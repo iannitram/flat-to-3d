@@ -9,7 +9,17 @@ Proton, on the Legion Go and the Z13 under SteamOS).
 Labels: **measured** means read in the code. **Inferred** means a reading of what the code is for.
 **Guess** means not yet supported by evidence.
 
-## Verdict
+## Update 2026-10-18 afternoon: tested on the Legion Go — the game's own stereo camera works
+
+Three private patch versions were tried through the port's new per-executable patch loader (Legion Go, SteamOS, 800p, 60 Hz):
+
+- **v1** (force stereo mode from boot): crashed at once. In the remaster, ~15 draw sites pass a null window context in multi-view modes (the text renderer asserts).
+- **v2** (v1 + a guard in the text renderer): ran at 60 FPS with no crash, but the remaster's renderer only ever draws window 0 (a fatal assert guards it), so the scene stayed single; only the UI doubled (top/bottom).
+- **v3, alternate-frame stereo** (normal mode; the game's own two-eye camera is built every frame and view 0 flips between the left and right eye each frame): **works.** Ian, watching the screen with the separation exaggerated ×5 for the test: "it looks like I'm crosseyed. Rapidly opening and closing my left and right eye." That is the expected look of frame-sequential stereo viewed flat: the game itself draws each eye from its own offset camera (true stereo, not depth reprojection), at 30 Hz per eye when the game runs at 60.
+
+**So the route changes:** not side-by-side halves from the game, but **frame-sequential eyes** at 60 Hz. Flat to 3D's presenter takes even/odd frames as left/right and shows them on the fixed 3D screen. Open: eye-order detection (a known parity, or a marker the port can read), TAA/motion-blur ghosting between eyes, the normal separation multiplier, and whether "alternate eyes from the game's own camera" counts as true stereo under the project's rules (recommended: yes; Ian to confirm).
+
+## Verdict (static analysis, before the test)
 
 **Most of the stereo path survives (verdict b, strong form). The output-to-3D-TV side is gone.**
 
