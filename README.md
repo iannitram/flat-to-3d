@@ -43,6 +43,9 @@ In parallel, a separate session is setting up Ghidra (and REA, if Ian approves i
    - 007 First Light's dormant built-in stereo mode first.
    - Then Alan Wake 2.
    - Then a Vulkan-level layer for the rest.
+7. **Uncharted 3 through Ian's own Linux port** (`uncharted_pc` on shadPS4):
+   - Most of the PS3 stereo 3D mode survives in the PS4 remaster's code: the two-eye camera, the eye-offset maths and side-by-side viewports, all behind one render-mode value.
+   - Tested on the Legion Go (2026-10-18): the game's own two-eye camera works as alternate-frame stereo (each eye 30 Hz at 60 FPS); the side-by-side path does not draw a second view. Whether alternate eyes count as true stereo is pending Ian's ruling. See [docs/uncharted3-stereo.md](docs/uncharted3-stereo.md).
 
 **Future:** Steam Frame support. Keep the 3D-screen output on plain OpenXR so it can also run through SteamVR.
 
@@ -53,6 +56,7 @@ In parallel, a separate session is setting up Ghidra (and REA, if Ian approves i
 | `docs/PORT-SPIDERMAN2.md` | Spider-Man 2 port plan and its decisions |
 | `docs/spidy-stereo-core-map.md` | How Spidy's GAME SCREEN 3D works, with every game-specific address on that path |
 | `docs/STEP0-RUNSHEET.md` | Step-by-step for the first headset trial |
+| `docs/uncharted3-stereo.md` | What survives of Uncharted 3's PS3 stereo mode in the PS4 build, and the route through the PC port |
 | `third_party/SpidyVR` | SpidyVR v0.3.8, pinned submodule |
 | `cmake/clang-cl-xwin.cmake` | Cross-compile toolchain (Windows x64 DLLs on Linux) |
 | `tools/build-spidy.sh` | Fetches Spidy's pinned dependencies and builds it |
