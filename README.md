@@ -14,7 +14,7 @@ In parallel, a separate session is setting up Ghidra (and REA, if Ian approves i
 
 - **Requirements settled** with Ian (vault `DECISIONS.md`): Z13 and SteamOS only, true stereo only, free and open-source only (nothing paywalled, even if already owned), offline games only, a giant fixed 3D TV with no head-steered camera.
 - **Research report** on every relevant tool, the Linux VR streaming stack and each Favorite game (vault `reports/True stereo 3D on SteamOS.md`).
-- **Library classified:** all 99 installed games have a `## 3D (stereo)` section and `stereo-*` recipe keys on their wiki page. Counts: 5 works-now, 35 likely, 6 build, 2 not safe, 50 won't work, 1 untested.
+- **Library classified:** all 99 installed games have a `## 3D (stereo)` section and `stereo-*` recipe keys on their wiki page. Counts on the wiki: 5 works-now, 36 likely, 6 build, 2 not safe, 49 won't work, 1 untested.
 - **Spider-Man 2 route found and planned:** `Spider-Man2.exe` shares Spidy's engine internals but not its addresses. [docs/PORT-SPIDERMAN2.md](docs/PORT-SPIDERMAN2.md) is the 8-step plan, and [docs/spidy-stereo-core-map.md](docs/spidy-stereo-core-map.md) maps Spidy's stereo-screen code.
 - **Workbench:** Spidy cross-compiles on the Z13 (clang-cl + xwin in the `craft-build` distrobox), and its 337 unit tests pass under Proton 11's Wine.
 - **Step-0 kit installed:** WiVRn 26.9 server (Flatpak), the matching headset APK and the Spidy 0.3.8 release. Spider-Man Remastered is finishing its install.
