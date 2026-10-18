@@ -9,7 +9,7 @@ Updated 2026-10-18.
 | Step | What | State |
 |---|---|---|
 | 0 | Baseline: unmodified SpidyVR on Remastered, in the Quest 2 | **Waiting on a headset session.** Remastered (Steam 1817070) is finishing its install (66 GB downloaded). Run sheet: [STEP0-RUNSHEET.md](STEP0-RUNSHEET.md). |
-| 1 | Workbench | **Done, with one bit uncommitted.** See below. |
+| 1 | Workbench | **Done.** See below. |
 | 2 | Get inside Spider-Man 2 | Not started. |
 | 3 | Move the camera (find the camera functions in SM2) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. |
 | 4–8 | Two eyes, clean images, headset, HUD, app | Not started. |
@@ -33,10 +33,6 @@ Updated 2026-10-18.
 **Spider-Man 2's C++ type information is not stripped after all.** The plan said it was. The exe holds 27,183 type names, and all 124 camera and render types the tool looked for lead to their vtables. Among them are `Camera2::Camera`, `FollowCamera` and `CombatCamera`, plus `PlayerModelHudFollower`, `HeroLocal` and `TimeScaleSystem`. The strings Spidy's notes point to are also present: `ViewContextManager`, `Adapted Lum`, `TemporalAa` and the `kTaaTarget` family.
 
 Spidy's own type-based tools therefore work on Spider-Man 2, which makes step 3 a good deal easier than planned. One thing is missing: no `ViewContextManager` type name turned up, so that object is found through its string instead.
-
-### Not committed yet
-
-`tools/research/`, `tools/ghidra/headless.sh`, and this page are on disk but not committed or pushed.
 
 ## What's next
 
@@ -81,5 +77,4 @@ Spidy's own type-based tools therefore work on Spider-Man 2, which makes step 3 
 
 1. **When to run the analysis.** Overnight is the obvious slot. Just say "run the Ghidra analysis tonight" and it starts with the memory watch on.
 2. **REA.** Installed but not registered. Registering it (`rea setup`) changes Claude Code's config permanently, so it waits for your yes. Without it, I script Ghidra headless directly, which covers everything above.
-3. **Commit now?** The research tools, the Ghidra script and this page can be committed and pushed now, before the analysis.
-4. Still open from the plan: contacting Spidy's author.
+3. Still open from the plan: contacting Spidy's author.
