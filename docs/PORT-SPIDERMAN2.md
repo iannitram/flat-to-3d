@@ -6,7 +6,7 @@
 
 The detailed code map behind this plan is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the plain-language version plus the steps.
 
-Status: **plan only.** Nothing is installed, built or run.
+Status (2026-10-18): **Step 1 mostly done.** Spidy cross-compiles on the Z13 and its tests pass; Spider-Man Remastered is downloading for step 0. Nothing has been injected into a game yet.
 
 ---
 
