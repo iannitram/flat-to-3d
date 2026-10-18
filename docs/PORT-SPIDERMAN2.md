@@ -11,8 +11,9 @@ Status (2026-10-18):
 | Step | State |
 |---|---|
 | 0 Baseline | **Ready, waiting on a headset session.** WiVRn, the headset APK and the Spidy release are in place; Remastered is finishing its install ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)). |
-| 1 Workbench | **Mostly done.** Submodule pinned; Spidy builds on the Z13 and its 337 tests pass. Discovery tools and Ghidra are being set up by a separate session. |
-| 2–8 | Not started. Nothing has been injected into Spider-Man 2. |
+| 1 Workbench | **Done.** Submodule pinned; Spidy builds on the Z13 and its 337 tests pass; the discovery tools read Spider-Man 2; Ghidra and Java 21 are installed. |
+| 3 Camera (offline part) | **Started.** Ghidra has not analysed either exe yet (a several-hour job, paused so the Z13 stays free). Details: [ROADMAP.md](ROADMAP.md). |
+| 2, 4–8 | Not started. Nothing has been injected into Spider-Man 2. |
 
 ---
 
@@ -46,7 +47,7 @@ Another ~40 addresses serve only the swinging and menu features and can be dropp
 - It has no packer or protection sections. The code is plain, so injection and hooks should work as they do for Remastered.
 
 **Bad news:**
-- Its C++ type information is **stripped** (two traces, against the many Spidy's tools read in Remastered). Spidy's type-based discovery tools won't work directly.
+- ~~Its C++ type information is stripped.~~ **Corrected 2026-10-18:** it is not. The exe holds 27,183 type names, and Spidy's `discover_render_types.py` finds vtables for all 124 camera and render types it looks for, so the type-based tools work on Spider-Man 2.
 - Spider-Man 2 leans on ray tracing and newer upscalers. Spidy's anti-aliasing and brightness tricks may need rework.
 
 ## How we find the addresses
