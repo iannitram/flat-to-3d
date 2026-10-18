@@ -6,7 +6,13 @@
 
 The detailed code map behind this plan is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the plain-language version plus the steps.
 
-Status (2026-10-18): **Step 1 mostly done.** Spidy cross-compiles on the Z13 and its tests pass; Spider-Man Remastered is downloading for step 0. Nothing has been injected into a game yet.
+Status (2026-10-18):
+
+| Step | State |
+|---|---|
+| 0 Baseline | **Ready, waiting on a headset session.** WiVRn, the headset APK and the Spidy release are in place; Remastered is finishing its install ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)). |
+| 1 Workbench | **Mostly done.** Submodule pinned; Spidy builds on the Z13 and its 337 tests pass. Discovery tools and Ghidra are being set up by a separate session. |
+| 2–8 | Not started. Nothing has been injected into Spider-Man 2. |
 
 ---
 
@@ -47,7 +53,9 @@ Another ~40 addresses serve only the swinging and menu features and can be dropp
 
 The fastest route is **binary diffing**. Spidy already names hundreds of Remastered functions. Load the Remastered exe and the Spider-Man 2 exe into **Ghidra** (free, from the NSA) and run its **Version Tracking**, which matches functions across two related builds. Each Spidy address in Remastered then points to its Spider-Man 2 counterpart, which we verify by hand. Strings (`Adapted Lum`, `kTaaTarget0`, `RenderAlloc`, `ViewContextManager`, `TemporalAa`, `ScaleformRTTStream`) anchor the matches.
 
-This needs the **Remastered exe** (version 4.630.0.0), so Spider-Man Remastered must be installed at some point. Ian owns it.
+This needs the **Remastered exe** (version 4.630.0.0). Spider-Man Remastered is being installed on the Z13 for this and for step 0.
+
+**REA** ([morluto/rea](https://github.com/morluto/rea), MIT) lets the agent drive Ghidra directly: decompile, follow cross-references, search strings, and keep evidence for each conclusion. Ian approved it in principle for steps 3–5 and for later performance work, such as skipping work the game's own main view does while both eyes render. Registering it in Claude Code's config needs his OK first.
 
 **Survive patches.** Spidy breaks on every game update. Our port should find each address by **byte-pattern search** at startup, with the fixed address as a fallback. Then a small Spider-Man 2 patch doesn't break everything.
 
@@ -56,14 +64,14 @@ This needs the **Remastered exe** (version 4.630.0.0), so Spider-Man Remastered 
 Each step ends in a test that can be checked without guessing.
 
 ### Step 0: Baseline (needs Remastered installed)
-Run unmodified Spidy on Spider-Man Remastered on the Z13 in GAME SCREEN 3D, through WiVRn over Quest Tether's USB link.
+Run unmodified Spidy (official 0.3.8 release) on Spider-Man Remastered on the Z13 in GAME SCREEN 3D, through WiVRn's wired mode (`adb reverse`) on the USB cable. Quest Tether's internet sharing isn't needed for this.
 - **Proves:** Proton + WiVRn + Quest 2 + the stereo-screen technique all work on this machine, before we spend weeks porting.
 - **Test:** the Remastered city shows on a 3D screen in the Quest 2 with visible depth, at 30+ fps.
 - Can run in parallel with steps 1–2.
 
 ### Step 1: Set up the workbench
-- Fork SpidyVR into our repo as a pinned `third_party/SpidyVR` (git submodule). Our port lives in `games/spiderman2/`.
-- Build Spidy's Windows DLLs on the Z13 inside the existing `craft-build` distrobox (clang-cl + Windows SDK via `xwin`, or MinGW). Alternative: build on Hyperion with Visual Studio. **Decision needed** (below).
+- Pin SpidyVR in our repo as `third_party/SpidyVR` (git submodule, v0.3.8). **Done.** Our port will live in `games/spiderman2/`.
+- Build Spidy's Windows DLLs on the Z13 inside the `craft-build` distrobox with clang-cl + lld-link, using the Microsoft C runtime and Windows SDK fetched by `xwin`. Ian chose the Z13 and accepted Microsoft's license. MinGW isn't an option: 31 Spidy files use Microsoft-only `__try`/`__except`. **Done:** `cmake/clang-cl-xwin.cmake`, `tools/build-spidy.sh`; all targets build and 337/337 tests pass under Proton Wine.
 - Strip Spidy's discovery tools (`inspect_game.py`, `research_game.py`, `find_method_owners.py`) of their Remastered hash checks so they run on any exe.
 - Record Spider-Man 2's exe hash and version. Turn off its automatic updates in Steam where possible, and keep a copy of the exe for analysis.
 - **Test:** a minimal DLL builds; Spidy's tools read `Spider-Man2.exe` without refusing.
@@ -120,8 +128,14 @@ Write Spider-Man 2's recipe into its wiki page (`stereo-status: works-now`) and 
 - **Commits:** iannitram no-reply identity, never force-push.
 - **Licence:** GPL-3.0 throughout. Our port is a derivative of Spidy, so credit Ilya Mezerowsky in the README and file headers.
 
-## Decisions for Ian
+## Decisions
 
-1. **Install Spider-Man Remastered?** It's needed for the baseline (step 0) and for the binary diff in steps 3–5. Roughly 75 GB; it fits on internal storage (237 GB free) or the card (137 GB free).
-2. **Where to build the Windows DLLs:** on the Z13 in the `craft-build` distrobox (self-contained, Z13-only), or on Hyperion with Visual Studio (Spidy's native toolchain, less setup)?
-3. **Contact Spidy's author?** He's asking for ideas for "the next full VR conversion", and a Spider-Man 2 port overlaps with that. Working with him, or at least telling him, could save weeks.
+Settled:
+1. **Spider-Man Remastered goes on** the Z13's internal drive (Ian, 2026-10-18).
+2. **DLLs build on the Z13** in `craft-build` with clang-cl + xwin (Ian, 2026-10-18).
+3. **REA** approved in principle for the reverse-engineering steps. Its config registration still needs a yes.
+4. **No paywalled tools**, so this port is built from SpidyVR, not from R.E.A.L. VR.
+
+Open:
+- **Contact Spidy's author?** He's asking for ideas for "the next full VR conversion", and a Spider-Man 2 port overlaps with that. Working with him, or at least telling him, could save weeks. A compatibility report after step 0 is a natural first contact.
+- **AER as a fallback?** If the Z13 can't afford both eyes every frame in Spider-Man 2, alternating eyes is the fallback. Ian hasn't ruled on whether that still counts as true stereo.
