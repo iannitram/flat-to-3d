@@ -79,7 +79,7 @@ candidate. Uncharted 1 was not checked.
 
 ## Proposed route through the Uncharted PC port
 
-This fits Flat to 3D's rule of true stereo only, because the game draws both camera views itself.
+Whether this fits Flat to 3D's "true stereo only" rule is pending Ian's ruling (the game draws each eye from its own camera, but in alternate frames rather than both per frame). Testing on the Legion Go was a works/doesn't-work check; 3D runs belong on the Z13 per the project's "Z13 and SteamOS only" rule.
 
 **A. Native side-by-side.** Try this first.
 1. Force the render mode to 4 at boot from the port side. Use 4 rather than the `3d` switch's 5,
@@ -98,7 +98,7 @@ horizontal image shift.
 **C. Later: full resolution per eye.** Widen the stereo viewports and send the second eye to its own
 render target. This needs a second target and a hook between the two views in the port. Not scoped.
 
-**First test (cheap):** boot the port with the mode forced to 4 and take a screenshot. Two slightly
+**First test (cheap; done 2026-10-18, see the update at the top):** boot the port with the mode forced to 4 and take a screenshot. Two slightly
 shifted half-width images mean route A is live.
 
 ## Risks
