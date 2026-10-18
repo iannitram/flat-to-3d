@@ -12,7 +12,7 @@ Status (2026-10-18):
 |---|---|
 | 0 Baseline | **Ready, waiting on a headset session.** WiVRn, the headset APK and the Spidy release are in place; Remastered is finishing its install ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)). |
 | 1 Workbench | **Done.** Submodule pinned; Spidy builds on the Z13 and its 337 tests pass; the discovery tools read Spider-Man 2; Ghidra and Java 21 are installed. |
-| 3 Camera (offline part) | **Started.** Ghidra has not analysed either exe yet (a several-hour job, paused so the Z13 stays free). Details: [ROADMAP.md](ROADMAP.md). |
+| 3 Camera (offline part) | **Started.** Ghidra has not analysed either exe yet (a several-hour job, paused so the Z13 stays free). Details: [ROADMAP.md](ROADMAP.md). **Hyperion, 2026-10-18:** a fast offline matcher (`tools/xmatch/`) and the full 85-item target list are ready ([spiderman2-address-map.md](spiderman2-address-map.md)). Not run yet: both games were still downloading. |
 | 2, 4–8 | Not started. Nothing has been injected into Spider-Man 2. |
 
 ---
@@ -50,11 +50,23 @@ Another ~40 addresses serve only the swinging and menu features and can be dropp
 - ~~Its C++ type information is stripped.~~ **Corrected 2026-10-18:** it is not. The exe holds 27,183 type names, and Spidy's `discover_render_types.py` finds vtables for all 124 camera and render types it looks for, so the type-based tools work on Spider-Man 2.
 - Spider-Man 2 leans on ray tracing and newer upscalers. Spidy's anti-aliasing and brightness tricks may need rework.
 
+**From the games' shipped file lists (Hyperion, 2026-10-18).** Measured by file name. What each file is comes from its maker's documentation, and no exe was read. Details: [spiderman2-address-map.md](spiderman2-address-map.md#what-the-file-lists-already-show).
+- **The UI is Coherent Gameface (HTML and JavaScript), not Scaleform.** Spidy's four HUD hooks and its eleven settings-menu hooks have no counterpart. What changes:
+  - Step 6 drops the HUD gate from the start.
+  - GAME SCREEN becomes the only mode, so there's no in-game settings tab.
+  - Step 7 has to find how Gameface's HUD reaches the screen. `PlayerModelHudFollower` still exists, so the HUD may still be a 3D panel.
+- **The PlayStation PC SDK (PSN sign-in runtime) ships with it.** Remastered has none. Before step 2, confirm the game plays offline without PSN (offline-only rule).
+- **NVIDIA's ray-tracing denoisers (NRD) and DLSS ray reconstruction ship with it.** Plan on ray tracing off for the eyes from the start (step 5).
+- **DirectStorage ships with it.** It adds GPU copy and compute queues. Spidy's probe picks the direct queue, so this is low risk for step 2.
+- **The same as Remastered:** DX12 with the Agility SDK, Streamline (DLSS frame generation), and no anti-cheat files.
+
 ## How we find the addresses
 
 The fastest route is **binary diffing**. Spidy already names hundreds of Remastered functions. Load the Remastered exe and the Spider-Man 2 exe into **Ghidra** (free, from the NSA) and run its **Version Tracking**, which matches functions across two related builds. Each Spidy address in Remastered then points to its Spider-Man 2 counterpart, which we verify by hand. Strings (`Adapted Lum`, `kTaaTarget0`, `RenderAlloc`, `ViewContextManager`, `TemporalAa`, `ScaleformRTTStream`) anchor the matches.
 
-This needs the **Remastered exe** (version 4.630.0.0). Spider-Man Remastered is being installed on the Z13 for this and for step 0.
+This needs the **Remastered exe** (version 4.630.0.0). Spider-Man Remastered is being installed on the Z13 for this and for step 0, and on Hyperion for the diff. Hyperion's Steam copy is 121,901,008 bytes, the exact size of 4.630.0.0. The hash isn't checked yet.
+
+**Faster first pass (Hyperion):** `tools/xmatch/run_match.py` matches each Spidy function by masked byte windows plus instruction-sequence similarity. It follows calls and global references out of every confident match, matches vtables by RTTI name, and writes a unique pattern scan for each hit. It takes minutes and about 2 GB of memory. Ghidra Version Tracking stays as the cross-check for low-confidence items.
 
 **REA** ([morluto/rea](https://github.com/morluto/rea), MIT) lets the agent drive Ghidra directly: decompile, follow cross-references, search strings, and keep evidence for each conclusion. Ian approved it in principle for steps 3–5 and for later performance work, such as skipping work the game's own main view does while both eyes render. Registering it in Claude Code's config needs his OK first.
 
@@ -114,7 +126,8 @@ Write Spider-Man 2's recipe into its wiki page (`stereo-status: works-now`) and 
 |---|---|---|
 | Spider-Man 2's renderer changed how off-screen views work | Step 4 stalls | Render the second eye by re-submitting the main view, at a cost in frame rate |
 | No GPU timing markers in Spider-Man 2's render jobs | Can't pair eyes | Insert our own fences or markers |
-| HUD drawn differently | The 3D screen stays flat under Spidy's gate | Drop that gate (planned in step 6) |
+| HUD drawn differently (**now likely**: SM2 ships Coherent Gameface, not Scaleform) | The 3D screen stays flat under Spidy's gate | Drop that gate (planned in step 6) |
+| PSN sign-in required (SM2 ships the PlayStation PC SDK) | Breaks the offline-only rule | Check before step 2. If it's required, stop and ask Ian |
 | Game updates | Fixed addresses break | Pattern scans (step 7); pin the build |
 | Ray tracing tied to the main view | Eyes lack reflections or crash | RT off for the eyes |
 | Z13 frame rate | Three views (game + 2 eyes) cost a lot | Lower eye resolution, dynamic resolution, skip the main view's full render if possible |

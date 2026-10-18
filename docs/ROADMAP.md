@@ -11,7 +11,7 @@ Updated 2026-10-18.
 | 0 | Baseline: unmodified SpidyVR on Remastered, in the Quest 2 | **Waiting on a headset session.** Remastered (Steam 1817070) is finishing its install (66 GB downloaded). Run sheet: [STEP0-RUNSHEET.md](STEP0-RUNSHEET.md). |
 | 1 | Workbench | **Done.** See below. |
 | 2 | Get inside Spider-Man 2 | Not started. |
-| 3 | Move the camera (find the camera functions in SM2) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. |
+| 3 | Move the camera (find the camera functions in SM2) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. On Hyperion the fast matcher (`tools/xmatch/`) is ready and waits on the downloads: [spiderman2-address-map.md](spiderman2-address-map.md). |
 | 4–8 | Two eyes, clean images, headset, HUD, app | Not started. |
 
 ### Done
@@ -33,6 +33,14 @@ Updated 2026-10-18.
 **Spider-Man 2's C++ type information is not stripped after all.** The plan said it was. The exe holds 27,183 type names, and all 124 camera and render types the tool looked for lead to their vtables. Among them are `Camera2::Camera`, `FollowCamera` and `CombatCamera`, plus `PlayerModelHudFollower`, `HeroLocal` and `TimeScaleSystem`. The strings Spidy's notes point to are also present: `ViewContextManager`, `Adapted Lum`, `TemporalAa` and the `kTaaTarget` family.
 
 Spidy's own type-based tools therefore work on Spider-Man 2, which makes step 3 a good deal easier than planned. One thing is missing: no `ViewContextManager` type name turned up, so that object is found through its string instead.
+
+### Found on Hyperion (2026-10-18, from the games' file lists)
+
+- **Spider-Man 2's UI is Coherent Gameface (HTML and JavaScript), not Scaleform.** Spidy's HUD and settings-menu hooks can't be ported. Drop the HUD gate and make GAME SCREEN the only mode.
+- **It ships the PlayStation PC SDK.** Confirm it plays offline without PSN before injecting anything.
+- **It ships NVIDIA's ray-tracing denoisers.** Plan on ray tracing off for the eyes.
+- **It ships DirectStorage.** Low risk.
+- Details: [spiderman2-address-map.md](spiderman2-address-map.md#what-the-file-lists-already-show).
 
 ## What's next
 
