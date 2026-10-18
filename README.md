@@ -8,7 +8,11 @@ Play installed PC games in **true stereoscopic 3D**, where the game itself draws
 
 The first target is **Marvel's Spider-Man 2**, ported from [SpidyVR](https://github.com/IlyaMez/SpidyVR). Spidy is an open-source VR mod for Spider-Man Remastered, and its **GAME SCREEN 3D** mode is already the 3D TV we want. Step 0 runs Spidy unchanged on Remastered to prove the whole chain on this machine. Everything for it is installed, waiting on a headset session: [docs/STEP0-RUNSHEET.md](docs/STEP0-RUNSHEET.md).
 
-In parallel, a separate session is setting up Ghidra (and REA, if Ian approves its config change) to start mapping `Spider-Man2.exe` against Remastered.
+In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spiderman2-address-map.md](docs/spiderman2-address-map.md)). Its matcher (`tools/xmatch/`) is written and lists all 85 items on Spidy's stereo path. Nothing has been mapped yet: both games were still downloading on Hyperion when the first leg ended. Steam's file lists already change the plan in four places:
+- Spider-Man 2 draws its UI with **Coherent Gameface, not Scaleform**, so Spidy's HUD hooks and settings tab can't be ported.
+- It ships the **PlayStation PC SDK**, so check that it plays offline before injecting anything.
+- It ships **NVIDIA's ray-tracing denoisers**, which makes ray tracing off for the eyes likely.
+- It uses **DirectStorage**, which is low risk.
 
 ## Done so far
 
@@ -23,7 +27,8 @@ In parallel, a separate session is setting up Ghidra (and REA, if Ian approves i
 
 1. **Step 0, Spidy on Remastered:** the game on a 3D screen in the Quest 2 over USB at 30+ fps. Proves Proton + WiVRn + Quest 2 + the technique. Afterwards, file a compatibility report upstream to SpidyVR.
 2. **Spider-Man 2 port, steps 1–8** of [the plan](docs/PORT-SPIDERMAN2.md):
-   - Map addresses by diffing the two exes in Ghidra.
+   - Map addresses by diffing the two exes. The offline matcher is ready (`tools/xmatch/run_match.py`, pattern scans included) and runs as soon as both installs finish on Hyperion. Ghidra is the cross-check.
+   - Before step 2, confirm Spider-Man 2 runs with no PSN sign-in (offline rule).
    - Get inside the game, then move the camera.
    - Render two eyes, pair them in the same frame, and clean up the images.
    - Put them in the headset as a 3D screen.
@@ -52,6 +57,8 @@ In parallel, a separate session is setting up Ghidra (and REA, if Ian approves i
 |---|---|
 | `docs/PORT-SPIDERMAN2.md` | Spider-Man 2 port plan and its decisions |
 | `docs/spidy-stereo-core-map.md` | How Spidy's GAME SCREEN 3D works, with every game-specific address on that path |
+| `docs/spiderman2-address-map.md` | Those addresses, Remastered → Spider-Man 2, with pattern scans and confidence |
+| `tools/xmatch/` | Offline Remastered → SM2 matcher, step-0 exe check, single-exe survey |
 | `docs/STEP0-RUNSHEET.md` | Step-by-step for the first headset trial |
 | `third_party/SpidyVR` | SpidyVR v0.3.8, pinned submodule |
 | `cmake/clang-cl-xwin.cmake` | Cross-compile toolchain (Windows x64 DLLs on Linux) |
