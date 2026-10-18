@@ -1,3 +1,4 @@
 [submodule "third_party/SpidyVR"]
 	path = third_party/SpidyVR
 	url = https://github.com/IlyaMez/SpidyVR
+	ignore = untracked

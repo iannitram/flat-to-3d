@@ -12,6 +12,17 @@ Status: **planning.** There's no working code yet.
 
 Inspiration: [Rai Pal](https://github.com/Raicuparta/rai-pal).
 
+## Building (on the Z13)
+
+Spidy's Windows DLLs cross-compile on Linux inside the `craft-build` distrobox, using clang-cl and lld-link against Microsoft's C runtime and Windows SDK. `xwin` unpacks those (Microsoft license accepted) into `~/.local/share/flat-to-3d/xwin`.
+
+```bash
+git submodule update --init
+distrobox enter craft-build -- tools/build-spidy.sh   # output: ~/.cache/flat-to-3d/build-spidy
+```
+
+Checked 2026-10-18: SpidyVR v0.3.8 builds every target, and its 337 unit tests pass under Proton 11's Wine.
+
 ## Future features
 
 - **Steam Frame compatibility.** Support Valve's Steam Frame headset alongside the Quest 2. Keep the 3D-screen output on standard OpenXR, not tied to WiVRn, so it can also run through SteamVR, which streams to the Frame (SteamVR 2.17 added Frame support and initial USB streaming).
