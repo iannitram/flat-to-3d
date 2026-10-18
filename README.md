@@ -12,6 +12,10 @@ Status: **planning.** There's no working code yet.
 
 Inspiration: [Rai Pal](https://github.com/Raicuparta/rai-pal).
 
+## Future features
+
+- **Steam Frame compatibility.** Support Valve's Steam Frame headset alongside the Quest 2. Keep the 3D-screen output on standard OpenXR, not tied to WiVRn, so it can also run through SteamVR, which streams to the Frame (SteamVR 2.17 added Frame support and initial USB streaming).
+
 ## Ground rules
 
 - True stereo only. Depth-buffer reprojection doesn't count.
