@@ -133,7 +133,11 @@ for name, rva, kind, prio, hx in items:
         e['conf'] = r.get('conf', 'none') if e['sm2'] else 'none'
         e['how'] = 'aligned instruction in matched parent'
     else:
-        key = rva if A.is_start(rva) else A.func_at(rva)[0]
+        f = None if A.is_start(rva) else A.func_at(rva)
+        key = f[0] if f else rva
+        if not A.is_start(rva) and f is None:
+            # executable but in no .pdata entry (leaf code without unwind info)
+            e['note'] = 'not in any .pdata function in Remastered'
         r = pairs.get(key, {})
         e.update({k: v for k, v in r.items() if not k.startswith('_')})
         e['sm2'] = hex(r['b']) if r.get('b') else None
