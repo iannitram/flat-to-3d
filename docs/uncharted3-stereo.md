@@ -19,6 +19,32 @@ Three private patch versions were tried through the port's new per-executable pa
 
 **So the route changes:** not side-by-side halves from the game, but **frame-sequential eyes** at 60 Hz. Flat to 3D's presenter takes even/odd frames as left/right and shows them on the fixed 3D screen. Open: eye-order detection (a known parity, or a marker the port can read), TAA/motion-blur ghosting between eyes, the normal separation multiplier, and whether "alternate eyes from the game's own camera" counts as true stereo under the project's rules (recommended: yes; Ian to confirm).
 
+## Update 2026-10-19: tuning on the Z13 (3D tuning is the Z13's job)
+
+Measured on the Z13 (Radeon 8060S, RADV STRIX_HALO, Mesa 26.2.0-devel git-035ae2f854), the port built from its `linux` branch with the v3 patch, Uncharted 3 from a save in the London bar (chapter 1, first control) with scripted input. Labels as above: **measured** = run on the Z13; **inferred** = a reading of the numbers.
+
+**It runs (measured).** Stereo v3 boots and plays at 60 FPS (worst frame 16.7-16.9 ms in steady play), no crash or assert over a 30-minute soak. Mono, for comparison, the same.
+
+**Eye parity (measured).** A diagnostic in a private build reads the game's own eye flag at every presented frame. On a quiet machine the eyes alternate on all but about 0.1-0.2 % of presented frames after first control (each break is one or two repeated frames, so left and right swap for a frame or two and recover). Boot and loading screens show a few more. With heavy work running beside the game (compiles, a large delete) it rose to about 0.8 % over 30 minutes, and the stutters came at the same moments. **So the presenter needs a quiet machine** (inferred), and it should treat a repeated frame as a hint to re-sync rather than assume strict even/odd. The present mode made no difference: Mailbox (the port's default) and Fifo gave similar counts, so Mailbox stays.
+
+**Separation (measured).** The game's render-options defaults hold a stereo separation multiplier (1.0 at +0x730 in the render-options block, written by the game's own initialisation); the earlier "x5" diagnostic changed only this value. Sweep, horizontal shift between the eyes at 1920 px width, same still camera:
+
+| Multiplier | Far (trophy shelf, a few metres away) | Near (pool-table rail) |
+|---|---|---|
+| 0.5 | 18 px (0.94 % of width) | 4 px |
+| 0.75 | 26 px (1.35 %) | 6 px |
+| **1.0 (the game's default)** | **36 px (1.88 %)** | **8 px** |
+| 1.5 | 54 px (2.81 %) | 12 px |
+| 2.0 | 72 px (3.75 %) | 16 px |
+
+The shift scales linearly with the multiplier. **Recommendation:** keep the game's 1.0 as the default. Far points must never be wider apart on the screen than the viewer's eyes (about 65 mm), or the eyes diverge. At 1.0 that holds for a virtual screen up to about 3.4 m wide. So Flat to 3D should cap the multiplier at about **3.46 m ÷ the virtual screen's width** (1.15 for a 3 m screen, 0.86 for a 4 m one) and offer a slider from 0.5 to 1.25 within that cap.
+
+**Limits of these numbers.** One scene only. The far reference is a shelf a few metres away, not the horizon, and the game computes the per-frame separation from camera data, so open outdoor scenes may show more far shift: re-measure there before fixing the cap. Not yet measured: the convergence default (a neighbouring render-options value is the likely field), and ghosting between the eyes with TAA / FSR 3.1 and motion blur on.
+
+**Also found on the way (measured).**
+- FSR 3.1 renders cleanly on the 8060S. The noise seen on the Legion Go's 780M (RADV PHOENIX) is specific to that GPU, and a port change under review (uncharted_pc#4) defaults anti-aliasing to Off until a GPU has been checked.
+- The port's host heap grew by about 37 MiB per minute in long sessions (normal and stereo alike). The cause was the missing shadPS4 fix #5258; the backport (uncharted_pc#3, under review) keeps it flat. That matters for long stereo sessions on the 15 GiB Legion Go.
+
 ## Verdict (static analysis, before the test)
 
 **Most of the stereo path survives (verdict b, strong form). The output-to-3D-TV side is gone.**
