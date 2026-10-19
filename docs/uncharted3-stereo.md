@@ -42,8 +42,8 @@ The shift scales linearly with the multiplier. **Recommendation:** keep the game
 **Limits of these numbers.** One scene only. The far reference is a shelf a few metres away, not the horizon, and the game computes the per-frame separation from camera data, so open outdoor scenes may show more far shift: re-measure there before fixing the cap. Not yet measured: the convergence default (a neighbouring render-options value is the likely field), and ghosting between the eyes with TAA / FSR 3.1 and motion blur on.
 
 **Also found on the way (measured).**
-- FSR 3.1 renders cleanly on the 8060S. The noise seen on the Legion Go's 780M (RADV PHOENIX) is specific to that GPU, and a port change under review (uncharted_pc#4) defaults anti-aliasing to Off until a GPU has been checked.
-- The port's host heap grew by about 37 MiB per minute in long sessions (normal and stereo alike). The cause was the missing shadPS4 fix #5258; the backport (uncharted_pc#3, under review) keeps it flat. That matters for long stereo sessions on the 15 GiB Legion Go.
+- FSR 3.1 renders cleanly on the 8060S. The noise seen on the Legion Go's 780M (RADV PHOENIX) is specific to that GPU, and since uncharted_pc#4 (merged, 522ab583) the port defaults anti-aliasing to Off until a GPU has been checked.
+- The port's host heap grew by about 37 MiB per minute in long sessions (normal and stereo alike). The cause was the missing shadPS4 fix #5258; the backport (uncharted_pc#3, merged as 305c3fa) keeps it flat. That matters for long stereo sessions on the 15 GiB Legion Go.
 
 ## Verdict (static analysis, before the test)
 
