@@ -2,7 +2,7 @@
 
 Where the project stands and what comes next. The full plan is [PORT-SPIDERMAN2.md](PORT-SPIDERMAN2.md) and the technical map is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the short version.
 
-Updated 2026-10-18.
+Updated 2026-10-26 (end-of-night sweep; the Step 0-3 notes below are from 2026-10-18).
 
 **1.0 scope (2026-10-26, [SPEC.md](../SPEC.md)):** Step 0 on Remastered, then port Steps 1-8 on Spider-Man 2, started from Game Mode with the Inject app's Start 3D and Inject buttons. Out of 1.0: the big-bucket tests, the generic 3D-screen pieces, other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
 
@@ -10,11 +10,30 @@ Updated 2026-10-18.
 
 | Step | What | State |
 |---|---|---|
-| 0 | Baseline: unmodified SpidyVR on Remastered, in the Quest 2 | **Waiting on a headset session.** Remastered (Steam 1817070) is finishing its install (66 GB downloaded). Run sheet: [STEP0-RUNSHEET.md](STEP0-RUNSHEET.md). |
+| 0 | Baseline: unmodified SpidyVR on Remastered, in the Quest 2 (#5) | **Waiting on a headset session.** Remastered (Steam 1817070) is finishing its install (66 GB downloaded). Run sheet: [STEP0-RUNSHEET.md](STEP0-RUNSHEET.md). |
 | 1 | Workbench | **Done.** See below. |
-| 2 | Get inside Spider-Man 2 | Not started. |
-| 3 | Move the camera (find the camera functions in SM2) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. On Hyperion the fast matcher (`tools/xmatch/`) is ready and waits on the downloads: [spiderman2-address-map.md](spiderman2-address-map.md). |
-| 4–8 | Two eyes, clean images, headset, HUD, app | Not started. |
+| 2 | Get inside Spider-Man 2 (#18, blocked by #7) | Not started. |
+| 3 | Move the camera (find the camera functions in SM2) (#19, blocked by #18) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. On Hyperion the fast matcher (`tools/xmatch/`) is ready and waits on the downloads: [spiderman2-address-map.md](spiderman2-address-map.md). |
+| 4–7 | Two eyes (#20), clean images (#21), headset (#22), HUD and memory (#23) | Not started. Each is blocked by the one before it. |
+| 8 | The Inject app and Spider-Man 2's recipe | **Skeleton on main, nothing built.** `inject/` (Rust), `decky/` and `recipes/` hold stubs that return "not built yet"; no pull request has merged since 2026-10-19. Issues: #24 find games, #25 load recipes, #26 Start 3D link, #27 inject and commands, #28 Decky panel, #29 the recipe; parent #10. |
+
+### Dev Loop issues (1.0)
+
+| Issue | What | Size | State |
+|---|---|---|---|
+| #5 | Step 0 on Remastered | Hard | Open, needs the owner's headset |
+| #7 | Does Spider-Man 2 play offline? | Question | Open, needs the owner's Z13; blocks #18 |
+| #18-#23 | Port Steps 2-7 | Medium, then Hard | Open, chained #18 -> #19 -> #20 -> #21 -> #22 -> #23 |
+| #24 | Inject: find Steam games | Easy | Open, locked tests in the issue; free to take |
+| #25 | Inject: load and check recipes | Medium | Open; free to take (#15 is answered) |
+| #26 | Inject: Start 3D link | Medium | Open; free to take |
+| #27 | Inject: inject and commands | Medium | Open; blocked by #24, #25, #26, #18 |
+| #28 | Decky plugin | Medium | Open; blocked by #27 |
+| #29 | Spider-Man 2 recipe | Easy | Open, locked tests in the issue; blocked by #25, #23 |
+| #6, #10 | Parents: the port, the Inject app | Hard | Open |
+| #15, #16 | Recipes home; research notes | | Closed (done) |
+
+After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14.
 
 ### Done
 
