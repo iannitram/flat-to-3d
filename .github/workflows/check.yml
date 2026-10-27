@@ -13,7 +13,9 @@ jobs:
     runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential curl ca-certificates
+      - env:
+          DEBIAN_FRONTEND: noninteractive
+        run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --manifest-path inject/Cargo.toml
       - run: cargo test --manifest-path inject/Cargo.toml
