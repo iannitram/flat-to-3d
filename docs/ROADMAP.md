@@ -4,6 +4,8 @@ Where the project stands and what comes next. The full plan is [PORT-SPIDERMAN2.
 
 Updated 2026-10-18.
 
+**1.0 scope (2026-10-26, [SPEC.md](../SPEC.md)):** Step 0 on Remastered, then port Steps 1-8 on Spider-Man 2, started from Game Mode with the Inject app's Start 3D and Inject buttons. Out of 1.0: the big-bucket tests, the generic 3D-screen pieces, other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
+
 ## Where we are
 
 | Step | What | State |
