@@ -8,9 +8,12 @@ jobs:
   engine:
     # The project is SteamOS-only (Linux): the engine and the Decky plugin run there; the game
     # DLLs build on the owner's Z13 (ruling 21). So CI runs on Linux only.
-    runs-on: ubuntu-latest
+    # Self-hosted Linux runner (R29): an actions-runner Ubuntu 24.04 container
+    # with fewer preinstalled tools than ubuntu-latest, so install the C toolchain rustc links with.
+    runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential curl ca-certificates
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --manifest-path inject/Cargo.toml
       - run: cargo test --manifest-path inject/Cargo.toml
