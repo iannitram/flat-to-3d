@@ -13,7 +13,7 @@ Updated 2026-10-26 (end-of-night sweep; the Step 0-3 notes below are from 2026-1
 | 0 | Baseline: unmodified SpidyVR on Remastered, in the Quest 2 (#5) | **Waiting on a headset session.** Remastered (Steam 1817070) is finishing its install (66 GB downloaded). Run sheet: [STEP0-RUNSHEET.md](STEP0-RUNSHEET.md). |
 | 1 | Workbench | **Done.** See below. |
 | 2 | Get inside Spider-Man 2 (#18, blocked by #7) | Not started. |
-| 3 | Move the camera (find the camera functions in SM2) (#19, blocked by #18) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. On Hyperion the fast matcher (`tools/xmatch/`) is ready and waits on the downloads: [spiderman2-address-map.md](spiderman2-address-map.md). |
+| 3 | Move the camera (find the camera functions in SM2) (#19, blocked by #18) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. On the owner's PC the fast matcher (`tools/xmatch/`) is ready and waits on the downloads: [spiderman2-address-map.md](spiderman2-address-map.md). |
 | 4–7 | Two eyes (#20), clean images (#21), headset (#22), HUD and memory (#23) | Not started. Each is blocked by the one before it. |
 | 8 | The Inject app and Spider-Man 2's recipe | **Skeleton on main, nothing built.** `inject/` (Rust), `decky/` and `recipes/` hold stubs that return "not built yet"; no pull request has merged since 2026-10-19. Issues: #24 find games, #25 load recipes, #26 Start 3D link, #27 inject and commands, #28 Decky panel, #29 the recipe; parent #10. |
 
@@ -55,7 +55,7 @@ After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14.
 
 Spidy's own type-based tools therefore work on Spider-Man 2, which makes step 3 a good deal easier than planned. One thing is missing: no `ViewContextManager` type name turned up, so that object is found through its string instead.
 
-### Found on Hyperion (2026-10-18, from the games' file lists)
+### Found on the owner's PC (2026-10-18, from the games' file lists)
 
 - **Spider-Man 2's UI is Coherent Gameface (HTML and JavaScript), not Scaleform.** Spidy's HUD and settings-menu hooks can't be ported. Drop the HUD gate and make GAME SCREEN the only mode.
 - **It ships the PlayStation PC SDK.** Confirm it plays offline without PSN before injecting anything.
