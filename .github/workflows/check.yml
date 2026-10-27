@@ -10,7 +10,7 @@ jobs:
     # DLLs build on the owner's Z13 (ruling 21). So CI runs on Linux only.
     # Self-hosted Linux runner (R29): an actions-runner Ubuntu 24.04 container
     # with fewer preinstalled tools than ubuntu-latest, so install the C toolchain rustc links with.
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential curl ca-certificates
