@@ -1,0 +1,18 @@
+[package]
+name = "flat3d-inject"
+version = "0.0.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Flat to 3D's Inject engine: installed games, recipes, stereo routes, Start 3D"
+publish = false
+
+[lib]
+name = "flat3d_inject"
+path = "src/lib.rs"
+
+[[bin]]
+name = "flat3d-inject"
+path = "src/main.rs"
+
+# No dependencies yet: the skeleton is std only. Issues add crates where they need them.
+[dependencies]

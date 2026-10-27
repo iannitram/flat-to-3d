@@ -6,12 +6,15 @@ on:
 
 jobs:
   engine:
-    # The engine runs on SteamOS (Linux) only; the game DLLs build on the owner's Z13 (ruling 21).
+    # The project is SteamOS-only (Linux): the engine and the Decky plugin run there; the game
+    # DLLs build on the owner's Z13 (ruling 21). So CI runs on Linux only.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --manifest-path inject/Cargo.toml
+      - run: cargo test --manifest-path inject/Cargo.toml
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python3 -m unittest discover -s tests -t .
       - run: python3 -m py_compile decky/main.py

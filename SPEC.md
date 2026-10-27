@@ -49,12 +49,12 @@ Port SpidyVR's stereo-screen core to Spider-Man 2, then wrap it in a small engin
 
 - The rulings in `docs/notes/DECISIONS.md` are binding: Z13 and SteamOS only, true stereo only, a giant fixed TV, Quest Tether + WiVRn, 30+ fps, offline only, free only, Spidy as the baseline, plain OpenXR.
 - The port follows `docs/PORT-SPIDERMAN2.md` Steps 0-8. Its code lives in `games/spiderman2/`, and the DLLs build on the Z13 with clang-cl + xwin (ruling 21).
-- **The engine is Python (stdlib only), to confirm with the owner.** It matches the repo's existing tools and SteamOS's own Python, and the Decky backend is Python too. Rai Pal's game detection (Rust, GPL-3.0) is the reference for detection logic. Issue #10 left the language open.
-- **Recipes as a data file in this repo, to confirm with the owner (#15).** For 1.0 the engine needs only Spider-Man 2's recipe. Where the other 98 records live is #15's question.
+- **The engine is Rust** (the owner's ruling, 2026-10-26, question tool: "Rust"): one binary, `flat3d-inject`, a std-only crate in `inject/`. The Decky backend stays Python (Decky backends are Python) and calls the binary as a subprocess. Rai Pal's game detection (Rust, GPL-3.0) is the reference for detection logic.
+- **Recipes are a data file in this repo** (the owner's ruling, 2026-10-26, question tool: "Data file in the repo (Recommended)", #15), under `recipes/`, versioned with the code and read by the engine. For 1.0 the engine needs only Spider-Man 2's recipe; the owner's per-game notes elsewhere stay notes.
 
 ## Testing decisions
 
-The engine is tested without games or hardware: Steam library parsing on sample `libraryfolders.vdf` and `appmanifest_*.acf` files, recipe loading, and the commands Start 3D would run (asserted, not executed). Every port step has its own on-device test, as in `docs/PORT-SPIDERMAN2.md`.
+The engine is tested without games or hardware, with `cargo test --manifest-path inject/Cargo.toml` (Rust `#[test]`s, sample files under `inject/tests/fixtures/` as they are added): Steam library parsing on sample `libraryfolders.vdf` and `appmanifest_*.acf` files, recipe loading, and the commands Start 3D would run (asserted, not executed). Every port step has its own on-device test, as in `docs/PORT-SPIDERMAN2.md`.
 
 ## Further notes
 
