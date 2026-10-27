@@ -118,7 +118,7 @@ Write a ~300-line worker to replace Spidy's big VR controller. It starts the eye
 - **Test:** a full play session (swinging, combat, a cutscene, a pause) without dropped eyes or crashes.
 
 ### Step 8: Hook into the app
-Write Spider-Man 2's recipe into its wiki page (`stereo-status: works-now`) and wire it to the Inject button once the app exists.
+Write Spider-Man 2's recipe keys (`stereo-status: works-now`) and wire it to the Inject button once the app exists.
 
 ## Risks
 
@@ -138,7 +138,6 @@ Write Spider-Man 2's recipe into its wiki page (`stereo-status: works-now`) and 
 ## Machine rules that apply
 
 - **Z13 memory:** Ghidra on a 190 MB exe and the game itself are both heavy. Run one heavy job at a time under the 2 GiB watch, and check `qwen.lock` first.
-- **On Hyperion:** builds go through the dev gate (`Workspaces/CLAUDE.md` part 1).
 - **Commits:** iannitram no-reply identity, never force-push.
 - **Licence:** GPL-3.0 throughout. Our port is a derivative of Spidy, so credit Ilya Mezerowsky in the README and file headers.
 

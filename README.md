@@ -16,9 +16,9 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
 
 ## Done so far
 
-- **Requirements settled** with Ian (vault `DECISIONS.md`): Z13 and SteamOS only, true stereo only, free and open-source only (nothing paywalled, even if already owned), offline games only, a giant fixed 3D TV with no head-steered camera.
-- **Research report** on every relevant tool, the Linux VR streaming stack and each Favorite game (vault `reports/True stereo 3D on SteamOS.md`).
-- **Library classified:** all 99 installed games have a `## 3D (stereo)` section and `stereo-*` recipe keys on their wiki page. Counts on the wiki: 5 works-now, 36 likely, 6 build, 2 not safe, 49 won't work, 1 untested.
+- **Requirements settled** ([docs/notes/DECISIONS.md](docs/notes/DECISIONS.md)): Z13 and SteamOS only, true stereo only, free and open-source only (nothing paywalled, even if already owned), offline games only, a giant fixed 3D TV with no head-steered camera.
+- **Research report** on every relevant tool, the Linux VR streaming stack and each Favorite game ([docs/notes/research-report.md](docs/notes/research-report.md)).
+- **Library classified:** all 99 installed games have a `## 3D (stereo)` section and `stereo-*` recipe keys in my per-game notes (the key schema is in [docs/notes/DECISIONS.md](docs/notes/DECISIONS.md); the per-game table is in [docs/notes/research/library_engine_scan.md](docs/notes/research/library_engine_scan.md)). Counts: 5 works-now, 36 likely, 6 build, 2 not safe, 49 won't work, 1 untested.
 - **Spider-Man 2 route found and planned:** `Spider-Man2.exe` shares Spidy's engine internals but not its addresses. [docs/PORT-SPIDERMAN2.md](docs/PORT-SPIDERMAN2.md) is the 8-step plan, and [docs/spidy-stereo-core-map.md](docs/spidy-stereo-core-map.md) maps Spidy's stereo-screen code.
 - **Workbench:** Spidy cross-compiles on the Z13 (clang-cl + xwin in the `craft-build` distrobox), and its 337 unit tests pass under Proton 11's Wine.
 - **Step-0 kit installed:** WiVRn 26.9 server (Flatpak), the matching headset APK and the Spidy 0.3.8 release. Spider-Man Remastered is finishing its install.
@@ -41,16 +41,16 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
    - An OpenXR layer that pins any VR mod's two eyes to a fixed screen.
    - A viewer for side-by-side output.
 5. **The Inject app:**
-   - A command-line engine plus a Decky plugin. It finds installed games, reads each game's wiki recipe and injects the right tool.
+   - A command-line engine plus a Decky plugin. It finds installed games, reads each game's recipe keys and injects the right tool.
    - "Start 3D" brings up Quest Tether and WiVRn.
    - Rai Pal is the model.
 6. **Our own stereo for the remaining DX12 games:**
    - 007 First Light's dormant built-in stereo mode first.
    - Then Alan Wake 2.
    - Then a Vulkan-level layer for the rest.
-7. **Uncharted 3 through Ian's own Linux port** (`uncharted_pc` on shadPS4):
+7. **Uncharted 3 through my own Linux port** (`uncharted_pc` on shadPS4):
    - Most of the PS3 stereo 3D mode survives in the PS4 remaster's code: the two-eye camera, the eye-offset maths and side-by-side viewports, all behind one render-mode value.
-   - Tested on the Legion Go (2026-10-18): the game's own two-eye camera works as alternate-frame stereo (each eye 30 Hz at 60 FPS); the side-by-side path does not draw a second view. Whether alternate eyes count as true stereo is pending Ian's ruling. See [docs/uncharted3-stereo.md](docs/uncharted3-stereo.md).
+   - Tested on the Legion Go (2026-10-18): the game's own two-eye camera works as alternate-frame stereo (each eye 30 Hz at 60 FPS); the side-by-side path does not draw a second view. Whether alternate eyes count as true stereo is pending my ruling. See [docs/uncharted3-stereo.md](docs/uncharted3-stereo.md).
 
 **Future:** Steam Frame support. Keep the 3D-screen output on plain OpenXR so it can also run through SteamVR.
 
@@ -89,12 +89,13 @@ Heavy jobs on the Z13 (builds, Ghidra, the game) run one at a time under a 2 GiB
 
 ## Where the planning lives
 
-Decisions, research and per-game recipes live in Ian's Nextcloud vault:
+Decisions, research and notes are in this repo under [docs/notes/](docs/notes/):
 
-- `Workspaces/Flat to 3D/README.md`: project overview and status.
-- `Workspaces/Flat to 3D/DECISIONS.md`: every ruling and the recipe-key schema.
-- `Workspaces/Flat to 3D/reports/True stereo 3D on SteamOS.md`: the research report.
-- `Wiki/Technology/Gaming/<Game>.md`: each game's `stereo-*` frontmatter keys are the recipe this app reads.
+- [docs/notes/DECISIONS.md](docs/notes/DECISIONS.md): every ruling and the recipe-key schema.
+- [docs/notes/research-report.md](docs/notes/research-report.md): the research report.
+- [docs/notes/research/](docs/notes/research/): the raw research notes behind the report (tool landscape, Linux VR stack, per-game notes, library engine scan).
+- [docs/notes/library-scan.tsv](docs/notes/library-scan.tsv): the installed-games list.
+- Status and the plan: [docs/ROADMAP.md](docs/ROADMAP.md) and this repo's issues.
 
 ## Credits and license
 
