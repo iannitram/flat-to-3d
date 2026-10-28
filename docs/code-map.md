@@ -1,8 +1,8 @@
 # Code map
 
-One row per part of the repo: what it owns, who uses it and which Must it serves (SPEC.md). Written 2026-10-26 from the tree at main; checked against main again in the end-of-night sweep (no module has merged since: every Inject part is still a stub). The deep map of Spidy's stereo core is [spidy-stereo-core-map.md](spidy-stereo-core-map.md), and the Spider-Man 2 address map is [spiderman2-address-map.md](spiderman2-address-map.md).
+One row per part of the repo: what it owns, who uses it and which Must it serves (SPEC.md). Describes commit: 9f93f38 (2026-10-28), checked against `main`: no module has merged since the skeleton, so every Inject part is still a stub; the only change since 2026-10-26 is CI. The deep map of Spidy's stereo core is [spidy-stereo-core-map.md](spidy-stereo-core-map.md), and the Spider-Man 2 address map is [spiderman2-address-map.md](spiderman2-address-map.md).
 
-Platforms (R04): the host is Linux (SteamOS on the owner's Z13) only (rulings 1, 2). The game DLLs are Windows binaries, cross-built on the Z13 with clang-cl + xwin and run under Proton. Mac and Windows hosts don't apply. CI runs `cargo build` + `cargo test` for the engine and byte-compiles the Decky backend on `ubuntu-latest`; the DLL build and every game test need the Z13.
+Platforms (R04): the host is Linux (SteamOS on the owner's Z13) only (rulings 1, 2). The game DLLs are Windows binaries, cross-built on the Z13 with clang-cl + xwin and run under Proton. Mac and Windows hosts don't apply. CI runs `cargo build` + `cargo test` for the engine and byte-compiles the Decky backend on a self-hosted Linux runner (an Ubuntu 24.04 container; the job installs the C toolchain itself); the DLL build and every game test need the Z13.
 
 ## How it fits together
 
@@ -34,8 +34,9 @@ flowchart TD
 | `inject/` | skeleton (Rust crate `flat3d-inject`, std only) | the engine: `steam::installed_games`, `recipes::load_recipes`, `injectors::inject`, `link::start_3d` / `start_3d_commands`, `cli::parse` / `cli::run` (`flat3d-inject list / inject <appid> / start-3d`); every stub returns `Err(NotBuilt)`; unit tests are `#[test]`s in each module | M9, M10, M12 |
 | `recipes/` | skeleton (only `README.md`; no recipe file yet, Spider-Man 2's is #29) | one file per game with the eight stereo keys; the canonical home, by the owner's ruling (#15); the format is set by the recipes issue | M12 |
 | `decky/` | skeleton (`plugin.json`, `main.py`) | the Game Mode plugin: the Python backend runs `bin/flat3d-inject` as a subprocess; the QAM panel (`decky/src/`) is planned | M11 |
-| `.github/workflows/check.yml` | present | CI on `ubuntu-latest`: `cargo build` + `cargo test` for `inject/`, `py_compile` for `decky/main.py` | M9-M12 |
+| `.github/workflows/check.yml` | present | CI on push and pull request, runner `[self-hosted, linux]`: `cargo build` + `cargo test` for `inject/`, `py_compile` for `decky/main.py` | M9-M12 |
 | `inject/tests/` | planned | integration tests locked in the Easy issues (#24 `steam_installed_games.rs`, #29 `spider_man_2_recipe.rs`) | M9, M12 |
+| `.github/ISSUE_TEMPLATE/`, `.github/pull_request_template.md` | present | issue and PR templates | all |
 | `docs/` | present | rulings (`notes/DECISIONS.md`), research, the port plan, Step 0 runsheet, maps | all |
 
 ## Open-source pieces
