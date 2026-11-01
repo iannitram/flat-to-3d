@@ -1,12 +1,29 @@
-# Roadmap: Spider-Man 2 in 3D
+# Roadmap: Zero Company and Spider-Man 2 in 3D
 
 Where the project stands and what comes next. The full plan is [PORT-SPIDERMAN2.md](PORT-SPIDERMAN2.md) and the technical map is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the short version.
 
 Updated 2026-10-26 (end-of-night sweep; the Step 0-3 notes below are from 2026-10-18).
 
-**1.0 scope (2026-10-26, [SPEC.md](../SPEC.md)):** Step 0 on Remastered, then port Steps 1-8 on Spider-Man 2, started from Game Mode with the Inject app's Start 3D and Inject buttons. Out of 1.0: the big-bucket tests, the generic 3D-screen pieces, other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
+**1.0 scope (2026-10-26, widened 2026-10-31, [SPEC.md](../SPEC.md)):** STAR WARS Zero Company first (UEVR, our own hook as fallback), then Step 0 on Remastered and port Steps 1-8 on Spider-Man 2, both started from Game Mode with the Inject app's Start 3D and Inject buttons. Out of 1.0: the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
 
-## Where we are
+## Zero Company track (first in 1.0, added 2026-10-31)
+
+STAR WARS Zero Company (Steam 2075800): Unreal 5.6.1, DX12 only (vkd3d-proton), ProtonDB Platinum, no anti-cheat found, ships `SWZeroCompany.pdb`. A turn-based tactics game with an overhead camera, so stereo gives a tabletop look and 30 fps is plenty. Research: [games_group_a.md](notes/research/games_group_a.md#star-wars-zero-company). Spec Musts M13-M17.
+
+| Step | What | Depends on | Must |
+|---|---|---|---|
+| Z1 | Offline check: link the EA account once, then play a mission with the network off | owner's Z13 | M13 |
+| Z2 | UEVR nightly under Proton: inject, Native Stereo then Synchronized Sequential; record what UE 5.6 does. Kaon (LorenDB/kaon) is the reference for installing UEVR into a Proton prefix | Z1 | M14 |
+| Z3 | 3D TV: test UEVR's 2D Screen Mode for per-eye depth; if it's flat, build the fixed-screen OpenXR layer (#9) | Z2 | M15 |
+| Z2b | Fallback only if Z2 fails: our own UE 5.6 stereo hook from the PDB (lock the pose, fixed eye offset, two views) | Z2 failed | M14 |
+| Z4 | Full mission in the headset at 30+ fps over WiVRn wired | Z3 | M16 |
+| Z5 | Zero Company recipe (`works-now`, UEVR route and settings) and `flat3d inject 2075800` | Z4, #25 | M17 |
+
+Spider-Man 2 note (2026-10-31): HEROVR (lecutis7of9/HEROVR, [PEERS.md](../PEERS.md)) already shows Spider-Man 2 in stereo on Windows. Ruling: learn only, keep our port; its hook list is a map to check our Ghidra results against, never a source of addresses.
+
+Zero Company proves the headset chain, Start 3D and Inject on a real game while the Spider-Man 2 address mapping goes on.
+
+## Spider-Man 2 track: where we are
 
 | Step | What | State |
 |---|---|---|

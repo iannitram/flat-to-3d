@@ -2,7 +2,11 @@
 
 Play installed PC games in **true stereoscopic 3D**, where the game itself draws two camera views (no faked depth). The picture appears on a giant fixed virtual 3D TV in a Quest 2, with a controller in hand. Everything runs on the ROG Flow Z13 under SteamOS and Proton, with the headset on a USB cable.
 
-## Where we're at (2026-10-18)
+## Where we're at
+
+**2026-10-31:** 1.0 now covers **STAR WARS Zero Company** (first, through UEVR) and Spider-Man 2. See [SPEC.md](SPEC.md), [docs/ROADMAP.md](docs/ROADMAP.md) and the peer projects in [PEERS.md](PEERS.md). The notes below are from 2026-10-18.
+
+### 2026-10-18
 
 **Phase: first trial being set up. No game has run in 3D on the Z13 yet.**
 
