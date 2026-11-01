@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-01 Spec approved by the owner (Plug in and play, Rust; rulings 24-41).
 - 2026-11-01 Owner rulings 39-41 applied: Rust-only app (iced) and engine with a thin TS Decky panel, no Python backend, no ui-shared; code map, roadmap, SPEC and issues re-cut (new #85-#134, Tauri/ui-shared/Python issues #28, #53-#57, #67-#73 closed).
 - 2026-11-01 Spec reworked by the "Plug in and play" grill (rulings 24-38): Steam is the launcher, the link starts on plug-in, Quest Tether's tether is ported into the Rust engine, a per-game 3D switch replaces Inject; M9-M11, M18, M24 rewritten, M25-M30 added. Approval back to "not yet".
 - 2026-10-31 Engine Mediums #25, #26, #39, #50 split into Easy issues #58-#66: briefs and locked tests (recipes E1a-E1c, api.rs E1d-E1e, --json E1f, link E2a-E2c); the JSON contract is in docs/code-map.md "API shape".
