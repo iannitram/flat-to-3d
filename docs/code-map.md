@@ -83,6 +83,7 @@ Every `flat3d-inject <command> --json` prints exactly one line holding one JSON 
 | `list` | `"list"` | array of `Game` |
 | `inject <appid>` | `"inject"` | `InjectResult` |
 | `start-3d`, `stop-3d`, `status` | `"start-3d"`, `"stop-3d"`, `"status"` | `LinkReport` |
+| `undo <appid>` (added 2026-10-31, #84) | `"undo"` | `UndoResult` |
 
 | Type | Keys |
 |---|---|
@@ -91,7 +92,10 @@ Every `flat3d-inject <command> --json` prints exactly one line holding one JSON 
 | `LinkState` | a string: `"no-headset"`, `"unauthorised"`, `"starting"`, `"ready"`, `"stopped"` (`starting` is for the faces while they wait; the engine's `start_3d` returns once it is done) |
 | `LinkReport` | `state` (`LinkState`), `message` (one line for people) |
 | `InjectResult` | `appid`, `route`, `launched` (bool), `summary` |
+| `UndoResult` | `appid`, `restored` (array of text, one line per change put back, from the undo record #81), `summary` |
 | `ApiError` | `code`, `message`; `code` is one of `usage`, `not-built`, `not-found`, `bad-recipe`, `refused`, `link-not-ready`, `command-failed`, `io` |
+
+**Errors the Decky backend makes itself** (#67): a missing engine binary is `io`; a timeout, a non-zero exit with no JSON, or unparseable output is `command-failed`. Same envelope, so the panel handles them like engine errors.
 
 **Start 3D and Stop 3D commands** (E2a #64, WiVRn wired mode only: Quest Tether isn't needed for a WiVRn session, `docs/notes/DECISIONS.md` facts). Start: `adb devices` (no headset or unauthorised stops here), `systemd-run --user --collect --unit=flat3d-wivrn flatpak run --command=wivrn-server io.github.wivrn.wivrn` (the server without its desktop window), `adb reverse tcp:9757 tcp:9757`, `adb shell am start -a android.intent.action.VIEW -d wivrn+tcp://localhost org.meumeu.wivrn.github`. Stop: `adb shell am force-stop org.meumeu.wivrn.github`, `adb reverse --remove tcp:9757`, `systemctl --user stop flat3d-wivrn.service` (the adb steps may fail with the headset unplugged; the server stop decides). They run behind `link::CommandRunner`, so tests fake them.
 
