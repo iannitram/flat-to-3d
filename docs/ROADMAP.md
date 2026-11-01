@@ -18,6 +18,26 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 **Order (ruling 2026-10-31):** Zero Company → ACE COMBAT 7 (same UEVR route) → Geo-11 and the SBS viewer → Control and Planet of Lana → Spider-Man 2.
 
+## The app: one engine, two faces (ruling 2026-10-31)
+
+"Desktop app + Decky plugin (Recommended)", built with "Tauri (Rust + web UI) (Recommended)". The Tauri app runs in Desktop Mode (library, setup, logs, per-game detail and undo); the Decky panel runs in Game Mode (Start 3D, Stop 3D, Inject). Both drive the Rust engine in `inject/`. Shape and interlinks: [code-map.md](code-map.md).
+
+## Development stages
+
+The game tracks below need the owner's devices; the app stages can be built by satellites now and run alongside them.
+
+| Stage | What | Issues |
+|---|---|---|
+| E1 Engine core | Steam games, recipes, the shared JSON shape (`api.rs`), `--json` CLI | #24, #25, #50 |
+| E2 Link | Start 3D (WiVRn without its window, adb), Stop 3D, status | #26, #39 |
+| E3 Injectors | `uevr.rs`, `geo11.rs`, `port.rs`, each with undo; split of #27 | #27 (dispatch, port, undo), #51 UEVR, #52 Geo-11 |
+| F1 Decky | backend over `--json`, QAM panel | #28 panel, #53 backend |
+| F2 App skeleton | Tauri 2 + React + Vite under `app/`, `ui-shared/`, CI | #54 |
+| F3 App pages | Library, Headset (with first-time setup), Game (recipe, undo), Logs | #55, #56 |
+| G Games | Zero Company → ACE COMBAT 7 → Planet of Lana + Control → Spider-Man 2 (tracks below) | #31-#49, #5-#29 |
+| P Packaging | AppImage and the Decky zip from one tagged commit | #57 |
+| D Design pass (last, R04) | the shared design system over the running app and the Decky panel; `design-pass` issues | after the rest |
+
 ## ACE COMBAT 7 track (added 2026-10-31)
 
 ACE COMBAT 7 (Steam 502500): Unreal 4, DX11, UEVR with the Nexus "UEVR Compatibility Mod" profile. Not installed today (its library drive isn't mounted). Spec M20.

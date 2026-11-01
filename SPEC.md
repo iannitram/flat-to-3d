@@ -1,8 +1,8 @@
 # Spec
 
-**1.0 means:** on the Z13 in Game Mode, I plug in the Quest 2, press **Start 3D** in the Decky plugin, then **Inject** on one of five Favorites: STAR WARS Zero Company, ACE COMBAT 7, Control, Planet of Lana or Spider-Man 2. The game plays in true stereo on a giant fixed 3D TV in the Quest 2 over USB, gamepad in hand, at 30+ fps. **Stop 3D** shuts the link down. Order: Zero Company, ACE COMBAT 7, the two Geo-11 games, Spider-Man 2.
+**1.0 means:** on the Z13 in Game Mode, I plug in the Quest 2, press **Start 3D** in the Decky plugin, then **Inject** on one of five Favorites: STAR WARS Zero Company, ACE COMBAT 7, Control, Planet of Lana or Spider-Man 2. The game plays in true stereo on a giant fixed 3D TV in the Quest 2 over USB, gamepad in hand, at 30+ fps. **Stop 3D** shuts the link down. In Desktop Mode a Flat to 3D app (Tauri) shows the same library, link and buttons, plus setup, logs and undo. Order: Zero Company, ACE COMBAT 7, the two Geo-11 games, Spider-Man 2.
 
-**Approved by the owner:** 2026-10-31, the owner, in the Project Manager session's question tool: "Approve (Recommended)" (the five games, gamepad only, Start 3D and Stop 3D, M18-M23, #9's SBS viewer in 1.0); order "ZC, AC7, Geo-11 pair, SM2 (Recommended)". Rulings behind it, the Project Manager session's question tool, 2026-10-31: V1 scope "Add the 3 'likely' ones"; controller "A gamepad (Recommended)"; Stop 3D "Yes (Recommended)".
+**Approved by the owner:** 2026-10-31, the owner, question tool: "Approve (Recommended)" for the desktop app (M24), rulings "Desktop app + Decky plugin (Recommended)" and "Tauri (Rust + web UI) (Recommended)"). Previous approval, 2026-10-31: "Approve (Recommended)" (the five games, gamepad only, Start 3D and Stop 3D, M18-M23, #9's SBS viewer in 1.0); order "ZC, AC7, Geo-11 pair, SM2 (Recommended)". Rulings behind it, the Project Manager session's question tool, 2026-10-31: V1 scope "Add the 3 'likely' ones"; controller "A gamepad (Recommended)"; Stop 3D "Yes (Recommended)".
 
 Earlier approval, 2026-10-31, the owner, in the Project Manager session's question tool: "Approve (Recommended)" (1.0 = Zero Company first, UEVR then our own hook, 2D Screen Mode else the fixed-screen layer, offline after one EA link, plus Spider-Man 2, both from Start 3D and Inject in Game Mode). Rulings behind it, 2026-10-31: "Into 1.0"; route "UEVR first, port fallback (Recommended)"; 3D TV "Try 2D Screen Mode, else layer (Recommended)"; order "Zero Company first (Recommended)"; EA link "OK if it plays offline after (Recommended)".
 
@@ -39,6 +39,7 @@ Almost every check needs the owner's Z13, the games and the Quest 2, so those ch
 | M21 | Geo-11 SHALL run under Proton and its side-by-side output SHALL reach the headset as the fixed 3D TV, through an SBS screen viewer (#9's viewer, pulled into 1.0). | A Geo-11 game shows depth on the fixed screen in the Quest 2. | on the device (`needs-owner-device`) |
 | M22 | Control (Steam 870780, `Control_DX11.exe`) SHALL play with the community Geo-11 3D fix on the fixed 3D TV at 30+ fps, with a `works-now` recipe. | A mission section in the headset with depth. | on the device (`needs-owner-device`); engine unit test |
 | M23 | Planet of Lana (Steam 1608230, Unity 2020.3 IL2CPP, DX11) SHALL play with its Geo-11 fix on the fixed 3D TV at 30+ fps, with a `works-now` recipe. | A level in the headset with depth (expected shallow, diorama-like). | on the device (`needs-owner-device`); engine unit test |
+| M24 | IN DESKTOP MODE A FLAT TO 3D APP (Tauri) SHALL show the installed games with their stereo status, Start 3D and Stop 3D with the link state, first-time headset setup, each game's recipe with Inject and an undo back to flat, and the engine's log; it drives the same engine as the Decky plugin (ruling 2026-10-31). | Each of those works from the app window on the Z13. | app build + typecheck in CI; on the device (`needs-owner-device`) |
 
 ## Won'ts
 
@@ -53,7 +54,7 @@ Installed PC games only play flat. The free VR mods that exist steer the camera 
 
 ## Solution
 
-Run Zero Company and ACE COMBAT 7 in stereo through UEVR (our own hook if UEVR can't on Zero Company), Control and Planet of Lana through Geo-11 plus an SBS screen viewer, port SpidyVR's stereo-screen core to Spider-Man 2, then wrap all five in a small engine and a Decky plugin, so Game Mode has one button for the headset link and one for the game.
+Run Zero Company and ACE COMBAT 7 in stereo through UEVR (our own hook if UEVR can't on Zero Company), Control and Planet of Lana through Geo-11 plus an SBS screen viewer, port SpidyVR's stereo-screen core to Spider-Man 2, then wrap all five in one Rust engine with two faces: a Decky plugin, so Game Mode has one button for the headset link and one for the game, and a Tauri desktop app for Desktop Mode (library, setup, logs, undo).
 
 ## User stories
 
@@ -68,6 +69,7 @@ Run Zero Company and ACE COMBAT 7 in stereo through UEVR (our own hook if UEVR c
 - ACE COMBAT 7 is not installed today (its library drive isn't mounted).
 - Zero Company comes first (ruling 2026-10-31): offline check, UEVR nightly under Proton, the 3D TV, then its recipe; it proves the headset chain and Inject on a real game while the Spider-Man 2 address mapping goes on.
 - The Spider-Man 2 port follows `docs/PORT-SPIDERMAN2.md` Steps 0-8. Its code lives in `games/spiderman2/`, and the DLLs build on the Z13 with clang-cl + xwin (ruling 21).
+- **Two faces, one engine** (rulings 2026-10-31, question tool: "Desktop app + Decky plugin (Recommended)", "Tauri (Rust + web UI) (Recommended)"): the Tauri app links the engine crate; the Decky backend calls its binary with `--json`. Shape: `docs/code-map.md`.
 - **The engine is Rust** (the owner's ruling, 2026-10-26, question tool: "Rust"): one binary, `flat3d-inject`, a std-only crate in `inject/`. The Decky backend stays Python (Decky backends are Python) and calls the binary as a subprocess. Rai Pal's game detection (Rust, GPL-3.0) is the reference for detection logic.
 - **Recipes are a data file in this repo** (the owner's ruling, 2026-10-26, question tool: "Data file in the repo (Recommended)", #15), under `recipes/`, versioned with the code and read by the engine. For 1.0 the engine needs the five games' recipes; the owner's per-game notes elsewhere stay notes.
 

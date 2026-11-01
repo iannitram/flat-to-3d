@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-10-31 One engine, two faces: a Tauri desktop app (M24) joins the Decky plugin, re-approved by the owner; code map rewritten (inject/ engine with api.rs and per-route injectors, app/, ui-shared/, decky/, viewer/, layer/, games/), roadmap development stages E1-D, issues #50-#57.
 - 2026-10-31 Spec widened again and re-approved: 1.0 = five Favorites (Zero Company, ACE COMBAT 7, Control, Planet of Lana, Spider-Man 2), gamepad only, Stop 3D (M18-M23); #9's SBS viewer in 1.0; roadmap gains the play round trip and the AC7 and Geo-11 tracks.
 - 2026-10-31 Spec widened and re-approved: STAR WARS Zero Company joins 1.0 and ships first (UEVR, our own hook as fallback; Musts M13-M17; roadmap track Z1-Z5). PEERS.md added with 8 approved peers (Prior art in SPEC.md); HEROVR already ports SpidyVR to Spider-Man 2 on Windows: learn only, our port stays.
 - 2026-10-26 End-of-night sweep: roadmap and code map brought in line with main (nothing merged since 2026-10-19), PIPELINE notes corrected (#15 closed), #10 unblocked, size labels on #6 and #10.
