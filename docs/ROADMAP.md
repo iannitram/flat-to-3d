@@ -1,10 +1,44 @@
-# Roadmap: Zero Company and Spider-Man 2 in 3D
+# Roadmap: five Favorites in 3D
 
 Where the project stands and what comes next. The full plan is [PORT-SPIDERMAN2.md](PORT-SPIDERMAN2.md) and the technical map is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the short version.
 
 Updated 2026-10-26 (end-of-night sweep; the Step 0-3 notes below are from 2026-10-18).
 
 **1.0 scope (2026-10-26, widened 2026-10-31, [SPEC.md](../SPEC.md)):** STAR WARS Zero Company first (UEVR, our own hook as fallback), then Step 0 on Remastered and port Steps 1-8 on Spider-Man 2, both started from Game Mode with the Inject app's Start 3D and Inject buttons. Out of 1.0: the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
+
+## The 1.0 play round trip
+
+1. **Plug in.** Z13 in Game Mode; Quest 2 on the USB-C cable, headset on, seated boundary. First time only: allow USB debugging.
+2. **Start 3D** (Quick Access → Flat to 3D): the engine starts the WiVRn server without its window, runs `adb reverse tcp:9757`, opens the WiVRn app on the Quest; the panel says Ready (M10).
+3. **Inject** on a game: the engine applies the recipe (launch options, mod files) and launches the game through Steam. WiVRn must already be up: Proton looks for VR only at launch.
+4. **Play** on the giant fixed screen with depth, gamepad in hand (M19). Head movement looks around the room, not the game. Pause goes flat.
+5. **Quit** to Game Mode, then **Stop 3D** (M18, #39), unplug.
+
+Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)). Making WiVRn run without its desktop window in Game Mode is part of #26.
+
+**Order (ruling 2026-10-31):** Zero Company → ACE COMBAT 7 (same UEVR route) → Geo-11 and the SBS viewer → Control and Planet of Lana → Spider-Man 2.
+
+## ACE COMBAT 7 track (added 2026-10-31)
+
+ACE COMBAT 7 (Steam 502500): Unreal 4, DX11, UEVR with the Nexus "UEVR Compatibility Mod" profile. Not installed today (its library drive isn't mounted). Spec M20.
+
+| Step | What | Depends on |
+|---|---|---|
+| A1 (#40) | Install it, check it runs under Proton offline | the drive |
+| A2 (#41) | UEVR on AC7 under Proton through the Zero Company route; disable decoupled pitch (known AC7 fix) | Z2, Z3 |
+| A3 (#42) | Full sortie in the headset at 30+ fps on the gamepad | A2 |
+| A4 (#47) | Recipe at works-now | A3, #25 |
+
+## Geo-11 track: Control and Planet of Lana (added 2026-10-31)
+
+Geo-11 (free DX11 stereo driver, says Proton works) writes the two views side by side; an SBS screen viewer puts them on the fixed screen. Spec M21-M23. Peers: Blackskydk/FlatToDepth, artumino/VRScreenCap (MIT).
+
+| Step | What | Depends on |
+|---|---|---|
+| G1 (#43) | Geo-11 under Proton: Planet of Lana's fix on the flat screen, check the SBS picture has depth | - |
+| G2 (#44) | SBS screen viewer: Geo-11's picture on the fixed screen in the headset (#9's viewer, in 1.0) | G1 |
+| G3 (#45, recipe #48) | Planet of Lana in the headset at 30+ fps, recipe at works-now | G2, #25 |
+| G4 (#46, recipe #49) | Control: `Control_DX11.exe` with the community 3D fix, in the headset at 30+ fps, recipe at works-now | G2, #25 |
 
 ## Zero Company track (first in 1.0, added 2026-10-31)
 
