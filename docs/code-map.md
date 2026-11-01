@@ -65,6 +65,36 @@ flowchart TD
 | `.github/workflows/check.yml` | present | CI on Linux: engine build + test, Decky backend compile; grows to the app (`cargo check` of `app/src-tauri`, `npm run build` + typecheck of `app/`, `decky/`, `ui-shared/`) | all |
 | `docs/` | present | rulings (`notes/DECISIONS.md`), research, the port plan, Step 0 run sheet, maps | all |
 
+## API shape (inject/src/api.rs)
+
+Fixed 2026-10-31 when #50 was split (E1d #61 types, E1e #62 envelope, E1f #63 `--json`); the locked tests in those issues hold these names, and the app (`ui-shared/` TS types) and the Decky backend (#53) read exactly this. Rust field name = JSON key.
+
+Every `flat3d-inject <command> --json` prints exactly one line holding one JSON object, the envelope `Response<T>`:
+
+```json
+{"ok": true,  "command": "list", "data": [ ... ]}
+{"ok": false, "command": "list", "error": {"code": "not-built", "message": "not built yet: ..."}}
+```
+
+`data` is left out on failure and `error` on success. A bad command line gives `"command": ""` and code `usage`. Exit code: 0 ok; 2 for `usage` and `not-built`; 1 for every other error. Without `--json`, results go to stdout as text and errors to stderr as `error: <message>`.
+
+| Command | `command` | `data` |
+|---|---|---|
+| `list` | `"list"` | array of `Game` |
+| `inject <appid>` | `"inject"` | `InjectResult` |
+| `start-3d`, `stop-3d`, `status` | `"start-3d"`, `"stop-3d"`, `"status"` | `LinkReport` |
+
+| Type | Keys |
+|---|---|
+| `Game` | `appid` (number), `name`, `install_dir` (path as text), `status` (the recipe's `stereo-status`, `untested` when there is no recipe), `has_recipe` (bool) |
+| `Recipe` | `appid`, `name`, `status`, `route`, `engine`, `api`, `mod_url`, `free`, `safe`, `checked`: the fields of `recipes::Recipe`, for the app's Game page |
+| `LinkState` | a string: `"no-headset"`, `"unauthorised"`, `"starting"`, `"ready"`, `"stopped"` (`starting` is for the faces while they wait; the engine's `start_3d` returns once it is done) |
+| `LinkReport` | `state` (`LinkState`), `message` (one line for people) |
+| `InjectResult` | `appid`, `route`, `launched` (bool), `summary` |
+| `ApiError` | `code`, `message`; `code` is one of `usage`, `not-built`, `not-found`, `bad-recipe`, `refused`, `link-not-ready`, `command-failed`, `io` |
+
+**Start 3D and Stop 3D commands** (E2a #64, WiVRn wired mode only: Quest Tether isn't needed for a WiVRn session, `docs/notes/DECISIONS.md` facts). Start: `adb devices` (no headset or unauthorised stops here), `systemd-run --user --collect --unit=flat3d-wivrn flatpak run --command=wivrn-server io.github.wivrn.wivrn` (the server without its desktop window), `adb reverse tcp:9757 tcp:9757`, `adb shell am start -a android.intent.action.VIEW -d wivrn+tcp://localhost org.meumeu.wivrn.github`. Stop: `adb shell am force-stop org.meumeu.wivrn.github`, `adb reverse --remove tcp:9757`, `systemctl --user stop flat3d-wivrn.service` (the adb steps may fail with the headset unplugged; the server stop decides). They run behind `link::CommandRunner`, so tests fake them.
+
 ## Interlinks
 
 - **One engine, two faces.** The app links the crate directly; the Decky backend can't (Decky backends are Python) so it calls the binary with `--json`. Both read the shapes in `inject/src/api.rs`.
