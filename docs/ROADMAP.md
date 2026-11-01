@@ -2,40 +2,45 @@
 
 Where the project stands and what comes next. The full plan is [PORT-SPIDERMAN2.md](PORT-SPIDERMAN2.md) and the technical map is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the short version.
 
-Updated 2026-10-26 (end-of-night sweep; the Step 0-3 notes below are from 2026-10-18).
+Updated 2026-11-01 (plug-in-and-play rework of the app and engine track; the Step 0-3 notes below are from 2026-10-18).
 
-**1.0 scope (2026-10-26, widened 2026-10-31, [SPEC.md](../SPEC.md)):** STAR WARS Zero Company first (UEVR, our own hook as fallback), then Step 0 on Remastered and port Steps 1-8 on Spider-Man 2, both started from Game Mode with the Inject app's Start 3D and Inject buttons. Out of 1.0: the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
+**1.0 scope (2026-10-26, widened 2026-10-31, reworked 2026-11-01, [SPEC.md](../SPEC.md), approval pending):** "Plug in and play". Steam is the launcher: Play a game as usual. With the headset on the cable the game plays in 3D; without it the same Play button plays flat. STAR WARS Zero Company first (UEVR, our own hook as fallback), then Step 0 on Remastered and port Steps 1-8 on Spider-Man 2. Out of 1.0: the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
 
 ## The 1.0 play round trip
 
-1. **Plug in.** Z13 in Game Mode; Quest 2 on the USB-C cable, headset on, seated boundary. First time only: allow USB debugging.
-2. **Start 3D** (Quick Access → Flat to 3D): the engine starts the WiVRn server without its window, runs `adb reverse tcp:9757`, opens the WiVRn app on the Quest; the panel says Ready (M10).
-3. **Inject** on a game: the engine applies the recipe (launch options, mod files) and launches the game through Steam. WiVRn must already be up: Proton looks for VR only at launch.
-4. **Play** on the giant fixed screen with depth, gamepad in hand (M19). Head movement looks around the room, not the game. Pause goes flat.
-5. **Quit** to Game Mode, then **Stop 3D** (M18, #39), unplug.
+1. **Plug in.** Z13 in Game Mode; Quest 2 on the USB-C cable, headset on, seated boundary. First time only: allow USB debugging. A user service (`flat3d-link`) sees the cable: it brings up the tunnel (internet from the PC over USB, the Quest Tether link ported to Rust), WiVRn and the headset app, and a toast says 3D is ready (M10, M25).
+2. **Press Play** on a game with the `3D Ready` collection badge. The launch wrapper `flat3d-run` sees the link is ready and the game's switch is on, applies the game's route and starts it with the OpenXR environment. With no headset, or the switch off, it starts the game unchanged (M9, M30).
+3. **Play** on the giant fixed screen with depth, gamepad in hand (M19). Head movement looks around the room, not the game. Pause goes flat.
+4. **Unplug** any time: the service keeps the link for 2 minutes in case of a replug, then stops it and says "restart the game for flat" (M18). A headset plugged in while a game is already running flat gets a toast to restart it in 3D.
+5. **Watch** the headset from Quick Access: battery, temperature (toast at 38 C and 42 C), throughput, uptime, reconnects (M26, M27).
 
-Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)). Making WiVRn run without its desktop window in Game Mode is part of #26.
+Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)).
 
-**Order (ruling 2026-10-31):** Zero Company → ACE COMBAT 7 (same UEVR route) → Geo-11 and the SBS viewer → Control and Planet of Lana → Spider-Man 2.
+**Order (ruling 2026-10-31):** Zero Company -> ACE COMBAT 7 (same UEVR route) -> Geo-11 and the SBS viewer -> Control and Planet of Lana -> Spider-Man 2.
 
-## The app: one engine, two faces (ruling 2026-10-31)
+## The app: one engine, two faces (rulings 2026-10-31, 2026-11-01)
 
-"Desktop app + Decky plugin (Recommended)", built with "Tauri (Rust + web UI) (Recommended)". The Tauri app runs in Desktop Mode (library, setup, logs, per-game detail and undo); the Decky panel runs in Game Mode (Start 3D, Stop 3D, Inject). Both drive the Rust engine in `inject/`. Shape and interlinks: [code-map.md](code-map.md).
+"Desktop app + Decky plugin (Recommended)", built in Rust ("Native Rust GUI", "iced (Recommended)"; "Rust backend, thin TS panel (Recommended)", 2026-11-01). The Decky panel (a thin TypeScript layer over the engine binary) runs in Game Mode (link, health, switches, 3D Ready games); the iced app runs in Desktop Mode (Setup, Headset, Games, Logs). Both read one `snapshot` from the Rust engine in `inject/`, whose `flat3d-link` service owns the headset link; neither face has an Inject button. Shape and interlinks: [code-map.md](code-map.md).
 
 ## Development stages
 
-The game tracks below need the owner's devices; the app stages can be built by satellites now and run alongside them.
+The game tracks below need the owner's devices; the app stages can be built by satellites now and run alongside them. `needs-owner-device` issues in these stages wait for a session with the headset.
 
 | Stage | What | Issues |
 |---|---|---|
-| E1 Engine core | Steam games, recipes, the shared JSON shape (`api.rs`), `--json` CLI | #24, #25, #50 |
-| E2 Link | Start 3D (WiVRn without its window, adb), Stop 3D, status | #26, #39 |
-| E3 Injectors | `uevr.rs`, `geo11.rs`, `port.rs`, each with undo; split of #27 | #27 (dispatch, port, undo), #51 UEVR, #52 Geo-11 |
-| F1 Decky | backend over `--json`, QAM panel | #28 panel, #53 backend |
-| F2 App skeleton | Tauri 2 + React + Vite under `app/`, `ui-shared/`, CI | #54 |
-| F3 App pages | Library, Headset (with first-time setup), Game (recipe, undo), Logs | #55, #56 |
-| G Games | Zero Company → ACE COMBAT 7 → Planet of Lana + Control → Spider-Man 2 (tracks below) | #31-#49, #5-#29 |
-| P Packaging | AppImage and the Decky zip from one tagged commit | #57 |
+| E1 Engine core | Steam games, recipes, the shared JSON shape (`api.rs`), `--json` CLI | #24, #25, #50 and its parts #61-#63 |
+| E2 Link (WiVRn half) | WiVRn without its window, `adb reverse`, the app on the Quest; Stop 3D; status; reattach on replug | #26, #39, #64-#66 |
+| E3 Injectors | `uevr.rs`, `geo11.rs`, `port.rs`, each with undo; routes return the environment for the wrapper | #27, #51 UEVR, #52 Geo-11, #81-#84 undo |
+| E5 Link service | `flat3d-inject watch`: track-devices, plug/unplug/grace state machine, state file, settings, run records | new issues, see PIPELINE.md |
+| E6 Tether | gnirehtet reverse tether ported from Quest Tether: one adb, tun0 honesty, Wi-Fi-first disconnect, NetworkManager sync, heal ladder, step-aside | new issues |
+| E7 Health and stats | battery and temperature zones, toast gate, throughput, soak summary | new issues |
+| E8 Wrapper | `flat3d-run`: plan, exec spec, run | new issues |
+| I Install | user unit, install/uninstall, bundled adb and relay build, Quest app check | new issues |
+| F1 Decky | the engine binary as the backend, a thin TS panel, launch-option sync, 3D Ready collection, toasts | #28, #53, new issues |
+| F2 App skeleton and face rules | iced app crate under `app/` with CI; the rules both faces show, in Rust (`status.rs`, `link_view.rs`, `rows.rs`, `view.rs`, `launch_options.rs`, `collection.rs`, `toasts.rs`) | #54, #74-#78 and new issues |
+| F3 App pages | Setup, Headset, Games, Logs | #55, #56, new issues |
+| G Games | Zero Company -> ACE COMBAT 7 -> Planet of Lana + Control -> Spider-Man 2 (tracks below) | #31-#49, #5-#29 |
+| P Packaging | AppImage and the Decky zip from one tagged commit, with the bundled tools | #57 |
 | D Design pass (last, R04) | the shared design system over the running app and the Decky panel; `design-pass` issues | after the rest |
 
 ## ACE COMBAT 7 track (added 2026-10-31)
@@ -86,7 +91,7 @@ Zero Company proves the headset chain, Start 3D and Inject on a real game while 
 | 2 | Get inside Spider-Man 2 (#18, blocked by #7) | Not started. |
 | 3 | Move the camera (find the camera functions in SM2) (#19, blocked by #18) | **Started offline.** Tools ready; the Ghidra analysis has not run yet. On the owner's PC the fast matcher (`tools/xmatch/`) is ready and waits on the downloads: [spiderman2-address-map.md](spiderman2-address-map.md). |
 | 4–7 | Two eyes (#20), clean images (#21), headset (#22), HUD and memory (#23) | Not started. Each is blocked by the one before it. |
-| 8 | The Inject app and Spider-Man 2's recipe | **Skeleton on main, nothing built.** `inject/` (Rust), `decky/` and `recipes/` hold stubs that return "not built yet"; no pull request has merged since 2026-10-19. Issues: #24 find games, #25 load recipes, #26 Start 3D link, #27 inject and commands, #28 Decky panel, #29 the recipe; parent #10. |
+| 8 | The plug-in-and-play engine and Spider-Man 2's recipe | **Skeleton on main, nothing built.** `inject/` (Rust), `decky/` and `recipes/` hold stubs that return "not built yet". Issues: #24 find games, #25 load recipes, #26 the WiVRn half of the link, #27 route dispatch, #28 Decky panel, #29 the recipe; parent #10; the link service, tether, wrapper and faces are in the stage table above. |
 
 ### Dev Loop issues (1.0)
 
@@ -97,8 +102,8 @@ Zero Company proves the headset chain, Start 3D and Inject on a real game while 
 | #18-#23 | Port Steps 2-7 | Medium, then Hard | Open, chained #18 -> #19 -> #20 -> #21 -> #22 -> #23 |
 | #24 | Inject: find Steam games | Easy | Open, locked tests in the issue; free to take |
 | #25 | Inject: load and check recipes | Medium | Open; free to take (#15 is answered) |
-| #26 | Inject: Start 3D link | Medium | Open; free to take |
-| #27 | Inject: inject and commands | Medium | Open; blocked by #24, #25, #26, #18 |
+| #26 | Link: WiVRn half of Start 3D | Medium | Open; free to take |
+| #27 | Route dispatch and `inject` command | Medium | Open; blocked by #24, #25, #18 |
 | #28 | Decky plugin | Medium | Open; blocked by #27 |
 | #29 | Spider-Man 2 recipe | Easy | Open, locked tests in the issue; blocked by #25, #23 |
 | #6, #10 | Parents: the port, the Inject app | Hard | Open |
