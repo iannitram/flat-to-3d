@@ -14,7 +14,7 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 | 2 | Operating system | **SteamOS only**, games through Proton. No Windows dual-boot. |
 | 3 | What counts as depth | **True stereo only** (two cameras). Depth-buffer reprojection (SuperDepth3D-style) does not count. Whether alternate-eye rendering (AER) counts is **not yet ruled**. Since ruling 16 it matters only as a fallback for our own builds. |
 | 4 | Experience | **Giant 3D TV.** A fixed screen, no head-steered camera. |
-| 5 | Headset link | **Quest Tether** (SteamOS port + Decky plugin) stays the USB link layer, and a Decky "Start 3D" button comes in the build phase. Research picked **WiVRn** as the streamer: its wired mode (`adb reverse tcp:9757`) runs alongside Quest Tether's internet sharing. Steam Link VR is the fallback. |
+| 5 | Headset link | *(Link layer superseded 2026-11-01 by ruling 30: the tether is now ported into the engine.)* **Quest Tether** (SteamOS port + Decky plugin) stays the USB link layer, and a Decky "Start 3D" button comes in the build phase. Research picked **WiVRn** as the streamer: its wired mode (`adb reverse tcp:9757`) runs alongside Quest Tether's internet sharing. Steam Link VR is the fallback. |
 | 6 | Frame rate | **A steady 30+ fps** is fine. Lower resolution and settings are acceptable. |
 | 7 | Online / anti-cheat | **Offline and single-player only.** Any game with anti-cheat or always-online play is marked "not safe" and skipped. Forza Horizon 6 is not safe. |
 | 8 | Money | **Free only.** Existing open-source VR mods for specific games are the baseline: keep their injection method, switch the output to a 3D screen. |
@@ -32,6 +32,21 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 | 21 | Build toolchain | **Windows DLLs build on the Z13** in the `craft-build` distrobox with clang-cl + lld-link, using Microsoft's C runtime and Windows SDK fetched by `xwin`. I accepted Microsoft's license for that download. |
 | 22 | Reverse-engineering tools | **REA** (github.com/morluto/rea, MIT, drives Ghidra) is approved in principle for mapping Spider-Man 2 and for performance work, since the mod is for my own use only. Registering its MCP server in Claude Code's config needs a separate yes. |
 | 23 | Upstream reports | **File verified, useful reports upstream** (SpidyVR, WiVRn, UEVR...) from the iannitram account without asking each time, and tell me the link. Pull requests still get a heads-up first. |
+| 24 | Plug-in | **Plug in and the 3D link starts by itself** (2026-11-01, question tool: "Start right away (Recommended)"), with a toast when ready; unplug runs Stop 3D. |
+| 25 | Unplug mid-game | **The game keeps running and the link waits about 2 minutes for a replug** (2026-11-01: "Keep game, wait for replug (Recommended)"); after that Stop 3D and a "restart for flat" toast. |
+| 26 | Controls | **A per-game 3D switch, on by default; no Inject button** (2026-11-01: "Per-game 3D switch (Recommended)"). Headset ready + switch on = 3D, otherwise flat. |
+| 27 | Launch option | **The Decky plugin adds `flat3d-run %command%` itself** when a recipe reaches works-now, keeping existing options (2026-11-01: "Plugin adds it (Recommended)"). |
+| 28 | Late plug-in | **Plugging in while a 3D-ready game runs flat brings the link up and toasts "restart for 3D"**; the game is left alone (2026-11-01: "Toast, leave game (Recommended)"). |
+| 29 | Desktop app | **The Tauri app shrinks to Setup, Headset, the per-game switches with recipes, and Logs**; Steam launches the games (2026-11-01: "Shrink it (Recommended)"). |
+| 30 | Quest Tether in the app | **Quest Tether's tether is built into Flat to 3D, ported to Rust** (2026-11-01: "I think we should build the Quest tether INTO this app given the necessity of plugging in."; ruling "Port it into Rust"). Internet over the cable is **on by default** ("On by default (Recommended)"). Replaces ruling 5's separate Quest Tether link layer. |
+| 31 | Coexistence | **Quest Tether keeps its own Linux app** ("Keep both on Linux"); when it is already tethering, **Flat to 3D uses its tunnel and adb and adds only WiVRn + `adb reverse`** ("Use its tunnel (Recommended)"). |
+| 32 | Headset health | **Battery and the green/yellow/red temperature in the panel, with a toast at 38 C and at 42 C during play** (2026-11-01: "Yes, with a warning (Recommended)"). |
+| 33 | Port scope | **All of Quest Tether's link for 1.0:** detect, heal, tunnel with an honest tun0 state, Wi-Fi-first disconnect, NetworkManager Wi-Fi sync, health, throughput/uptime/reconnects and the soak check (2026-11-01, multi-select: "Detect, heal, tunnel (Recommended)", "Headset health", "Soak + stats", "Wi-Fi sync"). |
+| 34 | adb | **One adb, never in git:** reuse a running server (Quest Tether's included), else the bundled adb **built from Android's open source (Apache-2.0)**, so no SDK licence (2026-11-01: "Find it, don't ship it (Recommended)", then "Quest Tether's adb (Recommended)", then "Open-source adb (Recommended)"). |
+| 35 | Manual control | **Start 3D / Stop 3D stay as manual buttons, plus an "Auto 3D on plug-in" switch, on by default** (2026-11-01: "Keep both + auto switch (Recommended)"). Auto off = plugging in only tethers. |
+| 36 | QAM layout | **Top to bottom: link state + Start/Stop 3D, headset health, tunnel and Auto 3D switches, then the 3D Ready games with their switches** (2026-11-01: "That order (Recommended)"). |
+| 37 | Steam library | **An automatic "3D Ready" Steam collection; no badges, cover art untouched** (2026-11-01: "Auto '3D Ready' (Recommended)", "Collection is enough (Recommended)"). |
+| 38 | Which games | **Only works-now games get the wrapper and switch in 1.0** (2026-11-01: "works-now only (Recommended)"). |
 
 Ruling 14 (where decisions, research and status are kept) is retired: they now live in this repo, under `docs/notes/`.
 

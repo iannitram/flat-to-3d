@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-01 Spec reworked by the "Plug in and play" grill (rulings 24-38): Steam is the launcher, the link starts on plug-in, Quest Tether's tether is ported into the Rust engine, a per-game 3D switch replaces Inject; M9-M11, M18, M24 rewritten, M25-M30 added. Approval back to "not yet".
 - 2026-10-31 Engine Mediums #25, #26, #39, #50 split into Easy issues #58-#66: briefs and locked tests (recipes E1a-E1c, api.rs E1d-E1e, --json E1f, link E2a-E2c); the JSON contract is in docs/code-map.md "API shape".
 - 2026-10-31 SPEC M10 reworded by the owner's ruling: Start 3D uses WiVRn's wired mode only; Quest Tether optional.
 - 2026-10-31 One engine, two faces: a Tauri desktop app (M24) joins the Decky plugin, re-approved by the owner; code map rewritten (inject/ engine with api.rs and per-route injectors, app/, ui-shared/, decky/, viewer/, layer/, games/), roadmap development stages E1-D, issues #50-#57.
