@@ -217,7 +217,12 @@ mod tests {
             game_3d_running: true,
             game_flat_running: true,
         };
-        for phase in [Phase::Absent, Phase::Plugged, Phase::Up, Phase::Grace { since: 1 }] {
+        for phase in [
+            Phase::Absent,
+            Phase::Plugged,
+            Phase::Up,
+            Phase::Grace { since: 1 },
+        ] {
             for e in [Event::StartRequested, Event::StopRequested] {
                 let w = Watch { phase };
                 let (n, fx) = step(&w, &e, 9, &i);
