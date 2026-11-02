@@ -22,6 +22,7 @@ pub mod tether;
 pub mod switches;
 pub mod undo;
 pub mod watch;
+pub mod wrapper;
 
 use std::fmt;
 
