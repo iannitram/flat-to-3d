@@ -8,6 +8,7 @@
 pub mod api;
 pub mod cli;
 pub mod injectors;
+pub mod launch_options;
 pub mod link;
 pub mod recipes;
 pub mod runs;
