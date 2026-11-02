@@ -11,6 +11,7 @@ pub mod injectors;
 pub mod link;
 pub mod recipes;
 pub mod setup;
+pub mod state;
 pub mod steam;
 
 use std::fmt;
