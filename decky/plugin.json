@@ -4,6 +4,6 @@
   "flags": [],
   "publish": {
     "tags": ["vr", "3d"],
-    "description": "Start 3D and Inject buttons for Flat to 3D in Game Mode."
+    "description": "Shows link status, a 3D switch for each game, and headset battery and temperature in Game Mode."
   }
 }
