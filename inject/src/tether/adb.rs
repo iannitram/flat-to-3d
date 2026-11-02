@@ -139,6 +139,11 @@ impl<R: CommandRunner> AdbRunner<R> {
         }
     }
 
+    /// False when neither a running nor a bundled adb was chosen.
+    pub fn has_adb(&self) -> bool {
+        !self.path.is_empty()
+    }
+
     pub fn run(&mut self, command: &[String]) -> Result<String, String> {
         if command.first().map(String::as_str) != Some("adb") {
             return self.runner.run(command);

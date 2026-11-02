@@ -8,6 +8,8 @@ struct Fake {
     calls: Vec<String>,
     fail_at: Option<usize>,
     reverses: BTreeMap<String, String>,
+    /// List lines as adb prints them (`<device spec> <host spec>`), without a serial column.
+    bare_list: bool,
 }
 
 impl Fake {
@@ -35,7 +37,13 @@ impl CommandRunner for Fake {
             return Ok(self
                 .reverses
                 .iter()
-                .map(|(from, to)| format!("S1 {from} {to}\n"))
+                .map(|(from, to)| {
+                    if self.bare_list {
+                        format!("{from} {to}\n")
+                    } else {
+                        format!("S1 {from} {to}\n")
+                    }
+                })
                 .collect());
         }
         if args.first().map(String::as_str) == Some("reverse") {
@@ -157,6 +165,34 @@ fn rollback_keeps_a_preexisting_wivrn_reverse() {
     assert!(t.connect(false).is_err());
     assert_eq!(t.adb.runner.calls.last().unwrap(), REMOVE);
     assert_eq!(t.adb.runner.reverses.len(), 1);
+    assert_eq!(t.adb.runner.reverses["tcp:9757"], "tcp:9757");
+}
+
+#[test]
+fn missing_adb_fails_before_any_command() {
+    let mut t = Tether::new("/fixture", "S1", choose_adb(None, None), Fake::default());
+    let error = t.connect(false).unwrap_err();
+    assert!(
+        error.contains("the bundled adb is not at /fixture/.local/share/flat3d/bin/adb"),
+        "{error}"
+    );
+    assert!(t.adb.runner.calls.is_empty());
+    assert_eq!(t.mode(), TetherMode::Off);
+}
+
+#[test]
+fn preexisting_wivrn_reverse_is_kept_when_adb_lists_without_serial() {
+    let mut t = tether(Fake {
+        bare_list: true,
+        fail_at: Some(6),
+        ..Fake::default()
+    });
+    t.adb
+        .runner
+        .reverses
+        .insert("tcp:9757".into(), "tcp:9757".into());
+    assert!(t.connect(false).is_err());
+    assert_eq!(t.adb.runner.calls.last().unwrap(), REMOVE);
     assert_eq!(t.adb.runner.reverses["tcp:9757"], "tcp:9757");
 }
 

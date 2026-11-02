@@ -39,6 +39,12 @@ impl<R: CommandRunner> Tether<R> {
         if self.mode != TetherMode::Off || !self.added_reverses.is_empty() {
             return Err("Tether is already active or needs cleanup".to_string());
         }
+        if !self.adb.has_adb() {
+            return Err(format!(
+                "No adb is available: none is running, and the bundled adb is not at {}",
+                adb::bundled_adb(&self.home)
+            ));
+        }
         let result = self.connect_steps(foreign_relay);
         if let Err(mut error) = result {
             if self.client_started {
@@ -83,9 +89,10 @@ impl<R: CommandRunner> Tether<R> {
             && command.get(1).map(String::as_str) == Some("reverse");
         if reverse {
             for line in existing.lines() {
+                // `adb reverse --list` prints `<device spec> <host spec>`; a serial may come first.
                 let words: Vec<_> = line.split_whitespace().collect();
-                if words.len() >= 3 && words[1] == command[2] {
-                    return if words[2] == command[3] {
+                if words.len() >= 2 && words[words.len() - 2] == command[2] {
+                    return if words[words.len() - 1] == command[3] {
                         Ok(())
                     } else {
                         Err("A required reverse is already in use".to_string())
