@@ -9,6 +9,7 @@ pub mod cli;
 pub mod injectors;
 pub mod link;
 pub mod recipes;
+pub mod state;
 pub mod steam;
 
 use std::fmt;
