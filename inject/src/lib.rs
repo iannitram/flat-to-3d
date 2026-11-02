@@ -12,6 +12,7 @@ pub mod collection;
 pub mod injectors;
 pub mod install;
 pub mod health;
+pub mod headset_view;
 pub mod launch_options;
 pub mod link;
 pub mod recipes;
