@@ -45,9 +45,9 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
    - An OpenXR layer that pins any VR mod's two eyes to a fixed screen.
    - A viewer for side-by-side output.
 5. **Plug in and play:**
-   - Steam launches the games. When you plug in the headset, the `flat3d-link` service brings up the link.
-   - The `flat3d-run` wrapper checks the link and each game's 3D switch, then applies that game's 3D route. If the link is not ready or the switch is off, the game runs flat.
-   - The engine includes Quest Tether's tether, ported to Rust.
+   - Steam launches the games. Plugging in the headset will start the `flat3d-link` service, which brings up the link.
+   - The `flat3d-run` wrapper will check the link and each game's 3D switch, then apply that game's 3D route. If the link is not ready or the switch is off, the game runs flat.
+   - The engine will include Quest Tether's tether, ported to Rust.
 6. **Our own stereo for the remaining DX12 games:**
    - 007 First Light's dormant built-in stereo mode first.
    - Then Alan Wake 2.
