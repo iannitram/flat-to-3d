@@ -99,11 +99,7 @@ pub enum SyncDecision {
 }
 
 /// Decide whether the Quest should join the PC's Wi-Fi network.
-pub fn sync_decision(
-    pc: Option<&str>,
-    quest: Option<&str>,
-    failed_attempts: u32,
-) -> SyncDecision {
+pub fn sync_decision(pc: Option<&str>, quest: Option<&str>, failed_attempts: u32) -> SyncDecision {
     let Some(pc) = pc else {
         return SyncDecision::NoPcWifi;
     };
@@ -121,5 +117,9 @@ pub fn sync_decision(
 
 /// Reset the failure counter after joining, or count this failed attempt.
 pub fn next_attempts(prev: u32, joined: bool) -> u32 {
-    if joined { 0 } else { prev + 1 }
+    if joined {
+        0
+    } else {
+        prev + 1
+    }
 }
