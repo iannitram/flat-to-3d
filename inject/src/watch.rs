@@ -83,7 +83,9 @@ pub struct Watch {
 
 impl Watch {
     pub fn new() -> Watch {
-        Watch { phase: Phase::Absent }
+        Watch {
+            phase: Phase::Absent,
+        }
     }
 }
 
@@ -150,20 +152,33 @@ pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) 
             } else {
                 vec![]
             };
-            (Watch { phase: Phase::Plugged }, effects)
+            (
+                Watch {
+                    phase: Phase::Plugged,
+                },
+                effects,
+            )
         }
         (Phase::Grace { .. }, Event::Plugged) => {
             (Watch { phase: Phase::Up }, vec![Effect::Reattach])
         }
-        (Phase::Up, Event::Unplugged) if i.game_3d_running => {
-            (Watch { phase: Phase::Grace { since: now } }, vec![])
-        }
+        (Phase::Up, Event::Unplugged) if i.game_3d_running => (
+            Watch {
+                phase: Phase::Grace { since: now },
+            },
+            vec![],
+        ),
         (Phase::Up, Event::Unplugged) => {
             let mut effects = vec![Effect::StopLink];
             if i.tunnel_on {
                 effects.push(Effect::StopTether);
             }
-            (Watch { phase: Phase::Absent }, effects)
+            (
+                Watch {
+                    phase: Phase::Absent,
+                },
+                effects,
+            )
         }
         (Phase::Plugged, Event::Unplugged) => {
             let effects = if i.tunnel_on {
@@ -171,7 +186,12 @@ pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) 
             } else {
                 vec![]
             };
-            (Watch { phase: Phase::Absent }, effects)
+            (
+                Watch {
+                    phase: Phase::Absent,
+                },
+                effects,
+            )
         }
         _ => (*w, vec![]),
     }
