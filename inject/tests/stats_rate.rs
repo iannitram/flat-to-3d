@@ -48,3 +48,10 @@ fn a_clock_step_back_gives_zero_and_keeps_the_old_reading() {
     assert_eq!(m.sample(1000, Some((500, 500))), (0, 0));
     assert_eq!(m.sample(3000, Some((1000, 1000))), (1000, 1000));
 }
+
+#[test]
+fn a_huge_counter_step_saturates_instead_of_overflowing() {
+    let mut m = RateMeter::new();
+    m.sample(1000, Some((0, 0)));
+    assert_eq!(m.sample(2000, Some((u64::MAX / 2, 0))).0, u64::MAX / 1000);
+}
