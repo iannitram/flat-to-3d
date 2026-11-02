@@ -22,7 +22,11 @@ pub fn parse_track_frames(buf: &str) -> (Vec<Vec<Device>>, String) {
         let header_start = pos;
         let header_end = header_start + 4;
         let present = header_end.min(buf.len());
-        let header = &buf[header_start..present];
+        // `get` is None when the header cut lands inside a multi-byte character: that is a
+        // non-hex char, so the buffer is bad too.
+        let Some(header) = buf.get(header_start..present) else {
+            return (frames, String::new());
+        };
         if !header.bytes().all(|b| b.is_ascii_hexdigit()) {
             return (frames, String::new());
         }
@@ -60,4 +64,16 @@ fn parse_payload(payload: &str) -> Vec<Device> {
         });
     }
     devices
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_track_frames;
+
+    #[test]
+    fn a_non_ascii_char_in_the_header_drops_the_buffer() {
+        assert_eq!(parse_track_frames("zzz\u{e9}rest"), (vec![], String::new()));
+        assert_eq!(parse_track_frames("abc\u{e9}"), (vec![], String::new()));
+        assert_eq!(parse_track_frames("0\u{e9}"), (vec![], String::new()));
+    }
 }
