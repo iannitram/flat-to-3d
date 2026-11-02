@@ -48,7 +48,9 @@ pub fn parse_run_record(text: &str) -> Option<RunRecord> {
         if line.is_empty() {
             continue;
         }
-        let (key, value) = line.split_once('\t')?;
+        let Some((key, value)) = line.split_once('\t') else {
+            continue;
+        };
         match key {
             "appid" => appid = Some(value.parse().ok()?),
             "pid" => pid = Some(value.parse().ok()?),

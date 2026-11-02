@@ -5,11 +5,13 @@
 //! Skeleton (2026-10-26): every function is a stub with its final signature that returns
 //! `Err(NotBuilt)`; each one is filled in by its own issue. GPL-3.0.
 
+pub mod api;
 pub mod cli;
 pub mod injectors;
 pub mod link;
 pub mod recipes;
 pub mod runs;
+pub mod setup;
 pub mod steam;
 
 use std::fmt;
