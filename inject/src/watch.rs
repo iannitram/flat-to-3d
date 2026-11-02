@@ -66,6 +66,117 @@ fn parse_payload(payload: &str) -> Vec<Device> {
     devices
 }
 
+pub const GRACE_SECS: u64 = 120;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Phase {
+    Absent,
+    Plugged,
+    Up,
+    Grace { since: u64 },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Watch {
+    pub phase: Phase,
+}
+
+impl Watch {
+    pub fn new() -> Watch {
+        Watch { phase: Phase::Absent }
+    }
+}
+
+impl Default for Watch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Event {
+    Plugged,
+    Unplugged,
+    Tick,
+    StartRequested,
+    StopRequested,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Inputs {
+    pub auto_3d: bool,
+    pub tunnel_on: bool,
+    pub game_3d_running: bool,
+    pub game_flat_running: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Note {
+    Ready,
+    LateRestartFor3d,
+    StoppedRestartForFlat,
+    AllowUsbDebugging,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Effect {
+    StartTether,
+    StopTether,
+    StartLink,
+    Reattach,
+    StopLink,
+    Notify(Note),
+}
+
+/// Apply a headset plug or unplug event without running its effects.
+pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) {
+    match (w.phase, e) {
+        (Phase::Absent, Event::Plugged) if i.auto_3d => {
+            let mut effects = Vec::new();
+            if i.tunnel_on {
+                effects.push(Effect::StartTether);
+            }
+            effects.push(Effect::StartLink);
+            effects.push(Effect::Notify(if i.game_flat_running {
+                Note::LateRestartFor3d
+            } else {
+                Note::Ready
+            }));
+            (Watch { phase: Phase::Up }, effects)
+        }
+        (Phase::Absent, Event::Plugged) => {
+            let effects = if i.tunnel_on {
+                vec![Effect::StartTether]
+            } else {
+                vec![]
+            };
+            (Watch { phase: Phase::Plugged }, effects)
+        }
+        (Phase::Grace { .. }, Event::Plugged) => {
+            (Watch { phase: Phase::Up }, vec![Effect::Reattach])
+        }
+        (Phase::Up, Event::Unplugged) if i.game_3d_running => {
+            (Watch { phase: Phase::Grace { since: now } }, vec![])
+        }
+        (Phase::Up, Event::Unplugged) => {
+            let mut effects = vec![Effect::StopLink];
+            if i.tunnel_on {
+                effects.push(Effect::StopTether);
+            }
+            (Watch { phase: Phase::Absent }, effects)
+        }
+        (Phase::Plugged, Event::Unplugged) => {
+            let effects = if i.tunnel_on {
+                vec![Effect::StopTether]
+            } else {
+                vec![]
+            };
+            (Watch { phase: Phase::Absent }, effects)
+        }
+        _ => (*w, vec![]),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_track_frames;
