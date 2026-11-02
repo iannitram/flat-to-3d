@@ -2,7 +2,7 @@
 
 **1.0 means:** I plug the Quest 2 into the Z13 and press **Play** on one of five Favorites in Steam (Game Mode or Desktop Mode): STAR WARS Zero Company, ACE COMBAT 7, Control, Planet of Lana or Spider-Man 2. The headset link and its internet tunnel come up by themselves, and the game plays in true stereo on a giant fixed 3D TV in the Quest 2, gamepad in hand, at 30+ fps. Unplugged, the same Play button plays it flat. A Decky panel and a small native Rust desktop app (iced) show the link, headset health and a 3D switch per game; there is no Inject button. Order: Zero Company, ACE COMBAT 7, the two Geo-11 games, Spider-Man 2.
 
-**Approved by the owner:** not yet (M12 and M17 reworded 2026-11-01 to match rulings 24-41; awaiting re-approval)
+**Approved by the owner:** 2026-11-01, the owner, the Project Manager session's question tool: "Approve (Recommended)" for the spec with M12 and M17 reworded to the Plug in and play rulings (rulings 24-41 in `docs/notes/DECISIONS.md`).
 
 Previous approval (the Inject-button 1.0, superseded): 2026-10-31, the owner, question tool: "Approve (Recommended)" for the desktop app (M24), rulings "Desktop app + Decky plugin (Recommended)" and "Tauri (Rust + web UI) (Recommended)"). Previous approval, 2026-10-31: "Approve (Recommended)" (the five games, gamepad only, Start 3D and Stop 3D, M18-M23, #9's SBS viewer in 1.0); order "ZC, AC7, Geo-11 pair, SM2 (Recommended)". Wording fix 2026-10-31, question tool: M10 "Reword to WiVRn wired only (Recommended)". Rulings behind it, the Project Manager session's question tool, 2026-10-31: V1 scope "Add the 3 'likely' ones"; controller "A gamepad (Recommended)"; Stop 3D "Yes (Recommended)".
 
