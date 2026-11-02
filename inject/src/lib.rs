@@ -7,6 +7,7 @@
 
 pub mod api;
 pub mod cli;
+pub mod cli_link;
 pub mod injectors;
 pub mod launch_options;
 pub mod link;
@@ -16,6 +17,7 @@ pub mod setup;
 pub mod state;
 pub mod steam;
 pub mod tether;
+pub mod switches;
 pub mod undo;
 pub mod watch;
 
