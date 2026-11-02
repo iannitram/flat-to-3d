@@ -21,6 +21,7 @@ pub mod stats;
 pub mod tether;
 pub mod switches;
 pub mod undo;
+pub mod view;
 pub mod watch;
 pub mod wrapper;
 
