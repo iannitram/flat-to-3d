@@ -23,7 +23,8 @@ impl EventRing {
 
     /// Restore a ring from saved events, keeping the newest events and resuming numbering.
     pub fn from_events(mut events: Vec<LinkEvent>) -> EventRing {
-        let next = events.iter().map(|event| event.seq).max().unwrap_or(0) + 1;
+        // saturating: a saved list at the top of the u64 range must not wrap or panic
+        let next = events.iter().map(|event| event.seq).max().unwrap_or(0).saturating_add(1);
         if events.len() > RING_MAX {
             events.drain(..events.len() - RING_MAX);
         }
@@ -41,7 +42,7 @@ impl EventRing {
         if self.events.len() > RING_MAX {
             self.events.remove(0);
         }
-        self.next += 1;
+        self.next = self.next.saturating_add(1);
         seq
     }
 
