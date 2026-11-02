@@ -4,6 +4,8 @@ use crate::NotBuilt;
 use crate::recipes::Recipe;
 use crate::steam::Game;
 
+pub mod uevr;
+
 /// Which injector module a recipe's `stereo-route` text names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
