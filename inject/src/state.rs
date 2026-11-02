@@ -1,5 +1,65 @@
 //! The files the link service and its clients share: docs/code-map.md, API shape, State, IPC and files.
 
+use crate::api::{EventKind, LinkEvent};
+
+/// The maximum number of link events kept in memory.
+pub const RING_MAX: usize = 10;
+
+/// A bounded list of link events with monotonically increasing sequence numbers.
+#[derive(Debug, Clone, Default)]
+pub struct EventRing {
+    events: Vec<LinkEvent>,
+    next: u64,
+}
+
+impl EventRing {
+    /// Create an empty event ring, numbered from one.
+    pub fn new() -> EventRing {
+        EventRing {
+            events: Vec::new(),
+            next: 1,
+        }
+    }
+
+    /// Restore a ring from saved events, keeping the newest events and resuming numbering.
+    pub fn from_events(mut events: Vec<LinkEvent>) -> EventRing {
+        let next = events.iter().map(|event| event.seq).max().unwrap_or(0) + 1;
+        if events.len() > RING_MAX {
+            events.drain(..events.len() - RING_MAX);
+        }
+        EventRing { events, next }
+    }
+
+    /// Add an event and return its sequence number.
+    pub fn push(&mut self, kind: EventKind, text: &str) -> u64 {
+        let seq = self.next;
+        self.events.push(LinkEvent {
+            seq,
+            kind,
+            text: text.to_owned(),
+        });
+        if self.events.len() > RING_MAX {
+            self.events.remove(0);
+        }
+        self.next += 1;
+        seq
+    }
+
+    /// The retained events in oldest-first order.
+    pub fn events(&self) -> &[LinkEvent] {
+        &self.events
+    }
+
+    /// Clone the retained events newer than `seq`.
+    pub fn since(&self, seq: u64) -> Vec<LinkEvent> {
+        self.events
+            .iter()
+            .filter(|event| event.seq > seq)
+            .cloned()
+            .collect()
+    }
+}
+
 /// How old a snapshot may be before it is stale.
 pub const STALE_SECS: u64 = 10;
 
