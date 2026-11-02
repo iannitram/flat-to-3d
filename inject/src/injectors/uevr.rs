@@ -30,9 +30,11 @@ pub fn profile_text(settings: &UevrSettings) -> String {
 pub fn profile_dir(compatdata: &Path, appid: u32, exe_name: &str) -> PathBuf {
     let stem = exe_name
         .get(..exe_name.len().saturating_sub(4))
-        .filter(|_| exe_name
-            .get(exe_name.len().saturating_sub(4)..)
-            .is_some_and(|suffix| suffix.eq_ignore_ascii_case(".exe")))
+        .filter(|_| {
+            exe_name
+                .get(exe_name.len().saturating_sub(4)..)
+                .is_some_and(|suffix| suffix.eq_ignore_ascii_case(".exe"))
+        })
         .unwrap_or(exe_name);
     compatdata
         .join(appid.to_string())
