@@ -10,6 +10,7 @@ pub mod cli;
 pub mod injectors;
 pub mod link;
 pub mod recipes;
+pub mod runs;
 pub mod setup;
 pub mod state;
 pub mod steam;
