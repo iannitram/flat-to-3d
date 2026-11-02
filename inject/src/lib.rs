@@ -10,6 +10,7 @@ pub mod cli;
 pub mod cli_link;
 pub mod collection;
 pub mod injectors;
+pub mod install;
 pub mod health;
 pub mod launch_options;
 pub mod link;
