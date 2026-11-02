@@ -28,8 +28,7 @@ pub fn foreign_relay(procs: &[(u32, String)], own_pid: Option<u32>) -> bool {
             return false;
         };
         let name = executable.rsplit('/').next().unwrap_or(executable);
-        name != "adb"
-            && words.clone().any(|word| word == "run" || word == "relay")
+        name != "adb" && words.clone().any(|word| word == "run" || word == "relay")
     })
 }
 
