@@ -32,12 +32,16 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
     ]
     .into_iter()
     .map(|(name, destination)| (format!("{src_dir}/{name}"), destination))
-    .chain(["adb", "gnirehtet", "gnirehtet.apk"].into_iter().map(|name| {
-        (
-            format!("{src_dir}/tools/{name}"),
-            format!("{tools_dir}/{name}"),
-        )
-    }))
+    .chain(
+        ["adb", "gnirehtet", "gnirehtet.apk"]
+            .into_iter()
+            .map(|name| {
+                (
+                    format!("{src_dir}/tools/{name}"),
+                    format!("{tools_dir}/{name}"),
+                )
+            }),
+    )
     .collect();
 
     InstallPlan {
