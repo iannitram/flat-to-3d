@@ -21,6 +21,77 @@ impl Security {
     }
 }
 
+/// The NetworkManager command that lists active Wi-Fi networks and their SSIDs.
+pub fn active_ssid_command() -> Vec<String> {
+    ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"]
+        .iter()
+        .map(|word| word.to_string())
+        .collect()
+}
+
+/// The NetworkManager command that reads a saved network's key type and passphrase.
+pub fn credentials_command(ssid: &str) -> Vec<String> {
+    [
+        "nmcli",
+        "-s",
+        "-g",
+        "802-11-wireless-security.key-mgmt,802-11-wireless-security.psk",
+        "connection",
+        "show",
+    ]
+    .iter()
+    .map(|word| word.to_string())
+    .chain(std::iter::once(ssid.to_string()))
+    .collect()
+}
+
+/// The adb command that reads the Quest's Wi-Fi status.
+pub fn quest_ssid_command() -> Vec<String> {
+    ["adb", "shell", "cmd", "wifi", "status"]
+        .iter()
+        .map(|word| word.to_string())
+        .collect()
+}
+
+/// Quotes one word for the Quest shell, including embedded single quotes.
+pub fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
+/// Builds the adb command that connects the Quest to a Wi-Fi network.
+///
+/// The returned words carry the passphrase in clear (the locked tests check it). Log or
+/// print them only through `redact_command`, never with `{:?}`, `println!` or an error text.
+pub fn connect_network_command(ssid: &str, security: Security, psk: &str) -> Vec<String> {
+    vec![
+        "adb".to_string(),
+        "shell".to_string(),
+        format!(
+            "cmd wifi connect-network {} {} {}",
+            shell_quote(ssid),
+            security.as_str(),
+            shell_quote(psk)
+        ),
+    ]
+}
+
+/// Joins command words for logging, replacing a connect-network passphrase with `***`.
+pub fn redact_command(cmd: &[String]) -> String {
+    let line = cmd.join(" ");
+    if let Some(start) = line.find("connect-network ") {
+        let suffix_start = start + "connect-network ".len();
+        let suffix = &line[suffix_start..];
+        if let Some(security_end) = [" wpa2 ", " wpa3 "]
+            .iter()
+            .filter_map(|marker| suffix.find(marker).map(|index| index + marker.len()))
+            .min()
+        {
+            return format!("{}'***'", &line[..suffix_start + security_end]);
+        }
+    }
+    line
+}
+
 /// Undoes terse-mode escaping: `\:` is `:` and `\\` is `\`.
 fn unescape_terse(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -82,5 +153,44 @@ pub fn parse_credentials(out: &str) -> Option<(Security, String)> {
         None
     } else {
         Some((security, passphrase.to_string()))
+    }
+}
+
+/// Maximum number of failed attempts to sync the Quest's Wi-Fi network.
+pub const MAX_WIFI_ATTEMPTS: u32 = 3;
+
+/// What the Wi-Fi sync should do with the PC and Quest network names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyncDecision {
+    NoPcWifi,
+    NoQuestWifi,
+    Same,
+    GiveUp,
+    Switch,
+}
+
+/// Decide whether the Quest should join the PC's Wi-Fi network.
+pub fn sync_decision(pc: Option<&str>, quest: Option<&str>, failed_attempts: u32) -> SyncDecision {
+    let Some(pc) = pc else {
+        return SyncDecision::NoPcWifi;
+    };
+    let Some(quest) = quest else {
+        return SyncDecision::NoQuestWifi;
+    };
+    if pc == quest {
+        SyncDecision::Same
+    } else if failed_attempts >= MAX_WIFI_ATTEMPTS {
+        SyncDecision::GiveUp
+    } else {
+        SyncDecision::Switch
+    }
+}
+
+/// Reset the failure counter after joining, or count this failed attempt.
+pub fn next_attempts(prev: u32, joined: bool) -> u32 {
+    if joined {
+        0
+    } else {
+        prev + 1
     }
 }

@@ -1,6 +1,51 @@
 //! Headset health: battery and temperature zones. docs/code-map.md, Parts.
 
-use crate::api::{Health, Zone};
+use crate::api::{EventKind, Health, Zone};
+
+#[derive(Debug, Clone, Default)]
+pub struct ToastGate {
+    yellow_sent: bool,
+    red_sent: bool,
+}
+
+impl ToastGate {
+    pub fn new() -> ToastGate {
+        ToastGate::default()
+    }
+
+    pub fn reset(&mut self) {
+        self.yellow_sent = false;
+        self.red_sent = false;
+    }
+
+    pub fn observe(&mut self, zone: Zone, playing: bool) -> Option<EventKind> {
+        match zone {
+            Zone::Green => {
+                self.reset();
+                None
+            }
+            Zone::Unknown => None,
+            Zone::Yellow if playing && !self.yellow_sent => {
+                self.yellow_sent = true;
+                Some(EventKind::Warm)
+            }
+            Zone::Red if playing && !self.red_sent => {
+                self.red_sent = true;
+                self.yellow_sent = true;
+                Some(EventKind::Hot)
+            }
+            Zone::Yellow | Zone::Red => None,
+        }
+    }
+}
+
+pub fn toast_text(kind: EventKind, temp_c: f64) -> String {
+    match kind {
+        EventKind::Warm => format!("Headset is warm: {temp_c:.1} C. It may slow down."),
+        EventKind::Hot => format!("Headset is hot: {temp_c:.1} C. Take a break."),
+        _ => String::new(),
+    }
+}
 
 pub fn health_command() -> Vec<String> {
     vec![
