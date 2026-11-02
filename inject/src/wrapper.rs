@@ -52,9 +52,7 @@ pub fn exec_spec(
         Plan::ThreeD { .. } => {
             let folder = format!("{home}/.local/share/flatpak/app/io.github.wivrn.wivrn");
             let filesystems_rw = match existing_fs_rw.filter(|value| !value.is_empty()) {
-                Some(existing)
-                    if existing.split(':').any(|part| part == folder) =>
-                {
+                Some(existing) if existing.split(':').any(|part| part == folder) => {
                     existing.to_string()
                 }
                 Some(existing) => format!("{existing}:{folder}"),
@@ -65,10 +63,7 @@ pub fn exec_spec(
                     "PRESSURE_VESSEL_IMPORT_OPENXR_1_RUNTIMES".to_string(),
                     "1".to_string(),
                 ),
-                (
-                    "PRESSURE_VESSEL_FILESYSTEMS_RW".to_string(),
-                    filesystems_rw,
-                ),
+                ("PRESSURE_VESSEL_FILESYSTEMS_RW".to_string(), filesystems_rw),
                 (
                     "STEAM_COMPAT_LAUNCHER_SERVICE".to_string(),
                     "proton".to_string(),
