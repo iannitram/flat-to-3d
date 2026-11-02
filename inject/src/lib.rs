@@ -19,6 +19,7 @@ pub mod recipes;
 pub mod runs;
 pub mod setup;
 pub mod state;
+pub mod status;
 pub mod steam;
 pub mod stats;
 pub mod tether;
