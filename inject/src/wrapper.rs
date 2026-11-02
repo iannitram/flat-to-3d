@@ -32,6 +32,53 @@ pub enum Plan {
     Flat { reason: FlatReason },
 }
 
+/// The command and environment the wrapper execs for one game launch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecSpec {
+    pub argv: Vec<String>,
+    pub env: Vec<(String, String)>,
+}
+
+/// Build the command and environment for a planned launch.
+pub fn exec_spec(
+    plan: &Plan,
+    argv: &[String],
+    route_env: &[(String, String)],
+    home: &str,
+    existing_fs_rw: Option<&str>,
+) -> ExecSpec {
+    let env = match plan {
+        Plan::Flat { .. } => Vec::new(),
+        Plan::ThreeD { .. } => {
+            let folder = format!("{home}/.local/share/flatpak/app/io.github.wivrn.wivrn");
+            let filesystems_rw = match existing_fs_rw.filter(|value| !value.is_empty()) {
+                Some(existing) if existing.split(':').any(|part| part == folder) => {
+                    existing.to_string()
+                }
+                Some(existing) => format!("{existing}:{folder}"),
+                None => folder,
+            };
+            let mut env = vec![
+                (
+                    "PRESSURE_VESSEL_IMPORT_OPENXR_1_RUNTIMES".to_string(),
+                    "1".to_string(),
+                ),
+                ("PRESSURE_VESSEL_FILESYSTEMS_RW".to_string(), filesystems_rw),
+                (
+                    "STEAM_COMPAT_LAUNCHER_SERVICE".to_string(),
+                    "proton".to_string(),
+                ),
+            ];
+            env.extend_from_slice(route_env);
+            env
+        }
+    };
+    ExecSpec {
+        argv: argv.to_vec(),
+        env,
+    }
+}
+
 /// Decide whether this launch uses its recipe's 3D route or runs flat.
 pub fn plan(link: LinkState, switch_on: bool, recipe: Option<&Recipe>) -> Plan {
     let Some(recipe) = recipe else {
