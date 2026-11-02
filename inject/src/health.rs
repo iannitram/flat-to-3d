@@ -33,7 +33,11 @@ pub fn parse_dumpsys_battery(out: &str) -> Health {
                 _ => "Unknown",
             };
         } else if let Some(value) = line.strip_prefix("temperature:") {
-            temp_c = value.trim().parse::<i32>().ok().map(|value| value as f64 / 10.0);
+            temp_c = value
+                .trim()
+                .parse::<i32>()
+                .ok()
+                .map(|value| value as f64 / 10.0);
         }
     }
 
