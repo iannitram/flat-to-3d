@@ -35,11 +35,24 @@ pub enum UndoAction {
 /// List the steps that restore the game, without changing the record.
 pub fn undo_actions(record: &UndoRecord) -> Vec<UndoAction> {
     let mut actions = Vec::with_capacity(record.created.len() + record.replaced.len() + 1);
-    actions.extend(record.created.iter().rev().cloned().map(UndoAction::RemoveFile));
-    actions.extend(record.replaced.iter().rev().map(|replaced| UndoAction::RestoreFile {
-        backup: replaced.backup.clone(),
-        path: replaced.path.clone(),
-    }));
+    actions.extend(
+        record
+            .created
+            .iter()
+            .rev()
+            .cloned()
+            .map(UndoAction::RemoveFile),
+    );
+    actions.extend(
+        record
+            .replaced
+            .iter()
+            .rev()
+            .map(|replaced| UndoAction::RestoreFile {
+                backup: replaced.backup.clone(),
+                path: replaced.path.clone(),
+            }),
+    );
     actions.push(UndoAction::SetLaunchOptions(
         record.launch_options_before.clone(),
     ));
