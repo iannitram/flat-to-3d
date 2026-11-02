@@ -207,4 +207,22 @@ mod tests {
         assert_eq!(parse_track_frames("abc\u{e9}"), (vec![], String::new()));
         assert_eq!(parse_track_frames("0\u{e9}"), (vec![], String::new()));
     }
+
+    #[test]
+    fn the_start_and_stop_requests_do_nothing_until_their_steps_land() {
+        use super::{step, Effect, Event, Inputs, Phase, Watch};
+        let i = Inputs {
+            auto_3d: true,
+            tunnel_on: true,
+            game_3d_running: true,
+            game_flat_running: true,
+        };
+        for phase in [Phase::Absent, Phase::Plugged, Phase::Up, Phase::Grace { since: 1 }] {
+            for e in [Event::StartRequested, Event::StopRequested] {
+                let w = Watch { phase };
+                let (n, fx) = step(&w, &e, 9, &i);
+                assert_eq!((n, fx), (w, Vec::<Effect>::new()));
+            }
+        }
+    }
 }
