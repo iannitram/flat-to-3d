@@ -84,3 +84,42 @@ pub fn parse_credentials(out: &str) -> Option<(Security, String)> {
         Some((security, passphrase.to_string()))
     }
 }
+
+/// Maximum number of failed attempts to sync the Quest's Wi-Fi network.
+pub const MAX_WIFI_ATTEMPTS: u32 = 3;
+
+/// What the Wi-Fi sync should do with the PC and Quest network names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyncDecision {
+    NoPcWifi,
+    NoQuestWifi,
+    Same,
+    GiveUp,
+    Switch,
+}
+
+/// Decide whether the Quest should join the PC's Wi-Fi network.
+pub fn sync_decision(
+    pc: Option<&str>,
+    quest: Option<&str>,
+    failed_attempts: u32,
+) -> SyncDecision {
+    let Some(pc) = pc else {
+        return SyncDecision::NoPcWifi;
+    };
+    let Some(quest) = quest else {
+        return SyncDecision::NoQuestWifi;
+    };
+    if pc == quest {
+        SyncDecision::Same
+    } else if failed_attempts >= MAX_WIFI_ATTEMPTS {
+        SyncDecision::GiveUp
+    } else {
+        SyncDecision::Switch
+    }
+}
+
+/// Reset the failure counter after joining, or count this failed attempt.
+pub fn next_attempts(prev: u32, joined: bool) -> u32 {
+    if joined { 0 } else { prev + 1 }
+}
