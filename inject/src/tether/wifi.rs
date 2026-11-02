@@ -59,6 +59,9 @@ pub fn shell_quote(s: &str) -> String {
 }
 
 /// Builds the adb command that connects the Quest to a Wi-Fi network.
+///
+/// The returned words carry the passphrase in clear (the locked tests check it). Log or
+/// print them only through `redact_command`, never with `{:?}`, `println!` or an error text.
 pub fn connect_network_command(ssid: &str, security: Security, psk: &str) -> Vec<String> {
     vec![
         "adb".to_string(),
