@@ -21,6 +21,74 @@ impl Security {
     }
 }
 
+/// The NetworkManager command that lists active Wi-Fi networks and their SSIDs.
+pub fn active_ssid_command() -> Vec<String> {
+    ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"]
+        .iter()
+        .map(|word| word.to_string())
+        .collect()
+}
+
+/// The NetworkManager command that reads a saved network's key type and passphrase.
+pub fn credentials_command(ssid: &str) -> Vec<String> {
+    [
+        "nmcli",
+        "-s",
+        "-g",
+        "802-11-wireless-security.key-mgmt,802-11-wireless-security.psk",
+        "connection",
+        "show",
+    ]
+    .iter()
+    .map(|word| word.to_string())
+    .chain(std::iter::once(ssid.to_string()))
+    .collect()
+}
+
+/// The adb command that reads the Quest's Wi-Fi status.
+pub fn quest_ssid_command() -> Vec<String> {
+    ["adb", "shell", "cmd", "wifi", "status"]
+        .iter()
+        .map(|word| word.to_string())
+        .collect()
+}
+
+/// Quotes one word for the Quest shell, including embedded single quotes.
+pub fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
+/// Builds the adb command that connects the Quest to a Wi-Fi network.
+pub fn connect_network_command(ssid: &str, security: Security, psk: &str) -> Vec<String> {
+    vec![
+        "adb".to_string(),
+        "shell".to_string(),
+        format!(
+            "cmd wifi connect-network {} {} {}",
+            shell_quote(ssid),
+            security.as_str(),
+            shell_quote(psk)
+        ),
+    ]
+}
+
+/// Joins command words for logging, replacing a connect-network passphrase with `***`.
+pub fn redact_command(cmd: &[String]) -> String {
+    let line = cmd.join(" ");
+    if let Some(start) = line.find("connect-network ") {
+        let suffix_start = start + "connect-network ".len();
+        let suffix = &line[suffix_start..];
+        if let Some(security_end) = [" wpa2 ", " wpa3 "]
+            .iter()
+            .filter_map(|marker| suffix.find(marker).map(|index| index + marker.len()))
+            .min()
+        {
+            return format!("{}'***'", &line[..suffix_start + security_end]);
+        }
+    }
+    line
+}
+
 /// Undoes terse-mode escaping: `\:` is `:` and `\\` is `\`.
 fn unescape_terse(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
