@@ -58,3 +58,121 @@ pub fn choose_adb(running_exe: Option<&str>, bundled: Option<&str>) -> AdbChoice
         source: AdbSource::Missing,
     }
 }
+
+/// Process operations used by the tether; tests supply a recording runner.
+pub trait CommandRunner {
+    fn run(&mut self, command: &[String]) -> Result<String, String>;
+    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String>;
+    fn stop_relay(&mut self) -> Result<(), String>;
+}
+
+/// The real runner owns only the relay it starts.
+#[derive(Default)]
+pub struct ProcessRunner {
+    relay: Option<std::process::Child>,
+}
+
+impl CommandRunner for ProcessRunner {
+    fn run(&mut self, command: &[String]) -> Result<String, String> {
+        let output = std::process::Command::new(&command[0])
+            .args(&command[1..])
+            .output()
+            .map_err(|_| "Could not run tether command".to_string())?;
+        if !output.status.success() {
+            return Err("Tether command failed".to_string());
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+
+    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String> {
+        let mut child = std::process::Command::new(&command[0])
+            .args(&command[1..])
+            .env("ADB", adb)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|_| "Could not start tether relay".to_string())?;
+        match child.try_wait() {
+            Ok(None) => {
+                self.relay = Some(child);
+                Ok(())
+            }
+            Ok(Some(_)) => Err("Tether relay exited during startup".to_string()),
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                Err("Could not check tether relay".to_string())
+            }
+        }
+    }
+
+    fn stop_relay(&mut self) -> Result<(), String> {
+        if let Some(child) = self.relay.as_mut() {
+            if child
+                .try_wait()
+                .map_err(|_| "Could not check tether relay")?
+                .is_none()
+            {
+                child.kill().map_err(|_| "Could not stop tether relay")?;
+            }
+            child.wait().map_err(|_| "Could not reap tether relay")?;
+            self.relay = None;
+        }
+        Ok(())
+    }
+}
+
+/// Use the chosen adb and headset for every adb word list.
+pub struct AdbRunner<R> {
+    pub runner: R,
+    path: String,
+    serial: String,
+}
+
+impl<R: CommandRunner> AdbRunner<R> {
+    pub fn new(choice: AdbChoice, serial: &str, runner: R) -> Self {
+        Self {
+            runner,
+            path: choice.path,
+            serial: serial.to_string(),
+        }
+    }
+
+    pub fn run(&mut self, command: &[String]) -> Result<String, String> {
+        if command.first().map(String::as_str) != Some("adb") {
+            return self.runner.run(command);
+        }
+        if self.path.is_empty() {
+            return Err("No adb is available".to_string());
+        }
+        let mut words = vec![self.path.clone(), "-s".to_string(), self.serial.clone()];
+        words.extend_from_slice(&command[1..]);
+        self.runner.run(&words)
+    }
+
+    pub fn start_relay(&mut self, command: &[String]) -> Result<(), String> {
+        self.runner.start_relay(command, &self.path)
+    }
+
+    pub fn stop_relay(&mut self) -> Result<(), String> {
+        self.runner.stop_relay()
+    }
+}
+
+pub fn reverse_list_command() -> Vec<String> {
+    vec!["adb".into(), "reverse".into(), "--list".into()]
+}
+
+pub fn install_command(apk: &str) -> Vec<String> {
+    vec!["adb".into(), "install".into(), "-r".into(), apk.into()]
+}
+
+pub fn remove_reverse_command(spec: &str) -> Vec<String> {
+    vec![
+        "adb".into(),
+        "reverse".into(),
+        "--remove".into(),
+        spec.into(),
+    ]
+}
