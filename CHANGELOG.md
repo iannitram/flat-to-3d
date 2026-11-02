@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-02 Code map refreshed to match main: settings, setup, collection, toasts and the tests are present; the command-line rows say what is parsed and what is still stub.
 - 2026-11-01 The engine's first dependencies: serde + serde_json for inject/src/api.rs (E1d).
 - 2026-11-01 Spec re-approved by the owner after M12 and M17 were reworded to rulings 24-41.
 - 2026-11-01 SPEC M12 and M17 reworded from the Inject button to the `flat3d-run` launch wrapper and per-game 3D switch (rulings 24-41); approval back to "not yet" until the owner re-approves.
