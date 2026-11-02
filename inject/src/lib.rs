@@ -19,6 +19,7 @@ pub mod state;
 pub mod steam;
 pub mod stats;
 pub mod tether;
+pub mod toasts;
 pub mod switches;
 pub mod undo;
 pub mod view;
