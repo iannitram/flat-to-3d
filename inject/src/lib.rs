@@ -16,6 +16,7 @@ pub mod setup;
 pub mod state;
 pub mod steam;
 pub mod undo;
+pub mod watch;
 
 use std::fmt;
 
