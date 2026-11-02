@@ -25,9 +25,9 @@ impl RateMeter {
                         (0, 0)
                     }
                     Some((previous_ms, previous_rx, previous_tx)) => {
-                        let dt = now_ms - previous_ms;
+                        let dt = now_ms.saturating_sub(previous_ms);
 
-                        // If time step is zero, return (0, 0) and keep the old reading
+                        // If time did not advance, return (0, 0) and keep the old reading
                         if dt == 0 {
                             return (0, 0);
                         }
