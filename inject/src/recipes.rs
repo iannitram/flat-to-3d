@@ -17,6 +17,10 @@ pub const STATUSES: [&str; 6] = [
 ];
 /// Allowed `stereo-api` values.
 pub const APIS: [&str; 6] = ["dx9", "dx11", "dx12", "vulkan", "opengl", "unknown"];
+/// Allowed `stereo-free` values.
+pub const FREES: [&str; 3] = ["yes", "no", "unclear"];
+/// Allowed `stereo-safe` values.
+pub const SAFES: [&str; 2] = ["yes", "no"];
 /// The keys one recipe file must give, in the order a missing one is reported.
 pub const KEYS: [&str; 9] = [
     "name",
@@ -154,6 +158,41 @@ pub fn parse_recipe(appid: u32, text: &str) -> Result<Recipe, RecipeError> {
         safe: take("stereo-safe")?,
         checked: take("stereo-checked")?,
     })
+}
+
+/// Check a recipe's values against the allowed lists; reports the first bad key.
+/// Only the five checked keys are looked at: free text is not checked.
+pub fn check_recipe(recipe: &Recipe) -> Result<(), RecipeError> {
+    let bad = |key: &str, value: &str| RecipeError::BadValue {
+        key: key.to_string(),
+        value: value.to_string(),
+    };
+    if !STATUSES.contains(&recipe.status.as_str()) {
+        return Err(bad("stereo-status", &recipe.status));
+    }
+    if !APIS.contains(&recipe.api.as_str()) {
+        return Err(bad("stereo-api", &recipe.api));
+    }
+    if !FREES.contains(&recipe.free.as_str()) {
+        return Err(bad("stereo-free", &recipe.free));
+    }
+    if !SAFES.contains(&recipe.safe.as_str()) {
+        return Err(bad("stereo-safe", &recipe.safe));
+    }
+    if !is_date_shape(&recipe.checked) {
+        return Err(bad("stereo-checked", &recipe.checked));
+    }
+    Ok(())
+}
+
+/// `YYYY-MM-DD` by shape only: 10 bytes, `-` at 4 and 7, ASCII digits elsewhere.
+fn is_date_shape(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    bytes.len() == 10
+        && bytes.iter().enumerate().all(|(index, byte)| match index {
+            4 | 7 => *byte == b'-',
+            _ => byte.is_ascii_digit(),
+        })
 }
 
 /// Every recipe under `folder`, keyed by Steam appid. Rejects unknown status or api values.
