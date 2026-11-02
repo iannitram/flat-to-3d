@@ -15,6 +15,7 @@ pub mod runs;
 pub mod setup;
 pub mod state;
 pub mod steam;
+pub mod switches;
 pub mod undo;
 pub mod watch;
 
