@@ -193,6 +193,31 @@ pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) 
                 effects,
             )
         }
+        (Phase::Grace { .. }, Event::Tick) if !i.game_3d_running => {
+            let mut effects = vec![Effect::StopLink];
+            if i.tunnel_on {
+                effects.push(Effect::StopTether);
+            }
+            (
+                Watch {
+                    phase: Phase::Absent,
+                },
+                effects,
+            )
+        }
+        (Phase::Grace { since }, Event::Tick) if now.saturating_sub(since) >= GRACE_SECS => {
+            let mut effects = vec![Effect::StopLink];
+            if i.tunnel_on {
+                effects.push(Effect::StopTether);
+            }
+            effects.push(Effect::Notify(Note::StoppedRestartForFlat));
+            (
+                Watch {
+                    phase: Phase::Absent,
+                },
+                effects,
+            )
+        }
         _ => (*w, vec![]),
     }
 }
