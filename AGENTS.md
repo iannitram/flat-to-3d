@@ -8,7 +8,7 @@ Everything you need to work here is in this repo. The full pipeline and rules (`
 4. **Check that it builds**, then open the PR. CI and a review by another satellite with another model do the rest.
 5. **Label the PR** `by:<machine>` and `model:<model>`, and write `Closes #N`.
 6. **A failed job** gets a comment on the issue saying what happened, and the issue moves up one size (Easy -> Medium -> Hard).
-7. **Use the project's words** from `GLOSSARY.md` and the decisions in `docs/adr/`.
+7. **Use the project's words** from `SPEC.md` and the rulings in `docs/notes/DECISIONS.md`.
 8. **No private details** in code, commits or PR text: no names, e-mail addresses, home paths or machine names. Commit as the no-reply identity.
 
 ## This project
