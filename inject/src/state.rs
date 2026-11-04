@@ -23,16 +23,34 @@ impl EventRing {
 
     /// Restore a ring from saved events, keeping the newest events and resuming numbering.
     pub fn from_events(mut events: Vec<LinkEvent>) -> EventRing {
-        // saturating: a saved list at the top of the u64 range must not wrap or panic
-        let next = events.iter().map(|event| event.seq).max().unwrap_or(0).saturating_add(1);
+        let max = events.iter().map(|event| event.seq).max().unwrap_or(0);
         if events.len() > RING_MAX {
             events.drain(..events.len() - RING_MAX);
         }
-        EventRing { events, next }
+        let mut ring = EventRing {
+            events,
+            next: max.saturating_add(1),
+        };
+        if max == u64::MAX {
+            ring.renumber();
+        }
+        ring
     }
 
-    /// Add an event and return its sequence number.
+    /// Number the retained events 1, 2, … again, so numbering can go on past the top of the range.
+    fn renumber(&mut self) {
+        for (i, event) in self.events.iter_mut().enumerate() {
+            event.seq = i as u64 + 1;
+        }
+        self.next = self.events.len() as u64 + 1;
+    }
+
+    /// Add an event and return its sequence number. At the top of the range the retained events are
+    /// renumbered from one first (see [`EventRing::renumber`]).
     pub fn push(&mut self, kind: EventKind, text: &str) -> u64 {
+        if self.next == u64::MAX {
+            self.renumber();
+        }
         let seq = self.next;
         self.events.push(LinkEvent {
             seq,
