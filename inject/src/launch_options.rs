@@ -4,8 +4,48 @@ pub const WRAPPER: &str = "flat3d-run";
 
 const COMMAND: &str = "%command%";
 
+/// The words of `options`, split on whitespace outside double quotes. A quoted value such as
+/// `NAME="a b"` is one word, so the wrapper is never put inside it and its spaces survive.
+/// When `%command%` is only inside quotes (`sh -c "x %command% y"`), it is not a word of its own,
+/// so the plain whitespace split is used instead and the command stays visible.
 fn words(options: &str) -> Vec<&str> {
-    options.split_whitespace().collect()
+    let quoted_split = quote_split(options);
+    if !quoted_split.contains(&COMMAND) && options.contains(COMMAND) {
+        return options.split_whitespace().collect();
+    }
+    quoted_split
+}
+
+fn quote_split(options: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = None;
+    let mut quoted = false;
+    let mut escaped = false;
+    for (i, c) in options.char_indices() {
+        // Inside double quotes a backslash escapes the next character, so `\"` does not close the quote.
+        if escaped {
+            escaped = false;
+        } else if c == '\\' && quoted {
+            escaped = true;
+        } else if c == '"' {
+            quoted = !quoted;
+        }
+        if c.is_whitespace() && !quoted {
+            if let Some(from) = start.take() {
+                out.push(&options[from..i]);
+            }
+        } else if start.is_none() {
+            start = Some(i);
+        }
+    }
+    if quoted {
+        // An unclosed quote is broken input: split it as before rather than let it hide the command.
+        return options.split_whitespace().collect();
+    }
+    if let Some(from) = start {
+        out.push(&options[from..]);
+    }
+    out
 }
 
 fn is_wrapper(word: &str) -> bool {
