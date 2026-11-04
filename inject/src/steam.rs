@@ -110,7 +110,12 @@ fn game_from_manifest(text: &str, library: &Path) -> Option<Game> {
 
 /// True when `name` is one plain folder name. An absolute path, a `..` or an empty value would point
 /// outside `steamapps/common`, and `Path::join` with an absolute path replaces the whole base.
+/// Windows drops trailing dots and spaces, so `...` names `common` itself and `Game 50.` names the
+/// sibling `Game 50`: any name ending in a dot or a space is refused.
 fn is_folder_name(name: &str) -> bool {
+    if name.ends_with('.') || name.ends_with(' ') {
+        return false;
+    }
     let mut parts = Path::new(name).components();
     matches!(
         (parts.next(), parts.next()),
@@ -415,6 +420,9 @@ mod tests {
             (46, "/"),
             (47, ""),
             (48, "Game/../../escape"),
+            (49, "..."),
+            (50, "Game 50."),
+            (51, "Game 51 "),
         ];
         for (appid, installdir) in installdirs {
             let text = format!(
