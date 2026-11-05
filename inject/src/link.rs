@@ -186,3 +186,81 @@ pub fn start_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> 
     }
     Ok(LinkState::Ready)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn system_runner_empty_command_stderr() {
+        let out = SystemRunner.run(&[]);
+        assert!(!out.success);
+        assert!(out.stdout.is_empty());
+        assert_eq!(out.stderr, "empty command");
+    }
+
+    #[test]
+    fn system_runner_spawn_error_stdout_empty() {
+        let out = SystemRunner.run(&["flat3d-no-such-program".into()]);
+        assert!(!out.success);
+        assert!(out.stdout.is_empty());
+    }
+
+    #[test]
+    fn adb_failing_runs_nothing_more() {
+        struct Fake(Vec<Vec<String>>);
+        impl CommandRunner for Fake {
+            fn run(&mut self, command: &[String]) -> CommandOutput {
+                self.0.push(command.to_vec());
+                CommandOutput {
+                    success: false,
+                    stdout: String::new(),
+                    stderr: "adb: not found".into(),
+                }
+            }
+        }
+        let mut f = Fake(Vec::new());
+        assert!(start_3d(&mut f).is_err());
+        assert_eq!(f.0.len(), 1);
+    }
+
+    #[test]
+    fn step_three_failing_stops_after_four_commands() {
+        struct Fake {
+            step: usize,
+            ran: Vec<Vec<String>>,
+        }
+        impl CommandRunner for Fake {
+            fn run(&mut self, command: &[String]) -> CommandOutput {
+                self.ran.push(command.to_vec());
+                let out = match self.step {
+                    0 => CommandOutput {
+                        success: true,
+                        stdout: "List of devices attached\n123\tdevice\n".into(),
+                        stderr: String::new(),
+                    },
+                    1 | 2 => CommandOutput {
+                        success: true,
+                        stdout: String::new(),
+                        stderr: String::new(),
+                    },
+                    _ => CommandOutput {
+                        success: false,
+                        stdout: String::new(),
+                        stderr: "Error: Activity not found\n".into(),
+                    },
+                };
+                self.step += 1;
+                out
+            }
+        }
+        let mut f = Fake {
+            step: 0,
+            ran: Vec::new(),
+        };
+        let err = start_3d(&mut f).unwrap_err();
+        assert!(err.command.starts_with("adb shell am start"));
+        assert_eq!(err.message, "Error: Activity not found");
+        assert_eq!(f.ran.len(), 4);
+    }
+}
