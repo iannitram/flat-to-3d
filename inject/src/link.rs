@@ -1,7 +1,5 @@
 //! Start 3D and Stop 3D over WiVRn's wired mode (`adb reverse tcp:9757`).
 
-use crate::NotBuilt;
-
 /// WiVRn's port, reversed over USB.
 pub const WIVRN_PORT: u16 = 9757;
 
@@ -46,16 +44,8 @@ pub fn headset_from_adb(stdout: &str) -> Headset {
     }
 }
 
-/// Where the headset link stands.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LinkState {
-    /// adb lists the Quest.
-    pub headset_seen: bool,
-    /// Quest Tether reports its link.
-    pub tether_up: bool,
-    /// adb reverse is set and the WiVRn server is running.
-    pub wivrn_ready: bool,
-}
+/// Where the headset link stands (the API's enum).
+pub use crate::api::LinkState;
 
 /// The commands Start 3D runs, in order (pure: tests assert on this list).
 pub fn start_3d_commands() -> Vec<Vec<String>> {
@@ -105,18 +95,94 @@ pub fn stop_3d_commands() -> Vec<Vec<String>> {
     ]
 }
 
-/// Run [`start_3d_commands`] and report where the link stands.
-pub fn start_3d() -> Result<LinkState, NotBuilt> {
-    Err(NotBuilt("link::start_3d: see the Start 3D issue"))
+/// What one command left behind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandOutput {
+    /// The command exited with success.
+    pub success: bool,
+    /// Its standard output, as lossy UTF-8.
+    pub stdout: String,
+    /// Its standard error, as lossy UTF-8.
+    pub stderr: String,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Runs one command and waits for it (tests fake this).
+pub trait CommandRunner {
+    /// Run `command` (program, then its arguments) and report its output.
+    fn run(&mut self, command: &[String]) -> CommandOutput;
+}
 
-    #[test]
-    fn stub_exists() {
-        assert!(start_3d().is_err());
-        assert_eq!(WIVRN_PORT, 9757);
+/// The real runner: `std::process::Command`, waiting for the exit.
+pub struct SystemRunner;
+
+impl CommandRunner for SystemRunner {
+    fn run(&mut self, command: &[String]) -> CommandOutput {
+        let Some((program, args)) = command.split_first() else {
+            return CommandOutput {
+                success: false,
+                stdout: String::new(),
+                stderr: "empty command".into(),
+            };
+        };
+        match std::process::Command::new(program).args(args).output() {
+            Ok(output) => CommandOutput {
+                success: output.status.success(),
+                stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+            },
+            Err(error) => CommandOutput {
+                success: false,
+                stdout: String::new(),
+                stderr: format!("{program}: {error}"),
+            },
+        }
     }
+}
+
+/// A Start 3D command that failed: its words, and its trimmed stderr.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkError {
+    /// The command's words joined with spaces.
+    pub command: String,
+    /// Its stderr, trimmed.
+    pub message: String,
+}
+
+impl From<LinkError> for crate::api::ApiError {
+    fn from(e: LinkError) -> Self {
+        crate::api::ApiError::new("command-failed", &format!("{}: {}", e.command, e.message))
+    }
+}
+
+/// Run one command; a failure becomes a [`LinkError`] naming it.
+fn run_step(
+    runner: &mut dyn CommandRunner,
+    command: &[String],
+) -> Result<CommandOutput, LinkError> {
+    let output = runner.run(command);
+    if output.success {
+        Ok(output)
+    } else {
+        Err(LinkError {
+            command: command.join(" "),
+            message: output.stderr.trim().to_string(),
+        })
+    }
+}
+
+/// Run [`start_3d_commands`] in order and report where the link stands. A missing or
+/// unauthorised headset stops after `adb devices`; the first failing command stops the rest.
+/// It never returns `Starting`.
+pub fn start_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
+    let commands = start_3d_commands();
+    let devices = run_step(runner, &commands[0])?;
+    match headset_from_adb(&devices.stdout) {
+        Headset::Missing => return Ok(LinkState::NoHeadset),
+        Headset::Unauthorised => return Ok(LinkState::Unauthorised),
+        Headset::Present => {}
+    }
+    for command in &commands[1..] {
+        run_step(runner, command)?;
+    }
+    Ok(LinkState::Ready)
 }
