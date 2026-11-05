@@ -2,7 +2,6 @@
 //! They live as a data file in this repo under `recipes/` (the owner's 2026-10-26 ruling, #15);
 //! for 1.0 the engine needs Spider-Man 2's (SPEC M12).
 
-use crate::NotBuilt;
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -195,10 +194,54 @@ fn is_date_shape(text: &str) -> bool {
         })
 }
 
-/// Every recipe under `folder`, keyed by Steam appid. Rejects unknown status or api values.
-pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, NotBuilt> {
-    let _ = folder;
-    Err(NotBuilt("recipes::load_recipes: see the recipes issue"))
+/// Every `<appid>-<slug>.recipe` file under `folder`, parsed and checked, keyed by Steam appid.
+/// Other files are ignored. A file's own error comes back as [`RecipeError::InFile`] naming it.
+pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, RecipeError> {
+    let entries = std::fs::read_dir(folder).map_err(|e| RecipeError::Io {
+        path: folder.display().to_string(),
+        message: e.to_string(),
+    })?;
+    let mut names: Vec<String> = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|e| RecipeError::Io {
+            path: folder.display().to_string(),
+            message: e.to_string(),
+        })?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.ends_with(".recipe") {
+            names.push(name);
+        }
+    }
+    names.sort();
+    let mut recipes: BTreeMap<u32, Recipe> = BTreeMap::new();
+    let mut files: BTreeMap<u32, String> = BTreeMap::new();
+    for name in names {
+        let appid = name
+            .split_once('-')
+            .and_then(|(id, _)| id.parse::<u32>().ok())
+            .ok_or_else(|| RecipeError::BadFileName(name.clone()))?;
+        let path = folder.join(&name);
+        let text = std::fs::read_to_string(&path).map_err(|e| RecipeError::Io {
+            path: path.display().to_string(),
+            message: e.to_string(),
+        })?;
+        let in_file = |error: RecipeError| RecipeError::InFile {
+            file: name.clone(),
+            error: Box::new(error),
+        };
+        let recipe = parse_recipe(appid, &text).map_err(in_file)?;
+        check_recipe(&recipe).map_err(in_file)?;
+        if let Some(first) = files.get(&appid) {
+            return Err(RecipeError::DuplicateAppid {
+                appid,
+                first: first.clone(),
+                second: name,
+            });
+        }
+        files.insert(appid, name.clone());
+        recipes.insert(appid, recipe);
+    }
+    Ok(recipes)
 }
 
 #[cfg(test)]
@@ -206,8 +249,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stub_exists() {
-        assert!(load_recipes(Path::new("recipes")).is_err());
+    fn statuses_include_works_now() {
         assert!(STATUSES.contains(&"works-now"));
     }
 }
