@@ -155,4 +155,29 @@ mod tests {
         };
         assert_eq!(parse(&["list".to_string()]), Ok(expected));
     }
+
+    #[test]
+    fn json_flag_may_stand_between_command_and_argument() {
+        let expected = Cli {
+            command: Command::Inject { appid: 2651280 },
+            json: true,
+        };
+        let args = [
+            "inject".to_string(),
+            "--json".to_string(),
+            "2651280".to_string(),
+        ];
+        assert_eq!(parse(&args), Ok(expected));
+    }
+
+    #[test]
+    fn execute_human_not_built_goes_to_stderr() {
+        let out = execute(&["list".to_string()]);
+        assert_eq!(out.code, 2);
+        assert_eq!(out.stdout, "");
+        assert_eq!(
+            out.stderr,
+            "error: not built yet: cli: the command bodies are wired by #27\n"
+        );
+    }
 }
