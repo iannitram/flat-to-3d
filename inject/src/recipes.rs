@@ -252,4 +252,33 @@ mod tests {
     fn statuses_include_works_now() {
         assert!(STATUSES.contains(&"works-now"));
     }
+
+    #[test]
+    fn an_unreadable_recipe_file_is_an_io_error_naming_the_path() {
+        let dir =
+            std::env::temp_dir().join(format!("flat3d-recipes-unreadable-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("100-unreadable.recipe")).unwrap();
+        match load_recipes(&dir) {
+            Err(RecipeError::Io { path, .. }) => {
+                assert!(path.contains("100-unreadable.recipe"), "{path}");
+            }
+            other => panic!("expected Io, got {other:?}"),
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_file_name_without_a_dash_is_a_bad_file_name() {
+        let dir =
+            std::env::temp_dir().join(format!("flat3d-recipes-nodash-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("12345.recipe"), "name: Test\n").unwrap();
+        assert_eq!(
+            load_recipes(&dir),
+            Err(RecipeError::BadFileName("12345.recipe".into()))
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
