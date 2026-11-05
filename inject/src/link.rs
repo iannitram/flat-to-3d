@@ -187,6 +187,21 @@ pub fn start_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> 
     Ok(LinkState::Ready)
 }
 
+/// Run all of [`stop_3d_commands`] in order, whatever each returns: with the headset
+/// unplugged the two adb steps fail, and the server must still stop. The last command (the
+/// server stop) decides: success is `Stopped`, a failure is a [`LinkError`] naming it.
+pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
+    let commands = stop_3d_commands();
+    let (last, before) = commands
+        .split_last()
+        .expect("stop_3d_commands is not empty");
+    for command in before {
+        let _ = runner.run(command);
+    }
+    run_step(runner, last)?;
+    Ok(LinkState::Stopped)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
