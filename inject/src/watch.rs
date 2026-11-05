@@ -130,7 +130,7 @@ pub enum Effect {
     Notify(Note),
 }
 
-/// Apply a headset plug or unplug event without running its effects.
+/// Apply one event (plug, unplug, tick, or a hand-pressed Start/Stop) without running its effects.
 pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) {
     match (w.phase, e) {
         (Phase::Absent, Event::Plugged) if i.auto_3d => {
@@ -218,7 +218,52 @@ pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) 
                 effects,
             )
         }
+        (Phase::Plugged, Event::StartRequested) => (
+            Watch { phase: Phase::Up },
+            vec![Effect::StartLink, Effect::Notify(Note::Ready)],
+        ),
+        (Phase::Grace { .. }, Event::StartRequested) => {
+            (Watch { phase: Phase::Up }, vec![Effect::Reattach])
+        }
+        (Phase::Up | Phase::Grace { .. }, Event::StopRequested) => (
+            Watch {
+                phase: Phase::Plugged,
+            },
+            vec![Effect::StopLink],
+        ),
         _ => (*w, vec![]),
+    }
+}
+
+/// The link commands an effect runs: Start 3D's list, the reattach part of it (from `adb
+/// reverse` on; the server unit is already running), or Stop 3D's list. The tether and toast
+/// effects run no link commands.
+pub fn link_commands(effect: &Effect) -> Vec<Vec<String>> {
+    match effect {
+        Effect::StartLink => crate::link::start_3d_commands(),
+        Effect::Reattach => crate::link::start_3d_commands()[2..].to_vec(),
+        Effect::StopLink => crate::link::stop_3d_commands(),
+        Effect::StartTether | Effect::StopTether | Effect::Notify(_) => Vec::new(),
+    }
+}
+
+/// The toast text for a note, the same on every face.
+pub fn note_text(n: Note) -> &'static str {
+    match n {
+        Note::Ready => "3D is ready. Press Play on a 3D Ready game.",
+        Note::LateRestartFor3d => "Headset connected. Restart the game to play it in 3D.",
+        Note::StoppedRestartForFlat => "Headset link closed. Restart the game to play it flat.",
+        Note::AllowUsbDebugging => "Put the headset on and allow USB debugging.",
+    }
+}
+
+/// The note's kind word, for the state file.
+pub fn note_kind(n: Note) -> &'static str {
+    match n {
+        Note::Ready => "ready",
+        Note::LateRestartFor3d => "late-plug",
+        Note::StoppedRestartForFlat => "grace-ended",
+        Note::AllowUsbDebugging => "allow-debugging",
     }
 }
 
@@ -231,28 +276,5 @@ mod tests {
         assert_eq!(parse_track_frames("zzz\u{e9}rest"), (vec![], String::new()));
         assert_eq!(parse_track_frames("abc\u{e9}"), (vec![], String::new()));
         assert_eq!(parse_track_frames("0\u{e9}"), (vec![], String::new()));
-    }
-
-    #[test]
-    fn the_start_and_stop_requests_do_nothing_until_their_steps_land() {
-        use super::{step, Effect, Event, Inputs, Phase, Watch};
-        let i = Inputs {
-            auto_3d: true,
-            tunnel_on: true,
-            game_3d_running: true,
-            game_flat_running: true,
-        };
-        for phase in [
-            Phase::Absent,
-            Phase::Plugged,
-            Phase::Up,
-            Phase::Grace { since: 1 },
-        ] {
-            for e in [Event::StartRequested, Event::StopRequested] {
-                let w = Watch { phase };
-                let (n, fx) = step(&w, &e, 9, &i);
-                assert_eq!((n, fx), (w, Vec::<Effect>::new()));
-            }
-        }
     }
 }
