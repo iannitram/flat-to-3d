@@ -87,6 +87,9 @@ pub fn parse_tun0_bytes(proc_net_dev: &str) -> Option<(u64, u64)> {
     for line in proc_net_dev.lines() {
         if let Some(rest) = line.trim_start().strip_prefix("tun0:") {
             let fields: Vec<&str> = rest.split_whitespace().collect();
+            if fields.iter().any(|field| field.parse::<u64>().is_err()) {
+                return None;
+            }
             let receive = fields.first()?.parse::<u64>().ok()?;
             let transmit = fields.get(8)?.parse::<u64>().ok()?;
             return Some((receive, transmit));
