@@ -69,3 +69,48 @@ pub fn remove_reverse_command() -> Vec<String> {
         "localabstract:gnirehtet".to_string(),
     ]
 }
+
+/// tun0 has an IPv4 address in `ip addr show tun0` output.
+pub fn tun0_present(ip_addr_output: &str) -> bool {
+    ip_addr_output
+        .lines()
+        .any(|line| line.trim_start().starts_with("inet "))
+}
+
+/// The output is empty or the device is missing.
+pub fn tun0_gone(output: &str) -> bool {
+    output.trim().is_empty() || output.contains("does not exist")
+}
+
+/// Receive and transmit bytes for tun0 from `/proc/net/dev` text.
+pub fn parse_tun0_bytes(proc_net_dev: &str) -> Option<(u64, u64)> {
+    for line in proc_net_dev.lines() {
+        if let Some(rest) = line.trim_start().strip_prefix("tun0:") {
+            let fields: Vec<&str> = rest.split_whitespace().collect();
+            if fields.iter().any(|field| field.parse::<u64>().is_err()) {
+                return None;
+            }
+            let receive = fields.first()?.parse::<u64>().ok()?;
+            let transmit = fields.get(8)?.parse::<u64>().ok()?;
+            return Some((receive, transmit));
+        }
+    }
+    None
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TunnelState {
+    Off,
+    Starting,
+    Connected,
+}
+
+pub fn tunnel_state(relay_alive: bool, tun0: bool) -> TunnelState {
+    if !relay_alive {
+        TunnelState::Off
+    } else if !tun0 {
+        TunnelState::Starting
+    } else {
+        TunnelState::Connected
+    }
+}
