@@ -48,6 +48,9 @@ pub fn profile_dir(compatdata: &Path, appid: u32, exe_name: &str) -> PathBuf {
 pub const PROFILE_FILE: &str = "config.txt";
 /// Copy of the game's own profile, made before we replace it.
 pub const BACKUP_FILE: &str = "config.txt.flat3d-backup";
+/// Where the backup is copied first. It is renamed to `BACKUP_FILE` only once the copy is
+/// whole, so a failed copy never leaves a partial backup that would refuse every later apply.
+pub const BACKUP_PARTIAL_FILE: &str = "config.txt.flat3d-backup.partial";
 /// Marks a profile directory that we have already set up. It is recorded in `created`, so
 /// undo removes it, and while it exists a second apply is refused.
 pub const MARKER_FILE: &str = ".flat3d-applied";
@@ -57,7 +60,8 @@ pub const MARKER_FILE: &str = ".flat3d-applied";
 pub struct Applied {
     /// Every change, for undo.
     pub record: UndoRecord,
-    /// The environment the wrapper starts the game with.
+    /// The environment the wrapper starts the game with. Empty for now: the real UEVR
+    /// environment comes with the device half of #51, which waits on #32.
     pub env: Vec<(String, String)>,
 }
 
@@ -94,11 +98,7 @@ pub fn apply(
         rollback(&record);
         return Err(e);
     }
-    let env = vec![(
-        "FLAT3D_UEVR_PROFILE".to_owned(),
-        dir.to_string_lossy().into_owned(),
-    )];
-    Ok(Applied { record, env })
+    Ok(Applied { record, env: Vec::new() })
 }
 
 fn write_all(
@@ -114,7 +114,11 @@ fn write_all(
     fs::write(marker, "").map_err(|e| io("cannot write", marker, e))?;
     record.created.push(marker.to_path_buf());
     if profile.exists() {
-        fs::copy(profile, backup).map_err(|e| io("cannot back up to", backup, e))?;
+        let partial = dir.join(BACKUP_PARTIAL_FILE);
+        if let Err(e) = fs::copy(profile, &partial).and_then(|_| fs::rename(&partial, backup)) {
+            let _ = fs::remove_file(&partial);
+            return Err(io("cannot back up to", backup, e));
+        }
         record.replaced.push(Replaced {
             path: profile.to_path_buf(),
             backup: backup.to_path_buf(),
@@ -172,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn a_fresh_prefix_gets_the_profile_and_an_env() {
+    fn a_fresh_prefix_gets_the_profile_and_no_env_yet() {
         let root = fake_compatdata("fresh");
         let a = apply(&root, 7, "Game-Win64-Shipping.exe", &SETTINGS, "-x %command%").unwrap();
         let dir = profile_dir(&root, 7, "Game-Win64-Shipping.exe");
@@ -181,10 +185,7 @@ mod tests {
         assert_eq!(a.record.launch_options_before, "-x %command%");
         assert_eq!(a.record.created, vec![dir.join(MARKER_FILE), dir.join(PROFILE_FILE)]);
         assert!(a.record.replaced.is_empty());
-        assert_eq!(
-            a.env,
-            vec![("FLAT3D_UEVR_PROFILE".to_owned(), dir.to_string_lossy().into_owned())]
-        );
+        assert!(a.env.is_empty());
     }
 
     #[test]
@@ -251,6 +252,26 @@ mod tests {
         // A directory where the profile file belongs makes the write fail after the marker.
         fs::create_dir_all(dir.join(PROFILE_FILE)).unwrap();
         assert!(apply(&root, 7, "G.exe", &SETTINGS, "").is_err());
+        assert_eq!(files_in(&dir), vec![PROFILE_FILE.to_owned()]);
+    }
+
+    #[test]
+    fn a_failed_backup_leaves_no_backup_and_a_later_apply_works() {
+        let root = fake_compatdata("fail-backup");
+        let dir = profile_dir(&root, 7, "G.exe");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(PROFILE_FILE), "mine\n").unwrap();
+        // A directory where the partial copy goes makes the backup copy fail.
+        fs::create_dir_all(dir.join(BACKUP_PARTIAL_FILE)).unwrap();
+        assert!(apply(&root, 7, "G.exe", &SETTINGS, "").is_err());
+        assert!(!dir.join(BACKUP_FILE).exists());
+        assert!(!dir.join(MARKER_FILE).exists());
+        assert_eq!(fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(), "mine\n");
+        fs::remove_dir(dir.join(BACKUP_PARTIAL_FILE)).unwrap();
+        let a = apply(&root, 7, "G.exe", &SETTINGS, "").unwrap();
+        assert_eq!(fs::read_to_string(dir.join(BACKUP_FILE)).unwrap(), "mine\n");
+        assert!(!dir.join(BACKUP_PARTIAL_FILE).exists());
+        undo(&a.record);
         assert_eq!(files_in(&dir), vec![PROFILE_FILE.to_owned()]);
     }
 }
