@@ -37,6 +37,16 @@ impl<R: CommandRunner> Tether<R> {
 
     /// A foreign relay owns its client and reconnects. Only add the WiVRn link.
     pub fn connect(&mut self, foreign_relay: bool) -> Result<TetherMode, String> {
+        self.connect_with(foreign_relay, true)
+    }
+
+    /// Connect the tunnel alone: check the headset, then (without a foreign relay) the client
+    /// and relay. WiVRn's server, reverse and app are left to Start 3D.
+    pub fn connect_tunnel_only(&mut self, foreign_relay: bool) -> Result<TetherMode, String> {
+        self.connect_with(foreign_relay, false)
+    }
+
+    fn connect_with(&mut self, foreign_relay: bool, wivrn: bool) -> Result<TetherMode, String> {
         if self.mode != TetherMode::Off || !self.added_reverses.is_empty() {
             return Err("Tether is already active or needs cleanup".to_string());
         }
@@ -46,7 +56,7 @@ impl<R: CommandRunner> Tether<R> {
                 adb::bundled_adb(&self.home)
             ));
         }
-        let result = self.connect_steps(foreign_relay);
+        let result = self.connect_steps(foreign_relay, wivrn);
         if let Err(mut error) = result {
             if self.client_started {
                 if self.adb.run(&relay::client_stop_command()).is_err() {
@@ -63,9 +73,14 @@ impl<R: CommandRunner> Tether<R> {
         Ok(self.mode)
     }
 
-    fn connect_steps(&mut self, foreign_relay: bool) -> Result<(), String> {
+    fn connect_steps(&mut self, foreign_relay: bool, wivrn: bool) -> Result<(), String> {
         let existing = self.adb.run(&adb::reverse_list_command())?;
-        for command in link::start_3d_commands() {
+        let mut start = link::start_3d_commands();
+        if !wivrn {
+            // Keep only the `adb devices` check.
+            start.truncate(1);
+        }
+        for command in start {
             self.run_connect_command(&command, &existing)?;
         }
         if !foreign_relay {
@@ -148,5 +163,19 @@ impl<R: CommandRunner> Tether<R> {
         self.client_started = false;
         self.added_reverses.clear();
         Ok(())
+    }
+
+    /// Tear the tether down on this machine only, for when the headset is already gone: stop our
+    /// relay (if we own one) and forget the client and reverses, without any device command.
+    pub fn drop_local(&mut self) -> Result<(), String> {
+        let result = if self.mode == TetherMode::Own {
+            self.adb.stop_relay()
+        } else {
+            Ok(())
+        };
+        self.mode = TetherMode::Off;
+        self.client_started = false;
+        self.added_reverses.clear();
+        result
     }
 }
