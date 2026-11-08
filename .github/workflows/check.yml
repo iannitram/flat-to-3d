@@ -28,3 +28,16 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 -m py_compile decky/main.py
+
+  app:
+    # The desktop app (iced, Desktop Mode): a crate that links the engine by path. The system
+    # libraries iced needs are installed first on this Ubuntu 24.04 runner. No WebKitGTK, no Node.
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          DEBIAN_FRONTEND: noninteractive
+        run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --manifest-path app/Cargo.toml
+      - run: cargo check --manifest-path app/Cargo.toml
