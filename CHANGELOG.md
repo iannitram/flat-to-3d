@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-07 Roadmap and code map audited against main (ff12fef): engine progress per module, issue numbers on every planned part, a "Where it stands" section and stage table with done and open issues, the critical path to a first Zero Company try; #66 found closed but not on main.
 - 2026-11-02 Code map refreshed to match main: settings, setup, collection, toasts and the tests are present; the command-line rows say what is parsed and what is still stub.
 - 2026-11-01 The engine's first dependencies: serde + serde_json for inject/src/api.rs (E1d).
 - 2026-11-01 Spec re-approved by the owner after M12 and M17 were reworded to rulings 24-41.
