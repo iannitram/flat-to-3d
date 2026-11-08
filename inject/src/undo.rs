@@ -1,5 +1,8 @@
 //! The undo record: how to put a game back to flat. docs/code-map.md, Parts.
 
+use crate::api::{ApiError, UndoResult};
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 /// A file an injector replaced, and the backup it made first.
@@ -173,4 +176,186 @@ impl UndoRecord {
 /// Where one game's undo record lives, `<data_dir>/undo/<appid>.txt`.
 pub fn record_path(data_dir: &Path, appid: u32) -> PathBuf {
     data_dir.join("undo").join(format!("{}.txt", appid))
+}
+
+/// The engine's data directory: `$XDG_DATA_HOME/flat3d`, or `~/.local/share/flat3d` when
+/// `XDG_DATA_HOME` is unset or empty.
+pub fn data_dir(xdg_data_home: Option<&str>, home: &str) -> PathBuf {
+    match xdg_data_home.filter(|s| !s.is_empty()) {
+        Some(xdg) => PathBuf::from(xdg).join("flat3d"),
+        None => PathBuf::from(home).join(".local").join("share").join("flat3d"),
+    }
+}
+
+fn io_error(what: &str, path: &Path, e: &io::Error) -> ApiError {
+    ApiError::new("io", &format!("{} {}: {}", what, path.display(), e))
+}
+
+/// Put a game back to flat from its undo record (`undo <appid>`).
+///
+/// Runs the file steps of [`undo_actions`] on disk: created files are removed, replaced files
+/// get their backups copied back. The launch option step is not run here: the Decky plugin
+/// removes only our wrapper word from the line (code map). The record is deleted only after
+/// every file step has worked, so a failed undo can be run again; a file already gone or a
+/// backup already restored counts as done.
+pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
+    let path = record_path(data_dir, appid);
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            return Err(ApiError::new(
+                "not-found",
+                &format!("no undo record for {}", appid),
+            ));
+        }
+        Err(e) => return Err(io_error("cannot read", &path, &e)),
+    };
+    let record = UndoRecord::from_text(&text).map_err(|m| {
+        ApiError::new("command-failed", &format!("undo record for {}: {}", appid, m))
+    })?;
+    if record.appid != appid {
+        return Err(ApiError::new(
+            "command-failed",
+            &format!("undo record is for {}, not {}", record.appid, appid),
+        ));
+    }
+
+    let mut restored = Vec::new();
+    for action in undo_actions(&record) {
+        match action {
+            UndoAction::RemoveFile(file) => match fs::remove_file(&file) {
+                Ok(()) => restored.push(format!("removed {}", file.display())),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    restored.push(format!("already gone {}", file.display()))
+                }
+                Err(e) => return Err(io_error("cannot remove", &file, &e)),
+            },
+            UndoAction::RestoreFile { backup, path } => match fs::copy(&backup, &path) {
+                Ok(_) => {
+                    fs::remove_file(&backup).map_err(|e| io_error("cannot remove", &backup, &e))?;
+                    restored.push(format!("restored {} from {}", path.display(), backup.display()));
+                }
+                Err(e) if e.kind() == io::ErrorKind::NotFound && !backup.exists() => {
+                    restored.push(format!("already restored {}", path.display()))
+                }
+                Err(e) => return Err(io_error("cannot restore", &path, &e)),
+            },
+            UndoAction::SetLaunchOptions(_) => {}
+        }
+    }
+
+    fs::remove_file(&path).map_err(|e| io_error("cannot remove", &path, &e))?;
+    let summary = format!(
+        "{} change(s) put back for {}; the launch option is left to the Decky plugin",
+        restored.len(),
+        appid
+    );
+    Ok(UndoResult {
+        appid,
+        restored,
+        summary,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A fresh folder under the system temp dir for one test; the name keeps tests apart.
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("flat3d-undo-{}-{}", std::process::id(), name));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// A fake game folder after an inject: one file created, one replaced with a backup, and
+    /// the undo record that says so.
+    fn injected(root: &Path, appid: u32) -> PathBuf {
+        let game = root.join("game");
+        fs::create_dir_all(&game).unwrap();
+        let data = root.join("data");
+        fs::create_dir_all(data.join("undo")).unwrap();
+        fs::write(game.join("a.dll"), "injected").unwrap();
+        fs::write(game.join("b.ini"), "stereo").unwrap();
+        fs::write(game.join("b.ini.bak"), "original").unwrap();
+        let record = UndoRecord {
+            appid,
+            launch_options_before: "-novid".to_string(),
+            created: vec![game.join("a.dll")],
+            replaced: vec![Replaced {
+                path: game.join("b.ini"),
+                backup: game.join("b.ini.bak"),
+            }],
+        };
+        fs::write(record_path(&data, appid), record.to_text()).unwrap();
+        data
+    }
+
+    #[test]
+    fn undo_puts_the_files_back_and_deletes_the_record() {
+        let root = scratch("clean");
+        let data = injected(&root, 2651280);
+        let game = root.join("game");
+
+        let got = undo_game(&data, 2651280).unwrap();
+
+        assert_eq!(got.appid, 2651280);
+        assert_eq!(got.restored.len(), 2);
+        assert!(got.restored[0].starts_with("removed "));
+        assert!(got.restored[1].starts_with("restored "));
+        assert!(got.summary.contains("2 change(s)"));
+        assert!(!game.join("a.dll").exists());
+        assert_eq!(fs::read_to_string(game.join("b.ini")).unwrap(), "original");
+        assert!(!game.join("b.ini.bak").exists());
+        assert!(!record_path(&data, 2651280).exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_second_undo_has_no_record() {
+        let root = scratch("second");
+        let data = injected(&root, 7);
+        undo_game(&data, 7).unwrap();
+        let err = undo_game(&data, 7).unwrap_err();
+        assert_eq!(err.code, "not-found");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_file_already_gone_counts_as_done() {
+        let root = scratch("gone");
+        let data = injected(&root, 8);
+        fs::remove_file(root.join("game").join("a.dll")).unwrap();
+        let got = undo_game(&data, 8).unwrap();
+        assert!(got.restored[0].starts_with("already gone "));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_record_for_another_game_is_refused() {
+        let root = scratch("other");
+        let data = injected(&root, 9);
+        fs::copy(record_path(&data, 9), record_path(&data, 10)).unwrap();
+        let err = undo_game(&data, 10).unwrap_err();
+        assert_eq!(err.code, "command-failed");
+        assert!(record_path(&data, 10).exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_missing_record_is_not_found() {
+        let root = scratch("missing");
+        let err = undo_game(&root, 3).unwrap_err();
+        assert_eq!(err.code, "not-found");
+        assert_eq!(err.message, "no undo record for 3");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn data_dir_uses_xdg_then_home() {
+        assert_eq!(data_dir(Some("/x"), "/h"), PathBuf::from("/x/flat3d"));
+        assert_eq!(data_dir(Some(""), "/h"), PathBuf::from("/h/.local/share/flat3d"));
+        assert_eq!(data_dir(None, "/h"), PathBuf::from("/h/.local/share/flat3d"));
+    }
 }

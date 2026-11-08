@@ -66,6 +66,14 @@ pub struct InjectResult {
     pub summary: String,
 }
 
+/// What `undo <appid>` put back: one line per change, from the undo record (#81).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoResult {
+    pub appid: u32,
+    pub restored: Vec<String>,
+    pub summary: String,
+}
+
 pub const ERROR_CODES: [&str; 8] = [
     "usage",
     "not-built",
