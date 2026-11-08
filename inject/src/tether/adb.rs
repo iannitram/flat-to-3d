@@ -1,6 +1,7 @@
 //! Choosing the adb executable shared by the tether and link service.
 
 use crate::api::AdbSource;
+use crate::link;
 
 pub fn listener_pid(ss_output: &str, port: u16) -> Option<u32> {
     let suffix = format!(":{port}");
@@ -123,14 +124,14 @@ impl CommandRunner for ProcessRunner {
     }
 }
 
-/// Use the chosen adb and headset for every adb word list.
-pub struct AdbRunner<R> {
+/// Use the chosen adb and headset for every tether word list (the tether's own runner).
+pub struct TetherAdb<R> {
     pub runner: R,
     path: String,
     serial: String,
 }
 
-impl<R: CommandRunner> AdbRunner<R> {
+impl<R: CommandRunner> TetherAdb<R> {
     pub fn new(choice: AdbChoice, serial: &str, runner: R) -> Self {
         Self {
             runner,
@@ -165,6 +166,49 @@ impl<R: CommandRunner> AdbRunner<R> {
     }
 }
 
+/// E6b: wraps the link's `CommandRunner` so `adb ...` words name the adb in use and the
+/// headset's serial; the link and tether code never know which adb they got.
+pub struct AdbRunner<R: link::CommandRunner> {
+    inner: R,
+    adb: String,
+    serial: Option<String>,
+}
+
+impl<R: link::CommandRunner> AdbRunner<R> {
+    pub fn new(inner: R, adb: &str, serial: Option<&str>) -> Self {
+        Self {
+            inner,
+            adb: adb.to_string(),
+            serial: serial.map(str::to_string),
+        }
+    }
+
+    pub fn inner(&self) -> &R {
+        &self.inner
+    }
+}
+
+impl<R: link::CommandRunner> link::CommandRunner for AdbRunner<R> {
+    fn run(&mut self, command: &[String]) -> link::CommandOutput {
+        if command.first().map(String::as_str) != Some("adb") {
+            return self.inner.run(command);
+        }
+        let mut words = vec![self.adb.clone()];
+        if let Some(serial) = self.serial.as_deref() {
+            let server_command = matches!(
+                command.get(1).map(String::as_str),
+                Some("devices" | "start-server" | "kill-server" | "-s")
+            );
+            if !server_command {
+                words.push("-s".to_string());
+                words.push(serial.to_string());
+            }
+        }
+        words.extend_from_slice(&command[1..]);
+        self.inner.run(&words)
+    }
+}
+
 pub fn reverse_list_command() -> Vec<String> {
     vec!["adb".into(), "reverse".into(), "--list".into()]
 }
@@ -180,4 +224,101 @@ pub fn remove_reverse_command(spec: &str) -> Vec<String> {
         "--remove".into(),
         spec.into(),
     ]
+}
+
+#[cfg(test)]
+mod adb_runner_tests {
+    use super::*;
+    use crate::link::CommandOutput;
+
+    struct Fake {
+        ran: Vec<Vec<String>>,
+    }
+
+    impl link::CommandRunner for Fake {
+        fn run(&mut self, command: &[String]) -> CommandOutput {
+            self.ran.push(command.to_vec());
+            CommandOutput {
+                success: true,
+                stdout: "out".into(),
+                stderr: String::new(),
+            }
+        }
+    }
+
+    fn c(words: &[&str]) -> Vec<String> {
+        words.iter().map(|w| w.to_string()).collect()
+    }
+
+    fn runner(serial: Option<&str>) -> AdbRunner<Fake> {
+        AdbRunner::new(Fake { ran: vec![] }, "/h/bin/adb", serial)
+    }
+
+    #[test]
+    fn the_adb_word_is_swapped_and_the_serial_added() {
+        let mut r = runner(Some("S1"));
+        link::CommandRunner::run(&mut r, &c(&["adb", "reverse", "tcp:1", "tcp:2"]));
+        assert_eq!(
+            r.inner().ran,
+            vec![c(&["/h/bin/adb", "-s", "S1", "reverse", "tcp:1", "tcp:2"])]
+        );
+    }
+
+    #[test]
+    fn without_a_serial_there_is_no_dash_s() {
+        let mut r = runner(None);
+        link::CommandRunner::run(&mut r, &c(&["adb", "shell", "ls"]));
+        assert_eq!(r.inner().ran, vec![c(&["/h/bin/adb", "shell", "ls"])]);
+    }
+
+    #[test]
+    fn server_commands_never_get_a_serial() {
+        let mut r = runner(Some("S1"));
+        link::CommandRunner::run(&mut r, &c(&["adb", "devices"]));
+        link::CommandRunner::run(&mut r, &c(&["adb", "kill-server"]));
+        link::CommandRunner::run(&mut r, &c(&["adb", "start-server"]));
+        assert_eq!(
+            r.inner().ran,
+            vec![
+                c(&["/h/bin/adb", "devices"]),
+                c(&["/h/bin/adb", "kill-server"]),
+                c(&["/h/bin/adb", "start-server"]),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_command_that_already_has_a_serial_is_not_doubled() {
+        let mut r = runner(Some("S1"));
+        link::CommandRunner::run(&mut r, &c(&["adb", "-s", "OTHER", "shell", "ls"]));
+        assert_eq!(
+            r.inner().ran,
+            vec![c(&["/h/bin/adb", "-s", "OTHER", "shell", "ls"])]
+        );
+    }
+
+    #[test]
+    fn other_commands_pass_through_unchanged() {
+        let mut r = runner(Some("S1"));
+        link::CommandRunner::run(
+            &mut r,
+            &c(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]),
+        );
+        link::CommandRunner::run(&mut r, &[]);
+        assert_eq!(
+            r.inner().ran,
+            vec![
+                c(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]),
+                vec![]
+            ]
+        );
+    }
+
+    #[test]
+    fn the_inner_result_is_returned() {
+        let mut r = runner(None);
+        let out = link::CommandRunner::run(&mut r, &c(&["adb", "devices"]));
+        assert!(out.success);
+        assert_eq!(out.stdout, "out");
+    }
 }

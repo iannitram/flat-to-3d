@@ -7,10 +7,10 @@ pub mod stepaside;
 pub mod wifi;
 
 use crate::{api::TetherMode, link};
-use adb::{AdbRunner, CommandRunner};
+use adb::{CommandRunner, TetherAdb};
 
 pub struct Tether<R> {
-    pub adb: AdbRunner<R>,
+    pub adb: TetherAdb<R>,
     home: String,
     serial: String,
     mode: TetherMode,
@@ -21,7 +21,7 @@ pub struct Tether<R> {
 impl<R: CommandRunner> Tether<R> {
     pub fn new(home: &str, serial: &str, choice: adb::AdbChoice, runner: R) -> Self {
         Self {
-            adb: AdbRunner::new(choice, serial, runner),
+            adb: TetherAdb::new(choice, serial, runner),
             home: home.to_string(),
             serial: serial.to_string(),
             mode: TetherMode::Off,
