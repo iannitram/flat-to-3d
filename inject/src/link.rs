@@ -187,9 +187,112 @@ pub fn start_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> 
     Ok(LinkState::Ready)
 }
 
+/// Run all of [`stop_3d_commands`] in order, whatever each returns: with the headset
+/// unplugged the two adb steps fail, and the server must still stop. The last command (the
+/// server stop) decides: success is `Stopped`, a failure is a [`LinkError`] naming it.
+pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
+    let commands = stop_3d_commands();
+    let (last, before) = commands
+        .split_last()
+        .expect("stop_3d_commands is not empty");
+    for command in before {
+        let _ = runner.run(command);
+    }
+    run_step(runner, last)?;
+    Ok(LinkState::Stopped)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A runner that answers from a script and records every command it was asked to run.
+    struct Scripted {
+        answers: std::collections::VecDeque<CommandOutput>,
+        ran: Vec<Vec<String>>,
+    }
+
+    impl CommandRunner for Scripted {
+        fn run(&mut self, command: &[String]) -> CommandOutput {
+            self.ran.push(command.to_vec());
+            self.answers.pop_front().expect("unexpected extra command")
+        }
+    }
+
+    fn scripted(answers: Vec<CommandOutput>) -> Scripted {
+        Scripted {
+            answers: answers.into(),
+            ran: Vec::new(),
+        }
+    }
+
+    fn out(success: bool, stderr: &str) -> CommandOutput {
+        CommandOutput {
+            success,
+            stdout: String::new(),
+            stderr: stderr.into(),
+        }
+    }
+
+    #[test]
+    fn stop_runs_all_three_in_order_and_is_stopped() {
+        let mut f = scripted(vec![out(true, ""), out(true, ""), out(true, "")]);
+        assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
+        assert_eq!(f.ran, stop_3d_commands());
+    }
+
+    #[test]
+    fn unplugged_headset_still_stops_the_server() {
+        let no_dev = "error: no devices/emulators found";
+        let mut f = scripted(vec![out(false, no_dev), out(false, no_dev), out(true, "")]);
+        assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
+        assert_eq!(f.ran, stop_3d_commands());
+    }
+
+    #[test]
+    fn server_stop_failing_is_an_error_naming_it() {
+        let mut f = scripted(vec![
+            out(true, ""),
+            out(true, ""),
+            out(false, "Failed to stop flat3d-wivrn.service: Access denied\n"),
+        ]);
+        let expected = LinkError {
+            command: "systemctl --user stop flat3d-wivrn.service".into(),
+            message: "Failed to stop flat3d-wivrn.service: Access denied".into(),
+        };
+        assert_eq!(stop_3d(&mut f), Err(expected));
+        assert_eq!(f.ran.len(), 3);
+    }
+
+    #[test]
+    fn start_stop_start_reports_ready_stopped_ready() {
+        let device = "List of devices attached\n1WMHH0A1B2C3D4\tdevice\n\n";
+        let dev = |s: &str| CommandOutput {
+            success: true,
+            stdout: s.into(),
+            stderr: String::new(),
+        };
+        let mut f = scripted(vec![
+            dev(device),
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+            dev(device),
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+        ]);
+        assert_eq!(start_3d(&mut f), Ok(LinkState::Ready));
+        assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
+        assert_eq!(start_3d(&mut f), Ok(LinkState::Ready));
+        let mut expected = start_3d_commands();
+        expected.extend(stop_3d_commands());
+        expected.extend(start_3d_commands());
+        assert_eq!(f.ran, expected);
+    }
 
     #[test]
     fn system_runner_empty_command_stderr() {
