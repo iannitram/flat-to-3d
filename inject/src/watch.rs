@@ -575,20 +575,24 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
     }
 
     fn fire(&mut self, now: u64, event: Event) {
+        let before = self.watch;
         let (next, effects) = step(&self.watch, &event, now, &self.inputs);
         self.watch = next;
-        self.execute(now, effects);
+        self.execute(now, before, effects);
     }
 
-    fn execute(&mut self, now: u64, effects: Vec<Effect>) {
-        // A tether connect runs Start 3D's WiVRn commands itself, so a StartLink in the same
-        // batch must not run them a second time (systemd-run would find the unit running).
+    fn execute(&mut self, now: u64, before: Watch, effects: Vec<Effect>) {
+        // A tether connect runs Start 3D's WiVRn commands itself only when this batch also starts
+        // the link; a StartLink in the same batch then must not run them a second time
+        // (systemd-run would find the unit running). Without a StartLink the tether connects
+        // the tunnel alone and leaves WiVRn to a later Start 3D.
+        let with_link = effects.contains(&Effect::StartLink);
         let mut wivrn_by_tether = false;
         let mut link_failed = false;
         for effect in effects {
             match effect {
-                Effect::StartTether => match self.connect_tether() {
-                    Ok(()) => wivrn_by_tether = true,
+                Effect::StartTether => match self.connect_tether(with_link) {
+                    Ok(()) => wivrn_by_tether = with_link,
                     Err(message) => self.log(now, &format!("tether: {message}")),
                 },
                 Effect::StartLink | Effect::Reattach => {
@@ -600,6 +604,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                     let commands = link_commands(&effect);
                     if self.run_steps(now, &commands, true).is_err() {
                         link_failed = true;
+                        self.roll_back(now, before);
                     }
                     self.starting = false;
                 }
@@ -661,17 +666,48 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         adb.run(command)
     }
 
-    fn connect_tether(&mut self) -> Result<(), String> {
+    /// A link start failed: it must not read as Ready. With the headset here, run Stop 3D's
+    /// list (best effort, so a half-started server unit does not block a retry) and go back to
+    /// Plugged, where Start 3D tries again. With the headset gone (a reattach in the grace),
+    /// keep the phase the event found.
+    fn roll_back(&mut self, now: u64, before: Watch) {
+        if self.ready {
+            self.log(
+                now,
+                "3D link did not start; stopping it so Start 3D can retry",
+            );
+            let commands = crate::link::stop_3d_commands();
+            let _ = self.run_steps(now, &commands, false);
+            self.watch = Watch {
+                phase: Phase::Plugged,
+            };
+        } else {
+            self.log(now, "3D link did not reattach");
+            self.watch = before;
+        }
+    }
+
+    fn connect_tether(&mut self, with_wivrn: bool) -> Result<(), String> {
         let ps_command: Vec<String> = vec!["ps".into(), "-eo".into(), "pid=,args=".into()];
         let ps = self.runner.borrow_mut().run(&ps_command)?;
         let foreign = stepaside::foreign_relay(&stepaside::parse_ps(&ps), None);
         let serial = self.serial.clone();
-        self.tether_for(&serial).connect(foreign).map(|_| ())
+        let tether = self.tether_for(&serial);
+        let result = if with_wivrn {
+            tether.connect(foreign)
+        } else {
+            tether.connect_tunnel_only(foreign)
+        };
+        result.map(|_| ())
     }
 
+    /// Stop the tether. With the headset gone its device commands cannot work, so the tether is
+    /// torn down on this machine only and is ready to connect again on the next plug-in.
     fn disconnect_tether(&mut self) -> Result<(), String> {
+        let ready = self.ready;
         match self.tether.as_mut() {
-            Some(tether) => tether.disconnect(),
+            Some(tether) if ready => tether.disconnect(),
+            Some(tether) => tether.drop_local(),
             None => Ok(()),
         }
     }
@@ -861,15 +897,30 @@ mod service_tests {
     use crate::api::AdbSource;
     use std::collections::VecDeque;
 
-    /// Records every command as one line; reports the headset as ready to adb.
+    /// Records every command as one line; reports the headset as ready to adb. With `gone`,
+    /// every adb command fails as it does once the device is unplugged; a command whose line
+    /// contains `fail` fails too.
     #[derive(Default)]
     struct Fake {
         ran: Vec<String>,
+        gone: bool,
+        fail: Option<String>,
     }
 
     impl CommandRunner for Fake {
         fn run(&mut self, command: &[String]) -> Result<String, String> {
-            self.ran.push(command.join(" "));
+            let line = command.join(" ");
+            self.ran.push(line.clone());
+            if self.gone && command.first().map(String::as_str) == Some("adb") {
+                return Err("Tether command failed".to_string());
+            }
+            if self
+                .fail
+                .as_ref()
+                .is_some_and(|word| line.contains(word.as_str()))
+            {
+                return Err("Tether command failed".to_string());
+            }
             if command.iter().any(|word| word == "devices") {
                 return Ok("List of devices attached\nSER\tdevice\n".to_string());
             }
@@ -1035,6 +1086,89 @@ mod service_tests {
             .ran
             .iter()
             .any(|line| line.contains("force-stop")));
+    }
+
+    fn count(fake: &Rc<RefCell<Fake>>, word: &str) -> usize {
+        fake.borrow()
+            .ran
+            .iter()
+            .filter(|line| line.contains(word))
+            .count()
+    }
+
+    #[test]
+    fn an_unplug_tears_the_tether_down_when_adb_cannot_reach_the_headset() {
+        let (fake, mut service) = service(
+            "unplug-tether",
+            vec![
+                Some(device("SER", "device")),
+                Some(Vec::new()),
+                Some(device("SER", "device")),
+            ],
+        );
+        let s = settings(true);
+
+        let up = service.tick(400, &s, None, (false, false));
+        assert_eq!(up.tether, TetherMode::Own);
+        assert!(up.tunnel);
+
+        fake.borrow_mut().gone = true;
+        let down = service.tick(401, &s, None, (false, false));
+        assert_eq!(down.state, LinkState::NoHeadset);
+        assert_eq!(down.tether, TetherMode::Off);
+        assert!(!down.tunnel);
+        assert!(fake.borrow().ran.iter().any(|line| line == "relay stop"));
+
+        fake.borrow_mut().gone = false;
+        let back = service.tick(402, &s, None, (false, false));
+        assert_eq!(back.tether, TetherMode::Own);
+        assert!(back.tunnel);
+    }
+
+    #[test]
+    fn with_auto_3d_off_a_plug_brings_up_only_the_tunnel_and_start_runs_wivrn_once() {
+        let (fake, mut service) = service("manual-tunnel", vec![Some(device("SER", "device"))]);
+        let s = Settings {
+            auto_3d: false,
+            tunnel: true,
+            ..Settings::default()
+        };
+
+        let plugged = service.tick(500, &s, None, (false, false));
+        assert_eq!(plugged.state, LinkState::Stopped);
+        assert_eq!(plugged.tether, TetherMode::Own);
+        assert_eq!(count(&fake, "systemd-run"), 0);
+        assert_eq!(count(&fake, "wivrn+tcp"), 0);
+        let before = fake.borrow().ran.len();
+
+        let started = service.tick(501, &s, Some(Request::Start3d), (false, false));
+        assert_eq!(started.state, LinkState::Ready);
+        assert_eq!(count(&fake, "systemd-run"), 1);
+        assert!(fake.borrow().ran[before..]
+            .iter()
+            .any(|line| line.contains("systemd-run")));
+        assert!(started
+            .events
+            .iter()
+            .any(|event| event.kind == EventKind::Ready));
+    }
+
+    #[test]
+    fn a_failed_link_start_does_not_read_as_ready() {
+        let (fake, mut service) = service("failed-start", vec![Some(device("SER", "device"))]);
+        fake.borrow_mut().fail = Some("reverse tcp:9757".to_string());
+        let s = settings(false);
+
+        let after = service.tick(600, &s, None, (false, false));
+        assert_ne!(after.state, LinkState::Ready);
+        assert_eq!(after.state, LinkState::Stopped);
+        assert!(after.events.is_empty());
+        let log = fs::read_to_string(service.paths.log()).unwrap();
+        assert!(log.contains("reverse tcp:9757"));
+
+        fake.borrow_mut().fail = None;
+        let retried = service.tick(601, &s, Some(Request::Start3d), (false, false));
+        assert_eq!(retried.state, LinkState::Ready);
     }
 
     #[test]
