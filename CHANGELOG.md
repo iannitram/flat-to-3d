@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-07 Link stage E2 (WiVRn half) done: `link::stop_3d` closes the WiVRn app, the `adb reverse` and the server unit and reports Stopped, so Start 3D works again (#66, rebuilt after PR #188 was closed unmerged).
 - 2026-11-07 Blocker check: the base is not built (logic tested, only `flat3d-run` wired); roadmap "What's next" now runs in waves from wave 1 (#66, #119, #75, #99, #84, #183, #96, #51, #78), stage table carries each open issue's blockers, and the recipes code-map cell is back to exact `present` for the locked test.
 - 2026-11-07 Roadmap and code map audited against main (ff12fef): engine progress per module, issue numbers on every planned part, a "Where it stands" section and stage table with done and open issues, the critical path to a first Zero Company try; #66 found closed but not on main.
 - 2026-11-02 Code map refreshed to match main: settings, setup, collection, toasts and the tests are present; the command-line rows say what is parsed and what is still stub.
