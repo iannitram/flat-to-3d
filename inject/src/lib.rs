@@ -15,6 +15,7 @@ pub mod health;
 pub mod headset_view;
 pub mod launch_options;
 pub mod link;
+pub mod link_view;
 pub mod recipes;
 pub mod runs;
 pub mod setup;
