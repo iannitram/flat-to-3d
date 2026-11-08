@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-07 Wave 1 merged (PRs #190-#197, main `50c1e49`, 459 engine + 4 app tests): #66, #119, #75, #99, #84, #96, #51 file half, #78. Roadmap and code map synced; next is #183 alone, then wave 2 (#120, #125, #76, #116, #118).
 - 2026-11-07 #78 app crate: `app/` (iced 0.14, linked to `inject/` by path) opens a window with the four tabs (Setup, Headset, Games, Logs) on placeholder text, tested in `lib.rs`; the `app` job in `check.yml` runs its `cargo test` and `cargo check`. The faces stage has started.
 - 2026-11-07 Link stage E2 (WiVRn half) done: `link::stop_3d` closes the WiVRn app, the `adb reverse` and the server unit and reports Stopped, so Start 3D works again (#66, rebuilt after PR #188 was closed unmerged).
 - 2026-11-07 Blocker check: the base is not built (logic tested, only `flat3d-run` wired); roadmap "What's next" now runs in waves from wave 1 (#66, #119, #75, #99, #84, #183, #96, #51, #78), stage table carries each open issue's blockers, and the recipes code-map cell is back to exact `present` for the locked test.

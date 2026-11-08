@@ -2,7 +2,7 @@
 
 Where the project stands and what comes next. The full plan is [PORT-SPIDERMAN2.md](PORT-SPIDERMAN2.md) and the technical map is [spidy-stereo-core-map.md](spidy-stereo-core-map.md). This page is the short version.
 
-Updated 2026-11-07 (audit against main `ff12fef`: engine progress, issue states, what's next; the Spider-Man 2 Step 0-3 notes below are from 2026-10-18).
+Updated 2026-11-07 (after wave 1 merged, main `50c1e49`: engine progress, issue states, what's next; the Spider-Man 2 Step 0-3 notes below are from 2026-10-18).
 
 **1.0 scope (2026-10-26, widened 2026-10-31, reworked and approved 2026-11-01, [SPEC.md](../SPEC.md)):** "Plug in and play". Steam is the launcher: Play a game as usual. With the headset on the cable the game plays in 3D; without it the same Play button plays flat. Five Favorites, in order: STAR WARS Zero Company (UEVR, our own hook as fallback), ACE COMBAT 7 (UEVR), Control and Planet of Lana (Geo-11 and the SBS viewer), then Spider-Man 2 (Step 0 on Remastered, port Steps 1-8). Out of 1.0: the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
 
@@ -24,12 +24,14 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 ## Where it stands (2026-11-07)
 
-- **Engine: the pure parts are done, the wiring is not.** 47 engine issues are merged and 411 tests pass on main. What the engine can't do yet: run a command (`cli::dispatch` and `injectors::inject` still return "not built yet", #27), stop the link (#66), run the watch loop that owns the link (#119), answer the link and view commands (#120, #121), and apply a route (#51 UEVR, #52 Geo-11, #27 port). Until #119, #120 and #27 land, nothing can be tried end to end.
-- **Is the base built? Not yet.** Its logic is built and tested, but only `flat3d-run` runs as a real command, and with no link service it always plays flat. Every other command answers "not built yet" (`list`, `status`), `watch` and `snapshot` are not commands yet, and `stop_3d` is missing (checked by running the binary, 2026-11-07).
-- **Faces and packaging: not started.** No `app/`, no `decky/src/`, no `packaging/` on main.
+- **Wave 1 is merged (2026-11-07, PRs #190-#197):** `stop_3d` (#66), the watch loop `watch::run` (#119), `link_view` (#75), the tether plan (#99), `undo <appid>` (#84), the reshaped `AdbRunner` (#96), the UEVR route's fake-prefix half (#51) and the iced app crate with its CI job (#78). 459 engine tests and 4 app tests pass on main. Each PR was reviewed on two lenses with every finding checked by two skeptics; the confirmed bugs were fixed before the merge (in #119: the tether stuck on after an unplug, WiVRn started with Auto 3D off, a failed start reading Ready; in #51: a partial backup blocking later applies, an invented env variable).
+- **Engine: the parts exist, the commands mostly don't.** The link service's loop exists but nothing starts it: `watch`, `snapshot`, `switch`, `setting`, `install` are parsed but not wired into `main.rs` (#120). `cli::dispatch` answers "not built yet" for everything but `undo` (`list`, `inject`, `start-3d`, `stop-3d`, `status`, #27), and `injectors::inject` is still a stub (#27). The routes: UEVR's file half is built and tested on a fake prefix (#51, device half waits on Z2 #32), Geo-11 (#52) and port (#27) are not started.
+- **Is the base built? Nearly, not yet.** `flat3d-run` and `undo` are the only commands that do real work; `flat3d-run` still always plays flat, because no service writes `link.json` until `watch` is a command (#120). #120 is the one issue between here and a running link service.
+- **Faces and packaging: started.** `app/` is a skeleton (four placeholder tabs, #78). No `decky/src/` or `packaging/` yet.
 - **Games: no headset session yet.** None of the Zero Company, ACE COMBAT 7 or Geo-11 steps has run, and the Spider-Man 2 Ghidra analysis never ran (its project folder is empty; the only log is the failed start of 2026-10-18).
 - **Installed today:** Zero Company, Spider-Man 2 and Control on the internal drive, Planet of Lana on a second library drive. ACE COMBAT 7 and Spider-Man Remastered are not on any drive mounted today (three library drives are unmounted).
-- **Housekeeping:** main fails `cargo fmt --check` and `clippy -D warnings`, which CI doesn't run (#183). #66 was closed as merged, but its PR (#188) was closed unmerged and `stop_3d` is not on main, so it needs reopening. #146 is done on main and can close. Parents #25 and #50 have every child merged and can close.
+- **Known gaps from the wave-1 review (not bugs against their issues; for later issues):** `stop_3d` reports an error when the WiVRn unit is already gone (a second Stop 3D); no code emits the `allow-debugging` event yet; the snapshot's `tunnel` is "tether is up", not "tun0 carries traffic", until the health loop (#125); the UEVR route builds an undo record but nothing saves it yet (#27 does); `undo`'s command line has no test of its own.
+- **Housekeeping:** main fails `cargo fmt --check` and `clippy -D warnings`, which CI doesn't run (#183; now the only wave-1 issue left, best done before wave 2 starts so its reformat doesn't collide). #146 is done on main and can close. Parents #25 and #50 (every child merged) and #26 and #39 (E2: #64-#66 merged) can close. The merged `build/*` branches and their worktrees can go.
 
 ## Development stages
 
@@ -38,23 +40,23 @@ The game tracks below need the owner's devices; the engine, app and packaging st
 | Stage | What | Done | Open |
 |---|---|---|---|
 | E1 Engine core | Steam games, recipes, the shared JSON shape (`api.rs`), `--json` CLI | **Done:** #24, #58-#63 | parents #25, #50 (closable) |
-| E2 Link (WiVRn half) | WiVRn without its window, `adb reverse`, the app on the Quest; Stop 3D | #64, #65 | #66 `stop_3d` (ready; reopen); parents #26, #39 |
-| E3 Injectors | the routes: `uevr.rs`, `geo11.rs`, `port.rs`; each returns the environment for the wrapper; dispatch and `inject <appid>` | #83 (UEVR profile text) | #27 dispatch + port (blocked by #120), #51 UEVR (ready for the fake-prefix tests; the device half waits on Z2 #32), #52 Geo-11 (blocked by #43 and #44, both owner-device) |
-| E4 Undo and launch options | `route_of`, the `flat3d-run` word in launch options, the undo record and its steps, `undo <appid>` | #79, #80, #81, #82 | #84 (ready) |
-| E5 Link service | `flat3d-inject watch`: track-devices, plug/unplug/grace state machine, state file, event ring, run records, settings, link command parsing | #85-#94 | #119 watch loop (ready; does not need #66), #120 link commands (blocked by #119) |
-| E6 Tether | gnirehtet reverse tether ported from Quest Tether: one adb, tun0 honesty, Wi-Fi-first disconnect, NetworkManager sync, heal ladder, step-aside | #95, #97, #98, #100-#104, #124 | #96 (ready, but bigger than Easy: the `AdbRunner` on main has another trait, constructor and no server-command exemption, so the locked test won't compile against it), #99 plan (ready), #125 health loop (blocked by #119) |
+| E2 Link (WiVRn half) | WiVRn without its window, `adb reverse`, the app on the Quest; Stop 3D | **Done:** #64, #65, #66 | parents #26, #39 (closable) |
+| E3 Injectors | the routes: `uevr.rs`, `geo11.rs`, `port.rs`; each returns the environment for the wrapper; dispatch and `inject <appid>` | #83 (UEVR profile text), #51's fake-prefix half (`uevr::apply` with undo, PR #196) | #27 dispatch + port (blocked by #120), #51 device half (fetch UEVR and .NET, the real env; waits on Z2 #32), #52 Geo-11 (blocked by #43 and #44, both owner-device) |
+| E4 Undo and launch options | `route_of`, the `flat3d-run` word in launch options, the undo record and its steps, `undo <appid>` | **Done:** #79-#82, #84 | |
+| E5 Link service | `flat3d-inject watch`: track-devices, plug/unplug/grace state machine, state file, event ring, run records, settings, link command parsing | #85-#94, #119 (`watch::run`) | #120 link commands (ready: makes `watch` a command) |
+| E6 Tether | gnirehtet reverse tether ported from Quest Tether: one adb, tun0 honesty, Wi-Fi-first disconnect, NetworkManager sync, heal ladder, step-aside | #95-#104, #124 | #125 health loop (ready) |
 | E7 Health and stats | battery and temperature zones, toast gate, throughput, soak summary | **Done:** #105-#108 | (run by #119, #125) |
 | E8 Wrapper | `flat3d-run`: plan, exec spec, run | **Done:** #109, #110, #126 | |
-| E9 Face data | 3D Ready collection diff, new toasts, health/speed/uptime wording, the view commands | #113, #114, #115 | #121 view commands (blocked by #75, #76, #120; #75 is missing from its Blocked-by line) |
-| E10 Face rules | status labels and colours, link wording, game rows, headset buttons and logs | #74, #77 | #75 `link_view` (ready), #76 `rows` (blocked by #75: not parallel) |
+| E9 Face data | 3D Ready collection diff, new toasts, health/speed/uptime wording, the view commands | #113, #114, #115 | #121 view commands (blocked by #76 and #120) |
+| E10 Face rules | status labels and colours, link wording, game rows, headset buttons and logs | #74, #75, #77 | #76 `rows` (ready) |
 | I Install | user unit text, install/uninstall plans, Quest app check | #111, #112 | wiring is #128 (blocked by #120) |
-| A App (iced) | crate and CI, the four pages' state, views, main wiring | | #78 crate + CI (ready; its body says `ci.yml`, the file is `check.yml`), #116 and #118 (blocked by #78), #117 (by #78, #76), #122 (by #78, #116-#118, #121, #76), #123 (by #122; also needs #66 and a snapshot reader) |
+| A App (iced) | crate and CI, the four pages' state, views, main wiring | #78's crate, tabs and CI job (PR #197) | #78 stays open for opening the window on the owner's device and the CI job's first run on the runner; #116 and #118 (ready), #117 (by #76), #122 (by #116-#118, #121, #76), #123 (by #122) |
 | D Decky (thin TS) | the engine binary as the backend, the panel, launch-option sync, 3D Ready collection, toasts | | #130 (blocked by #121; owner device for the no-Python launcher question), #131 and #133 (by #130), #132 (by #130 and #121's `launch`) |
 | P Packaging | `build-tools.sh`, install wiring, AppImage, Decky zip, all from one tagged commit | | #127 (ready, owner device; its body has drifted from the code map's ruling 34 on where adb comes from and where the tools go), #128 (by #120), #129 (by #123, #127, #128), #134 (by #131) |
 | G Games | Zero Company -> ACE COMBAT 7 -> Planet of Lana + Control -> Spider-Man 2 (tracks below) | | #31-#49, #5, #7, #18-#23, #29 |
 | X Design pass (last, R04) | the shared design system over the running app and the Decky panel; `design-pass` issues | | after the rest |
 
-**Critical path to a first end-to-end try (Zero Company, by hand):** #119 -> #120 -> #27, with #66 and #51 alongside -> a Zero Company recipe -> the owner's headset session (Z1, Z2). The faces (A, D) and packaging (P) are not needed for that try: `flat3d-inject watch` run by hand (or the user unit, #128) plus `flat3d-run %command%` in the game's launch options is enough.
+**Critical path to a first end-to-end try (Zero Company, by hand):** #120 -> #27 -> a Zero Company recipe -> the owner's headset session (Z1, Z2, then #51's device half). #119, #66 and #51's file half are merged. The faces (A, D) and packaging (P) are not needed for that try: `flat3d-inject watch` run by hand (or the user unit, #128) plus `flat3d-run %command%` in the game's launch options is enough.
 
 ## ACE COMBAT 7 track (added 2026-10-31)
 
@@ -115,14 +117,14 @@ Zero Company proves the headset chain, the link service and the `flat3d-run` wra
 | #18-#23 | Port Steps 2-7 | Medium, then Hard | Open, chained #18 -> #19 -> #20 -> #21 -> #22 -> #23 |
 | #24 | Inject: find Steam games | Easy | Closed (on main, `b2bfdc3`) |
 | #25 | Inject: load and check recipes (parent of #58-#60) | Medium | Open; every child merged, can close |
-| #26, #39 | Link: WiVRn half of Start 3D and Stop 3D (parents of #64-#66) | Medium | Open; #64, #65 merged, #66 not on main |
+| #26, #39 | Link: WiVRn half of Start 3D and Stop 3D (parents of #64-#66) | Medium | Open; every child merged, can close |
 | #27 | Route dispatch, `port` route, `list` and `inject` command bodies | Medium | Open; blocked by #120 (#79, #80 are merged) |
 | #28 | Decky plugin (Python era) | Medium | Closed, superseded by #130-#133 |
 | #29 | Spider-Man 2 recipe | Easy | Open, locked tests in the issue; blocked by #23 |
 | #6, #10 | Parents: the port, the Inject app | Hard | Open |
 | #15, #16 | Recipes home; research notes | | Closed (done) |
 | #155 | SpidyVR 0.3.8 -> 0.7.0 | Medium | Open; after Step 0 passes |
-| #183 | `cargo fmt` and `clippy` red on main; add both to CI | | Open; free to take |
+| #183 | `cargo fmt` and `clippy` red on main; add both to CI | | Open; next, before wave 2 |
 
 After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14.
 
@@ -160,12 +162,12 @@ In order of what unblocks the most.
 
 ### 1. Engine wiring (satellites, now)
 
-Checked 2026-11-07: each issue's blockers against the code on main, then re-checked by a second reviewer.
+Wave 1 merged on 2026-11-07 (PRs #190-#197). Blockers re-checked against main `50c1e49`.
 
-- **Ready now (wave 1):** #66 `stop_3d` (Easy, reopen first), #119 the watch loop (Medium, the biggest unblocker: #120, #125), #75 `link_view` (Easy, unblocks #76), #99 tether plan (Easy), #84 `undo` (Medium), #183 fmt and clippy (Easy, but `cargo fmt` touches about 45 files including locked tests, so not a Qwen job under R28), #96 `AdbRunner` (more than Easy, see the E6 row), #51 UEVR route's fake-prefix part (Medium), #78 the app crate (Medium).
-- **Wave 2 (after #119, #75, #78):** #120 link commands, #125 tether health loop, #76 rows, #116 and #118 app pages.
-- **Wave 3 (after #120, #76):** #27 command bodies and dispatch, #121 view commands, #117 Games page, #128 install wiring. With #27 and #51, Zero Company can be tried by hand.
-- **Wave 4:** #130 Decky scaffold (after #121), #122 app views, then #123, #131-#133, and packaging (#127, #129, #134).
+- **First: #183** fmt and clippy, and both in CI. Its `cargo fmt` rewrites about 45 files, locked tests among them (format only), so it goes in alone before wave 2 branches open, and not as a Qwen job (R28).
+- **Wave 2 (ready now):** #120 link commands (Medium; the biggest unblocker: it makes `watch` a real command and unblocks #27, #121, #128), #125 tether health loop (Medium), #76 rows (Easy), #116 Headset page and #118 Setup page (Easy).
+- **Wave 3 (after #120, #76):** #27 command bodies, dispatch and the port route, #121 view commands, #117 Games page, #128 install wiring. With #27 in, Zero Company can be tried by hand.
+- **Wave 4:** #130 Decky scaffold (after #121), #122 app views, then #123, #131-#133, and packaging (#129, #134). #127 `build-tools.sh` is ready any time but needs the owner's device.
 
 ### 2. Zero Company with the headset (owner session)
 
@@ -213,5 +215,5 @@ Checked 2026-11-07: each issue's blockers against the code on main, then re-chec
 1. **When to run the analysis.** Overnight is the obvious slot. Just say "run the Ghidra analysis tonight" and it starts with the memory watch on.
 2. **REA.** Installed but not registered. Registering it (`rea setup`) changes Claude Code's config permanently, so it waits for your yes. Without it, I script Ghidra headless directly, which covers everything above.
 3. Still open from the plan: contacting Spidy's author.
-4. **Issue clean-up (from the 2026-11-07 audit):** reopen #66 (closed as merged, but PR #188 was closed unmerged); close #146 (done on main by #174) and the parents #25 and #50 (every child merged).
+4. **Issue clean-up:** close #146 (done on main by #174) and the parents #25, #50, #26 and #39 (every child merged). #51 and #78 stay open for their device halves. The 8 merged PRs carry no `by:` / `model:` labels (the guard leaves labels to the coordinator; `by:strix-halo` and `model:claude-sonnet-5-5` don't exist yet).
 5. **Drives.** ACE COMBAT 7 (A1, #40) and Spider-Man Remastered (Step 0, #5) need their library drive mounted or a fresh install.
