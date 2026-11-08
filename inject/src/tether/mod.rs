@@ -2,6 +2,7 @@
 
 pub mod adb;
 pub mod heal;
+pub mod plan;
 pub mod relay;
 pub mod stepaside;
 pub mod wifi;
