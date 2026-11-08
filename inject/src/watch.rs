@@ -15,7 +15,7 @@ use crate::link::{self, Headset};
 use crate::runs::{parse_run_record, running_modes, RunRecord};
 use crate::state::{self, EventRing, Request};
 use crate::switches::{parse_settings, Settings};
-use crate::tether::adb::{self as tether_adb, AdbChoice, AdbRunner, CommandRunner, ProcessRunner};
+use crate::tether::adb::{self as tether_adb, AdbChoice, CommandRunner, TetherAdb, ProcessRunner};
 use crate::tether::{stepaside, Tether};
 
 /// The adb server's port: where a running server listens.
@@ -658,7 +658,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
     }
 
     fn adb_run(&self, command: &[String]) -> Result<String, String> {
-        let mut adb = AdbRunner::new(
+        let mut adb = TetherAdb::new(
             self.adb.clone(),
             &self.serial,
             Shared(Rc::clone(&self.runner)),
