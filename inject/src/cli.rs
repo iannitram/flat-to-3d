@@ -1,10 +1,12 @@
-//! Command line: `flat3d-inject list | inject <appid> | start-3d | stop-3d | status`, each with
+//! Command line: `flat3d-inject list | inject <appid> | start-3d | stop-3d | status | undo <appid>`, each with
 //! an optional `--json` that prints exactly one `Response` object on one line. Human text is the
 //! default. The Decky backend (decky/main.py) calls these same commands with `--json`.
 
 use crate::api::{ApiError, Response};
+use crate::undo;
 use crate::NotBuilt;
 use serde_json::Value;
+use std::path::PathBuf;
 
 /// A parsed command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,6 +21,8 @@ pub enum Command {
     Stop3d,
     /// The link's state.
     Status,
+    /// Put a game back to flat from its undo record.
+    Undo { appid: u32 },
 }
 
 impl Command {
@@ -30,6 +34,7 @@ impl Command {
             Command::Start3d => "start-3d",
             Command::Stop3d => "stop-3d",
             Command::Status => "status",
+            Command::Undo { .. } => "undo",
         }
     }
 }
@@ -45,6 +50,7 @@ pub struct Cli {
 pub const USAGE: &str =
     "usage: flat3d-inject list | inject <appid> | start-3d | stop-3d | status [--json]";
 const INJECT_USAGE: &str = "usage: flat3d-inject inject <appid> [--json]";
+const UNDO_USAGE: &str = "usage: flat3d-inject undo <appid> [--json]";
 
 /// Parse the arguments after the program name. `--json` may stand anywhere. `Err` carries a
 /// one-line usage message.
@@ -65,6 +71,11 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
             Err(_) => return Err(INJECT_USAGE.to_string()),
         },
         ["inject", ..] => return Err(INJECT_USAGE.to_string()),
+        ["undo", appid] => match appid.parse::<u32>() {
+            Ok(appid) => Command::Undo { appid },
+            Err(_) => return Err(UNDO_USAGE.to_string()),
+        },
+        ["undo", ..] => return Err(UNDO_USAGE.to_string()),
         _ => return Err(USAGE.to_string()),
     };
     Ok(Cli { command, json })
@@ -119,9 +130,22 @@ pub fn render(command: &str, result: Result<Value, ApiError>, json: bool) -> Out
     }
 }
 
-/// Every command body is wired to the engine by #27.
-fn dispatch(_command: &Command) -> Result<Value, ApiError> {
-    Err(NotBuilt("cli: the command bodies are wired by #27").into())
+/// The engine's data directory, from the environment (`XDG_DATA_HOME`, `HOME`).
+fn engine_data_dir() -> PathBuf {
+    let xdg = std::env::var("XDG_DATA_HOME").ok();
+    let home = std::env::var("HOME").unwrap_or_default();
+    undo::data_dir(xdg.as_deref(), &home)
+}
+
+/// Run one command. `undo` is wired here (#84); every other command body is still #27.
+fn dispatch(command: &Command) -> Result<Value, ApiError> {
+    match command {
+        Command::Undo { appid } => {
+            let result = undo::undo_game(&engine_data_dir(), *appid)?;
+            serde_json::to_value(result).map_err(|e| ApiError::new("command-failed", &e.to_string()))
+        }
+        _ => Err(NotBuilt("cli: the command bodies are wired by #27").into()),
+    }
 }
 
 /// Parse and run a command line without printing.
