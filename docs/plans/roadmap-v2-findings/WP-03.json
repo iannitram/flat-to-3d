@@ -1,0 +1,8 @@
+{
+ "own_review": {
+  "runnable": true,
+  "changed": "none. Plan mode was active, so I did not edit WP-03.md. The proposed edits are in roadmap-v2-findings/WP-03-proposal.md:\n(1) Input/Depends: replace \"WP-00 pre-step\" (WP-00 has no such step) with a self-contained read-only fetch `gh issue view 76 -R iannitram/flat-to-3d --json body -q .body > \"$SCRATCH/issues/76.md\"` when the snapshot is missing, define $SCRATCH as the agent scratch dir, and state the GitHub-read network need. Keep the awk line and the gh fallback wording, because WP-04 and WP-05 cite them.\n(2) Use `use super::link_view::flat_reason;`, which works with either face layout.\n(3) Done-check: `export CARGO_TARGET_DIR` up front, so clippy and check.sh share it, and add a verbatim-check (rustfmt of the issue body diffed against the committed file).\n(4) Say \"Wave 2\" explicitly.\nVerified with no change needed:\n- The live #76 extract matches sha f7f72d10\u2026c1b4 (68 lines, no CR).\n- Every helper signature and line ref is correct at 2812f64.\n- Sort order gives 1,2,3.\n- serde_json is a normal dependency.\n- Depends WP-01 (wave 1) is correct for wave 2, and no same-wave WP owns rows.rs."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-03-proposal.md",
+ "incoming": []
+}

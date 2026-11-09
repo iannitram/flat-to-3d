@@ -1,0 +1,105 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active, so I could only read files and could not edit WP-25b.md. Every fix WP-25b needs is in cross with target WP-25b and can be applied as written. Its wave and dependencies are correct: it is wave 2 and depends on WP-01, WP-02 and WP-25a, which are all wave 1. Its heading does not say \"(wave 2)\" yet; that fix is in cross."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-02",
+   "target": "WP-25b",
+   "problem": "WP-25b appends `python3 tools/docs/check.py` to tools/check.sh. That file is owned by WP-02, and its step 10 already runs tools/docs/check.py when the file exists. The append would run the check twice and edit another WP's file.",
+   "fix": "Drop the check.sh edit from WP-25b. Say instead that WP-02's check.sh step 10 picks up tools/docs/check.py automatically once it exists."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-25b",
+   "problem": "The new exe dir name `$FLAT3D_RE_HOME/exe/<slug>-<version>/` (WP-25b:64) with slug `sm2-2.810` becomes `sm2-2.810-2.810.0.0`. The real local dir is `~/.local/share/flat-to-3d/exe/sm2-2.810.0.0`. WP-25b:65 also says 'around the tables' without saying whether the `### Priority N` headings sit inside the block.",
+   "fix": "Write `$FLAT3D_RE_HOME/exe/<game>-<version>/` (e.g. sm2-2.810.0.0). Put BEGIN just before the `### Priority 1` heading (:62) and END just after the last Priority 3 table row (:160), so the generated block includes the three headings."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The heading has no wave label. bones.md's index has no WP-25b row, so an agent working only from this file cannot tell which wave it belongs to.",
+   "fix": "Change the heading to `### WP-25b: Docs scrub + contradictions (wave 2)`."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The 'One line in tools/check.sh' edit is redundant. WP-02's check.sh step 10 already runs `tools/docs/check.py` when the file exists. check.sh belongs to WP-02 and is not in WP-25's file list in the bones index.",
+   "fix": "Delete the tools/check.sh bullet. Replace it with: 'tools/check.sh is not touched; WP-02 step 10 already runs tools/docs/check.py.'"
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "At 2812f64, ROADMAP.md:23 contains the path token `inject/` ('the Rust engine in `inject/`'). check.py forbids `inject/` path tokens in ROADMAP, and WP-25b's edit list does not cover line 23, so the full check.py done-check fails.",
+   "fix": "Add under docs/ROADMAP.md: ':23 `inject/` \u2192 `crates/engine/`', plus a final step: 'no `inject/` or `app/src` token remains (check.py).'"
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "WP-01 lists docs/code-map.md as edited but never says what it changes. At 2812f64, code-map has `inject/`/`app/src` path tokens at :13-:90, the :94 heading 'API shape (inject/src/api.rs)' and :184. Rows such as `cli_link.rs`/`cli_view.rs` (:71) and the face/ files (:78-80) will not match the post-WP-01 tree. WP-25b runs check.py with no paths, which would then fail on the inject/ rule and the status rule.",
+   "fix": "Add a code-map step: rewrite every remaining `inject/` or `app/src` token to its crates/ path from the bones \u00a72 Tree. The heading becomes 'API shape (crates/engine/src/api.rs)', keeping the 'API shape' name. Mark any row whose file does not exist as `planned`. Then run `python3 tools/docs/check.py --only status,links,mermaid,usage docs/code-map.md` until it is clean."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The locked-cell instruction uses brace shorthand: ``| `crates/engine/src/{api,link,recipes}.rs` | present |``. If an agent writes that cell literally, it breaks all three locked asserts (api_response.rs:69, link_stop.rs:112, recipe_load.rs:150), because each looks for its own exact cell.",
+   "fix": "Spell out the three cells exactly: ``| `crates/engine/src/api.rs` | present |``, ``| `crates/engine/src/link.rs` | present |``, ``| `crates/engine/src/recipes.rs` | present |``. Each must be its own row, starting with that exact text."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "code-map.md:194 (Packaging, 'Tools, never in git') ends 'in the `craft-build` distrobox'. That is a private-word hit, it is not allow-listed, and WP-25b has no edit for it.",
+   "fix": "Add: ':194 \"in the `craft-build` distrobox\" \u2192 \"in the distrobox build container (`$FLAT3D_BUILD_BOX`)\"'."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "PORT-SPIDERMAN2.md:87 (plan.md after the move) says 'inside the `craft-build` distrobox'. The allow-list lifts craft-build only in docs/workbench.md and on lines that contain FLAT3D_BUILD_BOX. WP-25b's :87 scrub covers only the owner/Hyperion, and plan.md is not in the workbench allow-list.",
+   "fix": "plan.md:87: replace '`craft-build` distrobox' with 'the distrobox build container (`$FLAT3D_BUILD_BOX`, see ../workbench.md)'."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "Lines :25-37 of the address map move into plan.md, and :37 contains 'Hyperion' (private word). Neither the plan.md scrub list nor the address-map edits cover it.",
+   "fix": "Add to the address-map/plan.md step: 'scrub Hyperion in moved :37 \u2192 \"a second machine (2026-10-18 scan leg)\"'."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The link fixes are incomplete. 'Fix every `../` link' for spidy-core-map does nothing, because that file has no relative links. These relative links break after the git mv and are not named: PORT:7 `spidy-stereo-core-map.md`, PORT:53 and ROADMAP:157 `spiderman2-address-map.md#what-the-file-lists-already-show` (that section moves into plan.md itself), and address-map:3 `spidy-stereo-core-map.md`.",
+   "fix": "Spell the link fixes out. plan.md:7 \u2192 `spidy-core-map.md`. plan.md:53 and the merged ROADMAP:157 \u2192 `#what-the-file-lists-already-show`. address-map.md:3 \u2192 `spidy-core-map.md`. ROADMAP:3 \u2192 `spiderman2/plan.md`. code-map:5 \u2192 `spiderman2/spidy-core-map.md` and `spiderman2/address-map.md`. Drop the '../ links' sentence."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The C26 edit says to prefix `third_party/SpidyVR/`, but two of the four cited files are not at the submodule root, so the prefixed paths would be wrong. In the submodule they are at include/spidy/presentation_gate.hpp and docs/REFERENCE.md.",
+   "fix": "Give exact paths: :58 `third_party/SpidyVR/include/spidy/presentation_gate.hpp`, :147 `third_party/SpidyVR/docs/VALIDATION.md`, :150 `third_party/SpidyVR/tools/inspect_game.py`, :188 `third_party/SpidyVR/docs/REFERENCE.md`."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "ROADMAP :135 (C20 'Step 1 done except the full-hash manifest') sits inside :131-143, which moves to workbench.md, so it is unclear where the new line goes. Separately, SPEC:13 says 'sends the line above back to not yet', and 'the line above' means :5. Moving :5 to CHANGELOG would leave :13 pointing at :3.",
+   "fix": "State that the C20 sentence goes into ROADMAP 'Where it stands', not into workbench. For SPEC, keep :5 (the current approval) in place and move only :7, :9 and :11 to CHANGELOG."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The address-map marker placement says 'around the tables'. That is ambiguous: there are three prio tables under headings :62, :83 and :111, with prose between them, and the section ends before '## Next leg' at :162.",
+   "fix": "Say exactly where the markers go: one `<!-- BEGIN GENERATED -->` line just before `### Priority 1` (:62) and one `<!-- END GENERATED -->` line after the last Priority-3 row (:160), before `## Next leg`. Alternatively, adopt WP-30's per-prio markers; see the WP-30 item."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The done-check calls `shellcheck` unguarded, but shellcheck is not installed on the host (`command -v shellcheck` is empty; bones K10). `$SCRATCH` is undefined, while other WPs use a concrete target dir. The edited Python files are never compiled.",
+   "fix": "Use: `python3 tools/docs/check.py && { command -v shellcheck >/dev/null && shellcheck tools/ghidra/headless.sh tools/build-spidy.sh || bash -n tools/ghidra/headless.sh tools/build-spidy.sh; } && python3 -m py_compile tools/research/research_game.py tools/xmatch/targets.py && CARGO_TARGET_DIR=$SCRATCH/target cargo test --locked -p flat3d-inject --test api_response --test link_stop --test recipe_load`."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-25b",
+   "problem": "The flag about `docs/archive/README.md`, `docs/archive/spiderman2-scan-leg-*.md` and the docs/notes/research moves is stale. None of those files exist in git at 2812f64, and docs/notes/** is already allow-listed by WP-25a.",
+   "fix": "Replace that flag with: 'No docs/archive/README.md or scan-leg files exist at 2812f64; docs/notes/** stays in place (allow-listed).'"
+  }
+ ]
+}

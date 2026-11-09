@@ -1,0 +1,33 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was on, so WP-33.md was left as it is. The full corrected replacement text is in roadmap-v2-findings/WP-33-proposal.md (everything under the '---'); copy it over wp/WP-33.md verbatim. What it changes: (1) paths() calls from_env(&|k:&str| std::env::var(k).ok(), sys::current_uid()), which is WP-01's closure form returning Result<Self,String>. (2) view_headset calls link_view(s.snapshot.clone(), now), which is WP-28's Option form, and uses the real HealthView fields. (3) Setup wiring now matches WP-05's real types. Effect::Setup(Vec<String>) becomes RunSetup(SetupKind), and Refresh maps to ReadPackages. Recheck is RunPressed(Packages) so that busy gets cleared. The doctor button and 'setup note' are gone (not in #122, and WP-05 has neither). run_cli adds --json only when it is missing, because SetupKind::args() already includes it. (4) Logs use WP-06's Msg::Lines/Failed (no 'Loaded') and call read_logs(&p, DEFAULT_LOG_LINES) directly instead of the CLI. (5) setting set and switch set pass 'on'/'off' strings. (6) Every effect has its mapping written out, and tests 1-16 have concrete inputs. (7) WP-01 owns the mod lines and Cargo.toml (Cargo.toml already has serde_json), so that flag is gone. The libarchive-tools CI requirement is dropped because WP-33 needs only the iced libs, which both apt lines have. (8) Depends is now WP-04/05/06/23 plus WP-28, staying in wave 4. WP-08/27/29 are listed as runtime-only for Q15, because WP-29 really belongs in wave 4. (9) The done-check runs in the worker's checkout with <agent scratch>/target and adds fmt plus a Cargo.lock diff."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-33-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-33",
+   "problem": "It calls link_view(snap) and an old from_env form.",
+   "fix": "Call link_view(Option<LinkSnapshot>,now) and from_env(&|k|std::env::var(k).ok(),uid)."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-33",
+   "problem": "WP-33:55 sends `logs_page::Msg::Loaded` via CLI `[\"logs\",\"--limit\",\"200\"]`, but WP-06's Msg has no `Loaded`. It has `Lines(Vec<String>)` and `Failed(String)`, so this will not compile.",
+   "fix": "LoadLogs \u2192 `Logs(logs_page::Msg::Lines(read_logs(&p, logs_page::LOG_LIMIT)))`, or `Lines(data.lines)` from the CLI. Send `Logs(Msg::Failed(e))` when EnginePaths or the call fails."
+  },
+  {
+   "from": "WP-05",
+   "target": "WP-33",
+   "problem": "WP-33 doesn't match WP-05's surface in five places. (a) `steps(s.packages, snap)` is a type error: steps takes Option<&Packages> and s.packages is Option<Packages>. (b) Line 81 says `SetupState::update`, but WP-05 has a free fn `setup_page::update(&mut SetupState, Msg)`. (c) It expects recheck/install-apps/doctor actions and a 'setup note'. WP-05 has `Action::{RunSetup(SetupKind::{Packages,InstallApps}), Refresh}`, with `k.args()` that already include --json, and no Doctor kind or note field. (d) setup::Packages has no Deserialize, so the effect must build Packages by hand from WP-29's `{\"wivrn\":bool,\"gnirehtet\":bool,\"missing\":[..]}`. (e) SetupState carries its own `snapshot`, fed by Msg::Snapshot.",
+   "fix": "Use `steps(s.packages.as_ref(), snap)` and the free fn `setup_page::update`. Map RunSetup(Packages) and Refresh \u2192 ReadPackages (run `flat3d-inject setup packages --json` and parse the wivrn/gnirehtet bools into Msg::Packages), and RunSetup(InstallApps) \u2192 `Setup(k.args())` then Msg::Done. Drop the doctor button and the 'setup note', or have WP-05 add SetupKind::Doctor (args [\"doctor\",\"--json\"]) first. Either feed Msg::Snapshot into app.setup or pass the app snapshot and note that SetupState.snapshot is unused."
+  },
+  {
+   "from": "WP-29",
+   "target": "WP-33",
+   "problem": "WP-33 depends on WP-29, which is now wave 4, the same wave as WP-33.",
+   "fix": "Set WP-33 to wave 5 and WP-34 to wave 6."
+  }
+ ]
+}

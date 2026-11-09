@@ -1,0 +1,69 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active for this run (read-only), so I made no edits, WP-16.md included. Every fix WP-16 needs is listed below in cross with target WP-16, and the orchestrator or a non-plan rerun can apply them. Wave 2 / depends WP-01 is correct: no same-wave WP owns geo11.rs or tests/geo11.rs."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-16",
+   "problem": "It uses ApiError::ViewerMissing, but ApiError is a struct. It also cites WP-23 for the Decky zip.",
+   "fix": "Use ApiError::new(\"not-found\",&format!(\"flat3d-viewer not found at {}\u2026\")) and have tests check that e.code is \"not-found\". Change WP-23 to WP-22."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "viewer_check uses `ApiError::ViewerMissing(path)`, but ApiError is a struct `{code,message}` (inject/src/api.rs:89) with no variants. The 'Assumptions about WP-01' bullet repeats this. The test asserts `Err(ApiError::ViewerMissing(_))`.",
+   "fix": "Signature comment: `Err(ApiError::new(\"not-found\", &format!(\"flat3d-viewer not found at {}; reinstall flat-to-3d (install, AppImage or Decky zip)\", p.display())))` unless the path is a regular file with any x bit (`std::os::unix::fs::PermissionsExt`, mode & 0o111). Test: `e.code == \"not-found\"` and `e.message` contains `flat3d-viewer not found`. Drop the 'ApiError has the variant ViewerMissing' assumption. 'not-found' is already one of the 8 ERROR_CODES."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "`apply returns its to_string()`: ApiError has no Display impl (api.rs:88-101 derives only Debug/Clone/PartialEq/Eq/Serialize/Deserialize), so this does not compile.",
+   "fix": "`viewer_check(viewer_exe).map_err(|e| e.message)?` as the first line of apply."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "The Viewer-shipping flag says 'WP-23 (Decky zip)'. WP-23 is the app Games page. WP-22 owns both build-appimage.sh and build-decky.sh.",
+   "fix": "Change it to 'WP-22 (AppImage and Decky zip) bundles it in bin/'."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "The signature block defines its own `pub type RouteSettings` ('or recipes::RouteSettings if\u2026') and its own `pub const KEYS`. WP-01 freezes `recipes::RouteSettings` and `recipes::GEO11_KEYS:[&str;7]`, and bones names recipes.rs the single owner of route keys.",
+   "fix": "Delete both lines. Add `use crate::recipes::{RouteSettings, GEO11_KEYS};` and `use crate::injectors::RouteEnv; use crate::api::ApiError; use crate::undo::{UndoRecord, Replaced}; use crate::injectors::uevr::MARKER_FILE;`. Read the key names from GEO11_KEYS."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "Rollback is described as 'the way uevr.rs:133 does', but that `rollback` is private and WP-14 rewrites uevr.rs in the same wave. 'Rename the old file to <name>.flat3d-backup' also breaks the rollback test: when E/d3d11.dll is a directory, fs::rename succeeds on Linux, so apply never fails.",
+   "fix": "Spell it out inline: back up each overwritten file with fs::copy to `<name>.flat3d-partial`, then rename that to `<name>.flat3d-backup` (as uevr::write_all does), so a directory at the destination makes fs::copy fail. Remove steps may rename. A private `fn rollback(&UndoRecord)` renames each replaced backup over its path in reverse, then removes created files in reverse."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "The tree-unchanged / snapshot checks don't say whether directories count. Directories are created but not recorded (ShaderFixes sorts before d3d11.dll, so it exists before the rollback trigger and after undo), so a check that includes dirs fails.",
+   "fix": "Tests: 'snapshot = sorted list of (relative path, bytes) of regular files only; directories are ignored'. Use it for the rollback, second-apply, missing-viewer and undo checks."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "Under the ini set rule, the d3dxdm.ini keys (direct_mode, dm_separation, dm_convergence) have no known section. A fixture or real file that lacks them returns the misleading `d3dx.ini has no <key> line`. The fixture contents for d3dx.ini and d3dxdm.ini are unspecified, so the Control and Lana tests cannot be written deterministically.",
+   "fix": "Rule: in d3dxdm.ini, a key with no active or commented line is appended at the end of the file. The error text uses the real file name: `<file> has no <key> line`. Fixtures: x64/d3dxdm.ini = \"direct_mode=sbs\\ndm_separation=30\\ndm_convergence=1.0\\n\"; x32 files contain \"x32\" so a wrong pick is visible; control-fix/d3dx.ini = \"[Stereo]\\nforce_stereo = 0\\n[Device]\\n;get_resolution_from = depth_buffer\\n\". The Lana fixture is lana-fix/Planet of Lana/{d3dx.ini,d3d11.dll,d3dxdm.ini} (exercises the depth rule). Lana expects: no step's `from` is under <cache>/geo11, and a d3dxdm.ini Write with direct_mode=sbs."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "`<cache>/geo11/**/x64/` is ambiguous when several x64 dirs exist. The sidecar's first element type is unstated.",
+   "fix": "Overlay dir = the first `x64` directory at depth \u2264 3 in sorted path order. Sidecar[0] = `viewer_exe.to_string_lossy().into_owned()`."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-16",
+   "problem": "In the done-check, CARGO_TARGET_DIR prefixes only the first command, so the clippy after && builds into crates' default target/.",
+   "fix": "`export CARGO_TARGET_DIR=<scratch>/target; cargo test --locked -p flat3d-inject --test geo11 && cargo clippy --locked -p flat3d-inject --all-targets -- -D warnings`"
+  }
+ ]
+}

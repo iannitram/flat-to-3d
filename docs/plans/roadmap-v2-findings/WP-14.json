@@ -1,0 +1,69 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was on for this run, so I could not edit WP-14.md. All the WP-14 fixes are listed in cross with target WP-14, ready to apply as is."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-14",
+   "problem": "The uevr-profile value form is not settled.",
+   "fix": "Make the value a pin key matching [a-z0-9-]+, and make UevrExtras.profile an Option<String>."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "The owner flagged that the uevr-profile value form is not settled. WP-14 still says UevrExtras.profile is Option<(String,String)> and that `uevr-profile` holds `<url> <sha256>` (lines 14 and 32). WP-26 and WP-27 already treat it as a pin key (`ac7-profile`).",
+   "fix": "Line 14: `pub profile: Option<String>`. Line 32: `uevr-profile`: a pin key matching `[a-z0-9-]+` (for example `ac7-profile`); any other value gives `Err(\"uevr-profile must be a pin key ([a-z0-9-]+)\")`. It is only carried here; WP-27 fetches that pin. Add two tests: `profile_pin_key_is_carried` (`ac7-profile` gives `Some(\"ac7-profile\")`) and `profile_url_form_is_refused` (`https://x abc` gives Err)."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "The `uevr_version_matches_pins` test does `include_str!(\"../../../packaging/pins\")`. That file and its `uevr.version` line come from WP-02, but WP-14 depends only on WP-01. WP-13 lists WP-02 for the same reason.",
+   "fix": "Change the Depends line to `WP-01, WP-02 (packaging/pins must hold `uevr.version: <UEVR_VERSION>`)`. The wave stays 2, because WP-02 is in wave 1. Assert `contains(&format!(\"uevr.version: {UEVR_VERSION}\\n\"))`."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "The `Applied` name is ambiguous. apply_with returns `uevr::Applied` (uevr.rs:60, `{record: UndoRecord, env}`), but bones \u00a72 also freezes a different `injectors::Applied{route,env:RouteEnv}`.",
+   "fix": "Spell it `uevr::Applied` (uevr.rs:60, unchanged) in the signature line and in step 6. Also state that WP-14 never names `injectors::Applied`."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "The debug_cmd contract with WP-15 is described wrongly. WP-14 says WP-15 accepts only Windows paths, does no conversion and mirrors `dll_path_contract_example`. WP-15.md:13 and :75 actually convert `/a/b` to `Z:\\a\\b` and leave other paths unchanged, and WP-15 has no mirrored test. Separately, the quoting rule says every word is quoted, but the example leaves `<stem>` bare.",
+   "fix": "Rewrite the Flag and the debug_cmd text: WP-14 always sends `Z:\\` paths, and WP-15's `to_win_path` leaves those unchanged, so the contract holds either way. Drop the 'mirrored by WP-15' and 'locked here' wording (it is a new test, not R28-locked). Quoting rule: the injector path, the stem and each --dll value are single-quoted (`'` becomes `'\"'\"'`); `--exe`, `--delay`, `--dll` and the delay digits stay bare. Example: `'/\u2026/flat3d-uevr-inject.exe' --exe 'SWZeroCompany' --delay 15 --dll 'Z:\\\u2026\\openxr_loader.dll' --dll 'Z:\\\u2026\\UEVRBackend.dll'`."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "The test fixture setup hard-codes the fake-home layout (`data/bin/...`, uevr dir). It does not say how to build EnginePaths, and bones and WP-01 disagree on `from_env`.",
+   "fix": "Tests build `p` with the bones \u00a72 `EnginePaths::from_env(&BTreeMap::from([(\"HOME\".into(), tmp)]), 1000)`. They place the two empty DLLs under `uevr_dir(&p)` and the exe at `injector_path(&p)`, never at hand-written paths. `injector_path` = `p.data.join(\"bin\").join(INJECTOR_EXE)`, which matches WP-15's `--install` target `$XDG_DATA_HOME/flat3d/bin`."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "Step 1, `install_dir/../../compatdata`, keeps literal `..` components, and nothing says what happens when the path has the wrong shape. WP-07's `steam::compatdata` is in the same wave and must not be called.",
+   "fix": "`compatdata = install_dir.parent().and_then(Path::parent).map(|s| s.join(\"compatdata\"))`; if that is None, `Err(\"game folder is not under steamapps/common\")`. Note that WP-07's `steam::compatdata` is not used (same wave)."
+  },
+  {
+   "from": "WP-14",
+   "target": "WP-14",
+   "problem": "The done-check sets CARGO_TARGET_DIR only on the first command. It also skips the existing unit tests inside uevr.rs (uevr.rs:150+), which this WP touches through the write_all refactor. The RouteSettings flag is now settled by WP-01:169.",
+   "fix": "Done-check: `export CARGO_TARGET_DIR=$SCRATCH/target; cargo test --locked -p flat3d-inject --lib --test uevr_apply --test uevr_profile --test injector_route && cargo clippy --locked -p flat3d-inject --all-targets -- -D warnings`. Replace the RouteSettings flag with `use crate::recipes::RouteSettings` (WP-01:169) and `crate::injectors::RouteEnv` (WP-01:180). extras_from and settings_from ignore keys outside UEVR_KEYS."
+  },
+  {
+   "from": "WP-26",
+   "target": "WP-14",
+   "problem": "Line 32 says `uevr-profile: <url> <sha256>`. This conflicts with WP-26's seeds and its pin-ref check, which treat uevr-profile as a packaging/pins key (e.g. `ac7-profile`).",
+   "fix": "Change to: `uevr-profile`: a packaging/pins key (e.g. `ac7-profile`); WP-27 resolves url/sha256 from pins via fetch.rs."
+  },
+  {
+   "from": "WP-27",
+   "target": "WP-14",
+   "problem": "The missing-pin hint reads 'run flat3d-inject setup fetch <appid>' when it should name the pin key. WP-14:32 also documents uevr-profile as '<url> <sha256>', but WP-26 makes it a pin key, and apply_with never reads the fetched profile.",
+   "fix": "Change the hint to 'run flat3d-inject setup fetch uevr'. Treat uevr-profile as a pin key and either copy from p.cache()/<key>/<version> in apply_with or note it as a follow-up."
+  }
+ ]
+}

@@ -1,0 +1,81 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active for this run, so I could not edit WP-02.md. Every WP-02 fix is listed in cross with target WP-02, ready to apply as written. Checked against the repo at 2812f64: 2 tracked .sh files and 14 tracked .py files, no tracked test_*.py, .gitignore lines as stated, headless.sh :15/:24 unquoted $P, no shellcheck on the host, and the msvc target installed. Wave 1 is correct, and WP-02 touches no locked test or Rust file."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-13",
+   "target": "WP-02",
+   "problem": "WP-13's real_pins test needs packaging/pins to have key uevr (fetch auto, size 38974809, sha256 starting 4cd6932d and ending dc6d8) and key ac7-prereqs (fetch: manual, with page). WP-02 does not list these keys, and its pins content waits on a network pre-pass.",
+   "fix": "WP-02's pin table must include uevr with the GitHub digest sha and size 38974809, and ac7-prereqs as fetch: manual with page and license, or WP-13's real_pins fails to compile its expectations."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "check.sh step 8 says its loop matches check.yml, but bones \u00a72 CI excludes decky/tests. From wave 2 on, WP-21 commits the locked decky/tests/test_run_engine.py, which does `import main`. The loop's `unittest discover -s decky/tests` then fails because decky/ is not on sys.path. tools/check.sh goes red, and so do the WP-03 and WP-34 done-checks that call it.",
+   "fix": "Replace the step 8 snippet with the bones form: `for d in $(git ls-files '*test_*.py'|xargs -n1 dirname|sort -u|grep -vx 'decky/tests'); do python3 -m unittest discover -s \"$d\" -p 'test_*.py' || exit 1; done`, then `if [ -n \"$(git ls-files 'decky/tests/test_*.py')\" ]; then (cd decky && python3 -m unittest discover -s tests -p 'test_*.py'); fi`."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "The packaging/pins content can't be written. The Flag says the pin table must come from a network pre-pass that no file contains, and its key list (platform-tools, .NET) is out of date. Five other WPs read exact keys and values from this file at test time: WP-13 real_pins (uevr sha and size, ac7-prereqs manual), WP-14 (`uevr.version: nightly-01143-\u2026`), WP-22 dry-run (android-tools and gnirehtet shas, appimagetool, appimage-runtime), WP-26 (pin keys uevr, geo11, lana-fix, control-fix, ac7-profile) and WP-29 (wivrn-apk, gnirehtet).",
+   "fix": "Add a 'Required keys' table to WP-02 with the known values. uevr (auto): version nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d, url https://github.com/praydog/UEVR-nightly/releases/download/<that tag>/uevr.zip, size 38974809, sha256 4cd6932d1d01168178aef70499d40b101ea6f19868cf76099d8e0087ef8dc6d8, license MIT. android-tools 37.0.0p1: url https://github.com/nmeum/android-tools/releases/download/37.0.0p1/android-tools-37.0.0p1.tar.xz, sha 2c6de1abe16b211c7d9f59276217e14fd9e0e18b20e331d3c84358f5dffd576e. gnirehtet 2.5.1: url https://github.com/Genymobile/gnirehtet/releases/download/v2.5.1/gnirehtet-rust-linux64-v2.5.1.zip, sha dee55499ca4fef00ce2559c767d2d8130163736d43fdbce753e923e75309c275. appimagetool 1.9.1: sha ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0. appimage-runtime 20251108: url https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64, sha 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d. geo11 0.7.12, lana-fix, control-fix, ac7-profile and wivrn-apk: auto, sha TBD-at-pin. ac7-prereqs: fetch manual, with page and note. Let the WP-02 agent fill missing GitHub sizes and urls from read-only `gh api repos/<o>/<r>/releases/tags/<tag>` metadata, with no downloads; state 'network: read-only metadata'. Where a size or url is still unknown, allow `size: TBD-at-pin` and `url: TBD-at-pin`, but only while sha256 is TBD. In pin.sh, a TBD url exits 3 and names `<key>.page`. A TBD size uses a fixed cap of `--max-filesize 4294967296`, and the size line is then written next to sha256 and pinned. Replace the stale 'needs network research' and 'inline comment after crate.ashpd' Flags."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "The pins line format is ambiguous. 'one `key: value` per line' and '`crate.*` and `npm.*` keys need only `version`' leave the real layout unclear. WP-13's parser splits `<key>.<field>: <value>` at the first '.', and its fixture uses `crate.ashpd: 0.13.13` and `npm.@decky/api: 1.1.3`. WP-13 also expects a format header in the pins file.",
+   "fix": "State: each line is `<key>.<field>: <value>`, split at the first '.' and the first ': '. Optional fields are md5, pinned, note and page; unknown fields are allowed. `crate.<name>: <ver>` and `npm.<name>: <ver>` are version lists, not fetch keys, so `pin.sh crate` exits 2 and `--all-tbd` skips them. The file starts with a `#` header that describes the format and the TBD-at-pin rule."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "pin.sh step 5 never says how sha256 is computed. It also leaves open how `--check` treats a hex pin versus a TBD pin, and 'leaves the file byte-identical' doesn't name which file.",
+   "fix": "Add: compute sha256 with `sha256sum \"$tmp/f\" | cut -d' ' -f1`. With `--check` and a hex pin, a sha mismatch exits 4. With `--check` and a TBD pin, only size, md5 and gh-digest are verified. 'The file' means the pins file. The pinned line lists only the checks that actually ran (`size`, `+md5`, `+gh-digest`). Run `mkdir -p \"${XDG_CACHE_HOME:-$HOME/.cache}/flat3d\"` before mktemp. In the tests, set XDG_CACHE_HOME to a tempdir."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "The test plan says 'uses a temp copy of the pins file', but the real pins file only has https URLs. Without its own synthetic keys, no test can exercise TBD fill, `--check` or a size or md5 mismatch.",
+   "fix": "State that each test writes a temp pins file. It holds a synthetic `t.*` auto key whose url is file://<tmp>/blob, with the size and md5 of a blob the test creates, plus a manual key. The test runs `bash packaging/pin.sh t --pins <tmp>` with PIN_ALLOW_FILE=1. The real packaging/pins is used only by the schema case: auto keys need version, url, size and sha256 (or TBD per the rules above) and license; manual keys need page and license."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "The issues_report.py `--json` shape and the device column are never defined, so 'the JSON shape is checked' is not concrete. Status precedence is also unclear for mixed or repeated blocker lines, and gh labels arrive as objects.",
+   "fix": "Define each item as `{\"number\":int,\"title\":str,\"status\":\"ready\"|\"blocked\"|\"blocked-external\",\"blockers\":[open #n ints],\"external\":[text]|[],\"device\":bool}`. Rules: scan every 'Blocked by' line. A line with `#n` refs counts only those refs. A line with no `#` whose text is not `none\u2026` is external. Status is blocked if any ref is open, else blocked-external if any external text, else ready. Read labels with `[l['name'] for l in labels]`. The markdown device cell is `yes` or empty. A gh failure exits 1 with gh's stderr. Network: only the real run uses read-only gh; the tests use the fixture."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "Small check.sh gaps. Step 6 refers to `$rt` but never assigns it. Step 5 gives no command. Step 11 leaves out CI's typecheck. Step 12 should sit under the rust guard. No step sets the exec bit, yet the done-check runs `tools/check.sh` directly. shellcheck can't run on the host.",
+   "fix": "Step 6: `rt=$(mktemp -d); trap 'rm -rf \"$rt\"' EXIT; XDG_RUNTIME_DIR=\"$rt\" cargo test --locked --workspace`. Step 5: `cargo clippy --locked -p flat3d-uevr-inject --target x86_64-pc-windows-msvc -- -D warnings`; the target is installed on the host. Step 11: `pnpm -C decky install --frozen-lockfile && pnpm -C decky run typecheck && pnpm -C decky build`. Step 12 goes inside the root-Cargo.toml guard. Commit check.sh and pin.sh with mode 100755 (`git update-index --chmod=+x`). Add: when shellcheck is missing, run it in the distrobox build container if available; otherwise CI's shellcheck step is the gate."
+  },
+  {
+   "from": "WP-02",
+   "target": "WP-02",
+   "problem": "The 'Depends on: none' line contradicts the bones index (WP-00), and step 1 of check.sh (`cargo fmt --check`) assumes WP-00 has landed. The 7 trailing 'Review note' lines belong to WP-01 and bones (RouteSettings, Layout serde, locked path counts, lockfile seeding). They would confuse a WP-02 agent.",
+   "fix": "Set '**Depends on:** WP-00 (wave 0 base). Full gate after WP-01; the pins values come from the Required keys table.' Delete the 7 trailing review notes, but keep the one rejecting the pytest loop, reworded for check.sh."
+  },
+  {
+   "from": "WP-26",
+   "target": "WP-02",
+   "problem": "packaging/pins content is left to a network pre-pass. WP-02 never names the keys WP-26 test 5 needs as pins with url+size+sha256: uevr, geo11, lana-fix, control-fix, ac7-profile. The helixmod Geo-11 fixes could end up as `fetch: manual` (page+license only). They would then not count as pin keys, and WP-26 test 5 fails.",
+   "fix": "State in WP-02 that packaging/pins must hold `uevr`, `geo11`, `lana-fix`, `control-fix` and `ac7-profile` as `fetch: auto` keys with version/url/size/sha256 (sha may be TBD-at-pin) and license. `ac7-prereqs` stays `fetch: manual`."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-02",
+   "problem": "WP-22's real (non-dry) runs and the appimage.yml dispatch need pins keys that WP-02's pins spec never lists: android-tools, gnirehtet, appimagetool and appimage-runtime.",
+   "fix": "packaging/pins carries a fetch: auto block for each of those four keys (version, url, size, sha256, license). Fill url and sha from WP-22's Inline facts: android-tools 37.0.0p1 2c6de1ab\u2026576e, gnirehtet v2.5.1 dee55499\u2026c275, appimagetool 1.9.1 ed4ce84f\u20264eb0, appimage-runtime 20251108 2fca8b44\u2026260d."
+  },
+  {
+   "from": "WP-25a",
+   "target": "WP-02",
+   "problem": "check.sh step 10 runs `tools/docs/check.py` (full repo) if present. WP-25a ships check.py in wave 1, so every wave-2 `tools/check.sh` done-check fails until WP-25b. WP-25b also appends the same line to check.sh, so the step would appear twice.",
+   "fix": "Drop step 10 from WP-02's check.sh. WP-25b appends `python3 tools/docs/check.py` as the only wave-2 check.sh edit."
+  }
+ ]
+}

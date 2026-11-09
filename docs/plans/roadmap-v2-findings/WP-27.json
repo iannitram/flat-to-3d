@@ -1,0 +1,27 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "No edits made: plan mode is on for this run, so WP-27.md is read-only. A full drop-in replacement is at roadmap-v2-findings/WP-27-proposal.md. It makes these changes:\n(1) ensure_applied now uses the bones \u00a72 form (p, appid, &Recipe, r) and returns Result<Applied, ApiError>. The &steam::Game/String variant is gone, so there is no '<code>: ' prefix splitting. The game is looked up with steam::installed_games, and the settings are re-read with find_recipe + route_settings.\n(2) The contract owner's flag is applied. Fetching uses fetch::pin(key) + fetch::fetch, which already handles the .flat3d-fetch marker and the unpack, so the separate unpack and sentinel steps are removed and the p.pins() flags are deleted. The error mapping goes through a new fetch_api_error: UnknownKey\u2192usage, TbdAtPin/Manual\u2192refused, Size/ShaMismatch\u2192command-failed, everything else\u2192io. Inside ensure_applied, UnknownKey maps to bad-recipe instead. The 'setup fetch with no key exits 2' test moves to WP-29.\n(3) The uevr-profile and geo11-fix settings are treated as pin keys, matching WP-26.\n(4) inject is reordered to recipe\u2192check_injectable\u2192route settings\u2192ensure_applied, so the locked cli_json 'inject 5' case returns not-found with no writes.\n(5) cli/undo.rs is dropped from WP-27's files (WP-01's body is kept) and only the cli_undo.rs test remains. cli_setup_fetch.rs is kept in the list.\n(6) Tests are made concrete: a shared temp HOME/XDG fixture with a fake Steam library and a recipe, the UEVR cache seeded through fetch::cache_dir with a marker file, the TBD case tested through fetch_api_error rather than the real pins, the rollback test, and a stated FakeRunner source.\n(7) Depends is now WP-01, 02, 07, 13, 14, 16. WP-20 was dropped because it is unused. Wave 3 is correct.\n(8) The done-check gains XDG_RUNTIME_DIR and the locked undo_record, undo_actions, uevr_profile, injector_route and wrapper tests."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-27-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-27",
+   "problem": "It uses p.pins(), a separate unpack step, and flags WP-01 for pins().",
+   "fix": "Use fetch::pin(key) and fetch::fetch with a .flat3d-fetch marker. Map errors as: UnknownKey to usage, TbdAtPin/Manual to manual, Size/ShaMismatch to checksum, and others to io. Move the 'setup fetch with no key exits 2' test to WP-29. Delete the pins() flags."
+  },
+  {
+   "from": "WP-13",
+   "target": "WP-27",
+   "problem": "WP-27 lines 46 and 61 say to run fetch::fetch 'then unpack', check a 'sentinel', and look the pin up in p.pins(). WP-13's fetch already unpacks, is idempotent through the marker file .flat3d-fetch, and has no unpack fn. Its pins come from the compile-time PINS (fetch::pin(key)), or from pin_in(&parse_pins(text),key) for a runtime file.",
+   "fix": "WP-27: call fetch::pin(key) (or pin_in(&parse_pins(&fs::read_to_string(p.pins())?),key)), then fetch::fetch(&pin,p,r). Drop the separate unpack and sentinel steps. The result dir is fetch::cache_dir(&pin,p)."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-27",
+   "problem": "WP-27 calls geo11::apply(..) (WP-27:49) but doesn't say which viewer_exe it passes. Without a real path, every Geo-11 launch fails viewer_check.",
+   "fix": "Pass `p.viewer_bin()` (the new WP-01 accessor) as viewer_exe. A not-found from viewer_check surfaces as a typed error and never falls back to flat."
+  }
+ ]
+}

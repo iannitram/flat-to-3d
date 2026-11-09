@@ -1,0 +1,57 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was on in this subagent, so WP-22.md is unedited. The full replacement text for every fix below is in roadmap-v2-findings/WP-22-proposal.md (E1-E7). Each fix also appears in cross with target WP-22. The wave is correct: wave 2, after WP-01 and WP-02 in wave 1. The only change to Depends is dropping the 'WP-00 (rust-toolchain.toml)' reason."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-22-proposal.md",
+ "incoming": [
+  {
+   "from": "WP-00",
+   "target": "WP-22",
+   "problem": "Lines 50-51, 61, 71 and 73 depend on a WP-00 rust-toolchain.toml (an `id: pin` step reading it, then dtolnay/rust-toolchain@master). WP-00 does not add one: it would force a rustup download on a host that has only `stable`. Bones \u00a72 and T19 already say appimage.yml uses `dtolnay/rust-toolchain@1.95.0`.",
+   "fix": "Replace steps 3-4 with `- uses: dtolnay/rust-toolchain@1.95.0`. Change the done-check to: appimage.yml contains `dtolnay/rust-toolchain@1.95.0` and contains neither `@stable` nor `@master`. Drop '(rust-toolchain.toml)' from Depends on WP-00 and drop the line 71 claim that WP-00 adds the toml."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-22",
+   "problem": "WP-22's AppImage and Decky zip scripts don't bundle flat3d-viewer (no mention in WP-22).",
+   "fix": "Bundle flat3d-viewer (built with --features xr,capture) in bin/ of both the AppImage and dist/flat-to-3d.zip, with done-checks `test -x $BIN/flat3d-viewer` and the zip listing contains bin/flat3d-viewer."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-22",
+   "problem": "appimage.yml contradicts bones \u00a72 'CI final shape' and T19. It uses runs-on ubuntu-24.04 and dtolnay/rust-toolchain@master, with the channel read from rust-toolchain.toml, but no WP creates that file (WP-00 pins @1.95.0 in check.yml). The 'workflow toolchain' test asserts the wrong strings, and Depends cites WP-00 for a toml that never exists.",
+   "fix": "Use runs-on: [self-hosted, linux]. Use the apt step with DEBIAN_FRONTEND=noninteractive and SUDO=$(command -v sudo || true) (same package list plus desktop-file-utils), then dtolnay/rust-toolchain@1.95.0. Drop the id: pin step. Test: the file contains '@1.95.0' and '[self-hosted, linux]' and none of '@stable', '@master' or 'ubuntu-24.04'. Drop the ubuntu-24.04 flag and the rust-toolchain.toml inline fact. Depends: WP-01, WP-02."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-22",
+   "problem": "The pin() helper is wrong under set -euo pipefail. For a missing key, grep exits 1 inside v=$(...), so the script dies with exit 1 and no message instead of exit 2. The A&&B||C form also risks shellcheck SC2015.",
+   "fix": "Replace it with: pin(){ local v; v=$(grep -m1 \"^$1: \" \"$PINS\" | cut -d' ' -f2-) || v=; if [ -z \"$v\" ] || [ \"$v\" = TBD-at-pin ]; then echo \"pin $1 missing or TBD-at-pin: run packaging/pin.sh\" >&2; exit 2; fi; printf '%s\\n' \"$v\"; }. Add ROOT=$(cd \"$(dirname \"$0\")/..\" && pwd) and run(){ printf '+'; printf ' %s' \"$@\"; printf '\\n'; [ \"${DRY:-0}\" = 1 ] || \"$@\"; }, so dry-run prints $ORIGIN literally."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-22",
+   "problem": "build-tools.sh never states where --dry-run sits relative to the distrobox re-exec, the preflight (exit 3) and mktemp. On a host without cmake/patchelf/distrobox the dry-run test would exit 3 or enter a box, and mktemp -d writes in dry-run.",
+   "fix": "Order: parse args, then read every pin (exit 2), then if --dry-run print every step with placeholder dirs ($CACHE/dl.XXXXXX, no mktemp) and exit 0, skipping box and preflight. Otherwise do the box re-exec (skipped if FLAT3D_IN_BOX=1 or /run/.containerenv), then preflight, then steps 1-6. Apply the same pins-then-dry-run order to build-appimage.sh."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-22",
+   "problem": "The tests read the real packaging/pins. WP-02 does not list the android-tools, gnirehtet, appimagetool or appimage-runtime keys (its pin table comes from a network pre-pass), so the dry-run tests' expected URLs and shas aren't guaranteed. The appimagetool URL is missing from Inline facts.",
+   "fix": "Each test writes its own temp pins fixture from Inline facts and passes --pins. Add the appimagetool URL https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage. Name the keys used: android-tools.{version,url,sha256}, gnirehtet.{version,url,sha256}, appimagetool.{url,sha256}, appimage-runtime.{url,sha256}. Tools dry-run test: assert the full shas; with --out <tmp>/t, assert it is not created; with the default out, assert 'dist/tools/gnirehtet.apk' is printed. TBD test: also add a missing-key case that exits 2."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-22",
+   "problem": "The appimage dry-run test expects the literal 'usr/flat3d-inject -> bin/flat3d-inject', which no `ln -s` line prints. Separately, repo recipes/ has no *.recipe files (only README.md), so a bare 'cp recipes/*.recipe' fails under set -e in both build-appimage.sh and build-decky.sh.",
+   "fix": "Dry-run prints '+ ln -s bin/flat3d-inject <AppDir>/usr/flat3d-inject' (and the same for flat3d-run), and the test asserts 'ln -s bin/flat3d-inject' and 'ln -s bin/flat3d-run'. Copy recipes with shopt -s nullglob after mkdir -p. Default bin dir is ${CARGO_TARGET_DIR:-$ROOT/target}/release. Fix the reference install.rs:34 \u2192 crates/engine/src/install.rs:34."
+  },
+  {
+   "from": "WP-22",
+   "target": "WP-22",
+   "problem": "The decky zip test's 'namelist() equals expected set' fails as written. The zipfile CLI writes directory entries ('flat-to-3d/', 'flat-to-3d/bin/'\u2026), the fake tree is not spelled out, and the relative --out breaks after cd into the staging dir.",
+   "fix": "Spell out the fake tree: T/decky/{dist/index.js,package.json,plugin.json,main.py,README.md}, T/LICENSE, T/recipes/x.recipe, B/{flat3d-inject,flat3d-run} mode 0755, D/{adb,gnirehtet,gnirehtet.apk,lib/libx.so}. Compare only names not ending in '/' against the explicit expected set. The script makes out absolute and runs (cd \"$stage\" && python3 -m zipfile -c \"$out_abs\" flat-to-3d). Defaults: --root=$ROOT, --tools=$ROOT/dist/tools. Name the local pnpm as 9.15.9 (WP-21:72)."
+  }
+ ]
+}

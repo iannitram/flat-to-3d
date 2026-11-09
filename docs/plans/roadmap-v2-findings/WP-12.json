@@ -1,0 +1,33 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active for this run, so I could not edit roadmap-v2.md (WP-12 section). The fixes WP-12 needs in its own file are listed in cross with target WP-12, ready to apply. Checks against the repo at 2812f64 that held: link.rs:51-99 builds the 4 start and 3 stop lists as WP-12 describes. stop_3d is at link.rs:193-207. The locked link_stop.rs:62-73 'Access denied' case stays an error under the unit_already_gone rule. AdbRunner skips adding -s when word 1 is already '-s' (adb.rs:191-208), so [\"adb\",\"-s\",serial,\u2026] is safe. Wave 2 depending on WP-01 (wave 1) is right. No same-wave WP owns link.rs or the test files (WP-08 owns cli/link.rs, WP-10 owns exec.rs and tether.rs). No locked test, USAGE string, error code or bin name is touched."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-12",
+   "target": "WP-12",
+   "problem": "Files and paths: WP-12 lists `crates/engine/src/wivrn.rs`, writes `pub use crate::wivrn::{\u2026}`, and its test `link_reexports_the_wivrn_names` names `flat3d_inject::wivrn::SERVER_FLAGS`. Under bones \u00a72 the module is `link::wivrn`. Its signature block also claims WP-01 freezes this set, which WP-01 does not.",
+   "fix": "Once bones and WP-01 are reconciled, change the files list to `crates/engine/src/link/wivrn.rs` (bodies only), change the re-export to `pub use wivrn::{FlatpakScope, QuestApp, WivrnDirs, WivrnStart, QUEST_APPS, SERVER_FLAGS, detect_quest_app, detect_server};`, and change the test to `flat3d_inject::link::SERVER_FLAGS == flat3d_inject::link::wivrn::SERVER_FLAGS`. Rewrite the 'retired names' paragraph so it does not call the bones \u00a72 names retired: bones wins unless it is updated."
+  },
+  {
+   "from": "WP-12",
+   "target": "WP-12",
+   "problem": "The done-check is broken. `$SCRATCH` is undefined, and the clippy half after `&&` runs without CARGO_TARGET_DIR, so it builds into the repo's target/.",
+   "fix": "Use `export CARGO_TARGET_DIR=<agent scratch>/target && cargo test --locked -p flat3d-inject --test link_stop_twice --test wivrn_detect --test link_start --test link_stop --test link_commands && cargo clippy --locked -p flat3d-inject --all-targets -- -D warnings`."
+  },
+  {
+   "from": "WP-12",
+   "target": "WP-12",
+   "problem": "Some tests are underspecified. `a_short_path_is_an_error` gives no input and no scripted second-scope reply. `user_install_strips_arch_branch_commit` uses a commit with an ellipsis (`61d58e18\u2026332`). The detect_quest_app text does not say whether an adb failure (success==false) stops the loop or skips to the next candidate. `unit_not_found_is_stopped` and `access_denied_is_still_an_error` give no replies or stderr strings.",
+   "fix": "For the short path, script user location `/x/y\\n` (ok) and system location failing, and expect `Err` naming both scopes. Use a full 64-hex commit literal. State that an adb failure returns None at once (no further candidates), and that adb_failure_is_none expects ran.len()==1. For unit_not_found, script `ok, ok, failed(\"Failed to stop flat3d-wivrn.service: Unit flat3d-wivrn.service not found.\\n\")`. For access_denied, script `failed(\"Failed to stop flat3d-wivrn.service: Access denied\\n\")` \u2192 Err with message trimmed."
+  },
+  {
+   "from": "WP-10",
+   "target": "WP-12",
+   "problem": "WP-12 defines WivrnStart{scope:Option<FlatpakScope>,app:String,flags} in crate::wivrn with SERVER_FLAGS/QUEST_APPS and retires the bones names. Bones \u00a72 freezes link/wivrn.rs with WivrnStart{dirs:WivrnDirs,app:Option<QuestApp>,flags}, WIVRN_SERVER_FLAGS and QUEST_APP_CANDIDATES (WP-01.md:188 also diverges). WP-10 imports crate::link::wivrn::WivrnStart per bones.",
+   "fix": "Make WP-12 (and WP-01.md:188) match bones \u00a72: the link/wivrn.rs path, field names and const names."
+  }
+ ]
+}

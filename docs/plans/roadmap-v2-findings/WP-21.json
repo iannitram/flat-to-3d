@@ -1,0 +1,63 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none: this session was in plan mode, so WP-21.md could not be edited and only read-only checks ran. The WP-21 fixes it needs are written out in the first cross item so they can be applied."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-21/WP-28/WP-32",
+   "problem": "launch-sync has no engine command.",
+   "fix": "Either WP-21 uses `launch add --json --options`, or WP-28 adds a launch-sync command."
+  },
+  {
+   "from": "WP-04",
+   "target": "WP-21",
+   "problem": "WP-21.md:87 cites `app/tests/headset_page.rs`, the path before WP-01. tools/docs/check.py rules and \u00a70 require crates/... paths.",
+   "fix": "Change it to `crates/app/tests/headset_page.rs`."
+  },
+  {
+   "from": "WP-00",
+   "target": "WP-21",
+   "problem": "Lines 69, 71, 76 and 106 rely on a 'WP-00 network pre-step' that WP-00 does not and should not run, because the lockfile must be resolved from the exact package.json WP-21 commits. As written, WP-21's `--frozen-lockfile --offline` gate cannot pass: the local metadata cache is empty and four pinned versions are missing from the store.",
+   "fix": "Make the step WP-21's own: 'Network (declared): once, at the start of WP-21, after writing decky/package.json: (cd decky && pnpm install --lockfile-only && pnpm fetch) with local pnpm 9.15.9. Commit the resulting pnpm-lock.yaml unchanged; everything after that, done-check included, runs --offline.' Drop 'plus the WP-00 network pre-step' from Depends on."
+  },
+  {
+   "from": "WP-21",
+   "target": "WP-21",
+   "problem": "(edits I could not make; plan mode) The launch-sync flag: there is no `launch-sync` engine command. Also, `launch(verb,line)` sends `launch add <line>` with no `--options`, and WP-28's parser rejects that as a usage error.",
+   "fix": "Replace the two lines with `export const launch = (verb: \"add\"|\"remove\", options: string) => engine<LaunchText>(\"launch\", verb, \"--json\", \"--options\", options);` and `export const launchSync = (options: string) => launch(\"add\", options);`. Rewrite the Behaviour bullet 'launch-sync argv' to say that main.py appends its trailing `--json`, WP-01's `parse_any` takes `--json` out of the argv before the first `--` and before the view parser runs (WP-01 'parse_any' step 2), and so the extra flag is harmless. Remove 'launch-sync' from the closing Flag."
+  },
+  {
+   "from": "WP-21",
+   "target": "WP-21",
+   "problem": "(edits I could not make) 'WP-00 network pre-step' does not exist. WP-00 is wave-0 fmt/clippy and never mentions pnpm, a lockfile or the network, so an agent cannot get pnpm-lock.yaml or a warm store from it.",
+   "fix": "Make the network pre-step WP-21's own Step 0 (network declared). In a scratch dir holding the verbatim package.json, run `pnpm install --lockfile-only && pnpm fetch` with local pnpm 9.15.9, then copy pnpm-lock.yaml into decky/. Every later step runs `--offline`. Replace 'must equal the pins research' with the full value to spot-check: `@decky/api@1.1.3` integrity `sha512-XsPCZxfxk5I1UtylIUN3qaWQI31siQbKfbLIskkI5innEatY1m4NQqBv/6hwPaO9mKMbdqYpnh5PSJDeMEOOBA==`, same as the sibling quest-tether repo's decky/pnpm-lock.yaml. All 9 pinned versions exist on npm (checked with npm view)."
+  },
+  {
+   "from": "WP-21",
+   "target": "WP-21",
+   "problem": "(edits I could not make) The body of engine.ts and the index.tsx imports are not given, so the TS\u2194Python bridge is left open.",
+   "fix": "Add: `const call = callable<[args: string[]], Envelope<unknown>>(\"engine\"); export async function engine<T>(...args: string[]): Promise<Envelope<T>> { try { return (await call(args)) as Envelope<T>; } catch (e) { return { ok: false, command: args[0] ?? \"\", error: { code: \"io\", message: String(e) } }; } }`. Imports: `callable, definePlugin` from `@decky/api` (both exported in 1.1.3), `Field, staticClasses` from `@decky/ui`, `FaVrCardboard` from `react-icons/fa`, and `useEffect, useState` from `react`."
+  },
+  {
+   "from": "WP-21",
+   "target": "WP-21",
+   "problem": "(edits I could not make) Small inaccuracies in WP-21.",
+   "fix": "(1) The closing Flag says doctor lands in WP-28; `doctor` is WP-29 (wave 3). (2) types.ts: type `LinkEvent.kind` as `string`, because api.rs EventKind also has `tether-error`, which code-map leaves out. Add optional `title?: string` to `ToastBatch`, which WP-28 adds. (3) Inline fact 'cli.rs:58-62 strips --json anywhere' covers only the legacy `parse`. After WP-01 the rule that matters is `parse_any` in crates/engine/src/cli.rs, which takes `--json` out of the head. (4) The '#76/#116/#117/#118 facade checklist' belongs to WP-01/03/04/05/23; cut it to one cross-reference line to keep WP-21 focused."
+  },
+  {
+   "from": "WP-28",
+   "target": "WP-21",
+   "problem": "decky/src/engine.ts has `launchSync` -> engine('launch-sync',...), but no engine command exists and the frozen ViewCommand has no LaunchSync. Also `launch(verb,line)` sends a bare line, which WP-28's parser rejects.",
+   "fix": "Drop launchSync. Make `launch = (verb, line) => engine<LaunchText>(\"launch\", verb, \"--options\", line)`. Update the line-40 note to say so."
+  },
+  {
+   "from": "WP-32",
+   "target": "WP-21",
+   "problem": "In types.ts/engine.ts, `launch(verb,line)` passes the line bare, which WP-28's parser rejects as usage. `launchSync` calls `launch-sync`, a command that WP-28 and WP-01 (ViewCommand) never define.",
+   "fix": "Set `launch = (verb, line) => engine<LaunchText>(\"launch\", verb, \"--json\", \"--options\", line)`. Delete `launchSync` and the 'launch-sync argv' behaviour bullet; under noUnusedLocals an exported const is fine either way."
+  }
+ ]
+}

@@ -1,0 +1,39 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active in this session, so I could only read files and WP-32.md is unedited. The edits I meant to make are in cross under target WP-32 and can be applied as written. The wave is correct: WP-21 is wave 2, WP-28 is wave 3 and WP-32 is wave 4, and no other wave-4 WP (WP-31, WP-33) owns a decky/ file. Nothing touches a locked test. Typings were checked against @decky/ui 4.16.4 and @decky/api 1.1.3 in ~/dev/save-relay/node_modules/.pnpm."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-21",
+   "target": "WP-32",
+   "problem": "launch.ts (line 42) calls `engine<LaunchText>(\"launch\",\"add\",cur)` without `--options`, which is a usage error under WP-28's parser.",
+   "fix": "Call WP-21's `launchSync(cur)`, which is `launch add --json --options cur`. Removal uses `launch(\"remove\", cur)`."
+  },
+  {
+   "from": "WP-28",
+   "target": "WP-32",
+   "problem": "launch.ts calls engine<LaunchText>(\"launch\",\"add\",cur) without --options, so WP-28 gives a usage error.",
+   "fix": "Use engine<LaunchText>(\"launch\",\"add\",\"--options\",cur), or the WP-21 `launch(\"add\",cur)` helper, and the same for remove."
+  },
+  {
+   "from": "WP-32",
+   "target": "WP-32",
+   "problem": "launch.ts calls engine<LaunchText>(\"launch\",\"add\",cur) with a bare line. WP-28's parser requires `launch add|remove [--json] --options <string>` (WP-28 lines 33-37), so every call returns usage. This is the contract owner's launch-sync item: WP-28 has no launch-sync command.",
+   "fix": "In launch.ts, call `engine<LaunchText>(\"launch\", verb, \"--json\", \"--options\", cur)` with verb \"add\" for plan.wanted and \"remove\" for plan.remove. Do not use WP-21's `launch`/`launchSync` helpers. Add a line saying there is no launch-sync command."
+  },
+  {
+   "from": "WP-32",
+   "target": "WP-32",
+   "problem": "collection.ts does not typecheck under strict mode with @decky/ui 4.16.x. GetCollection returns `CCollection | null` (collectionstore.d.ts:271). AsDragDropCollection returns `CCollectionBase | null` (:213), and CCollectionBase has no AddApps, RemoveApps or Save; those are on CCollection (:237-242). The `name` passed to NewUnsavedCollection is never defined, and `plan` is an Envelope, not a CollectionPlan.",
+   "fix": "Use a module-level `let name = \"3D Ready\"` (collection.rs:8). Then `const id = collectionStore.GetCollectionIDByUserTag(name); const c = (id ? collectionStore.GetCollection(id) : null) ?? collectionStore.NewUnsavedCollection(name, undefined as unknown as Parameters<typeof collectionStore.NewUnsavedCollection>[1], []);` and `cur = Array.from(c.apps).join(\",\")` (apps is a Set<number>). Then `r = await engine<CollectionPlan>(\"collection\",\"--current\",cur)`; if `!r.ok` return null, otherwise `name = r.data.name`. Call `c.AddApps(ov(add))`, `c.RemoveApps(ov(remove))` and `await c.Save()` on the CCollection, only when add.length + remove.length > 0, then return r.data. Drop AsDragDropCollection. Update the inline facts to match."
+  },
+  {
+   "from": "WP-32",
+   "target": "WP-32",
+   "problem": "Several smaller gaps. (1) The Imports list includes `Envelope`, which nothing uses; WP-21's tsconfig sets noUnusedLocals, so the typecheck fails. (2) 'Panel mount re-runs the same sync' sits under index.tsx, and nothing says what happens to syncLaunchOptions' returned errors. (3) The done-check runs `pnpm i --frozen-lockfile` without `--offline`, unlike WP-21, and never checks the bundle. (4) The third Flag (`--current \"\"`) is already settled by WP-28 line 40.",
+   "fix": "(1) Import only what each file uses. (2) Move the mount sync into the panel.tsx bullets: in a useEffect on mount, run `syncCollection().then(p => p && syncLaunchOptions(p))` and show each returned message as a `Field`. (3) Done-check: `cd decky && pnpm i --frozen-lockfile --offline && pnpm run typecheck && pnpm run build && test -f dist/index.js && python3 -m unittest discover -s tests -p 'test_*.py'`. State: network none (store warmed by the WP-00 pre-step). (4) Delete the third Flag."
+  }
+ ]
+}

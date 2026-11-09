@@ -1,0 +1,39 @@
+{
+ "own_review": {
+  "runnable": true,
+  "changed": "none. Plan mode was on for this run, so I could not edit WP-00.md. The WP-00 edits I verified and propose are the first three cross items (target WP-00), ready to apply as written. Verification against the repo at 2812f64 (read-only checks only): `cargo fmt --check` flags exactly 48 inject files: 10 in src and 38 in tests, all 38 of them headered. App has 0. The check.yml line refs (:24-30 and :41-43) match. Wave 0 has no dependencies. The plan uses only pre-reshape `inject/`/`app/` paths, which is correct for wave 0. I did not build: the clippy and test counts come from the earlier rehearsal and were not rerun."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-00",
+   "problem": "It counts the locked set wrongly, has no toolchain pin for WP-22, and does not set up the network pre-step that WP-21 expects.",
+   "fix": "The locked set is 49 headered files, plus 6 unheadered files that are not locked. Add rust-toolchain.toml, or have WP-22 use dtolnay/rust-toolchain@1.95.0. Add the network pre-step or drop it from WP-21."
+  },
+  {
+   "from": "WP-00",
+   "target": "WP-00",
+   "problem": "Tests section (line 70) says 'Locked: all 55 inject/tests/*.rs'. Only 49 files start with a `//! Locked` header. Six have no header and are not locked: event_ring_wrap.rs, launch_options_quotes.rs, runs_extra_lines.rs, tether_runtime.rs, tether_tunnel_review.rs, wrapper_run.rs.",
+   "fix": "Replace line 70 with: \"Locked: the 49 `inject/tests/*.rs` whose line 1 starts `//! Locked`. The other 6 (`event_ring_wrap`, `launch_options_quotes`, `runs_extra_lines`, `tether_runtime`, `tether_tunnel_review`, `wrapper_run`) carry no header and are not locked. rustfmt edits 38 test files, all of them headered; none of the 6 changes. Test names and assertions are unchanged.\" On line 23, change '38 test files, all locked' to '38 test files, all locked (of the 49 headered)'."
+  },
+  {
+   "from": "WP-00",
+   "target": "WP-00",
+   "problem": "The toolchain flag (lines 62-65) is stale: it says the bones use @stable, and it suggests rust-toolchain.toml as an option. Bones \u00a72 now pins dtolnay/rust-toolchain@1.95.0 in check.yml and appimage.yml. The host has only the `stable` toolchain, which is 1.95.0, so a rust-toolchain.toml naming 1.95.0 would make rustup download a toolchain on every agent's first cargo call. That is a release download, which the pass forbids.",
+   "fix": "Replace lines 62-65 with: \"Toolchain: every workflow pins `dtolnay/rust-toolchain@1.95.0` (bones \u00a72 CI and T19; host rustc/clippy 1.95.0, 2026-04-14), so a newer stable clippy cannot turn `-D warnings` red with no code change. WP-00 adds **no** `rust-toolchain.toml`: the host has only `stable-x86_64-unknown-linux-gnu`, so a toml naming 1.95.0 would trigger a rustup download. WP-22's `appimage.yml` uses `@1.95.0` directly. Raising the pin is a deliberate later change.\""
+  },
+  {
+   "from": "WP-00",
+   "target": "WP-00",
+   "problem": "WP-00 says nothing about network, but WP-21 expects a 'WP-00 network pre-step' (pnpm lockfile plus warm store). WP-00 lands alone, owns no decky/ files and cannot see WP-21's package.json, and a warmed pnpm store only exists on the machine that ran it. A pre-step there cannot reliably produce the lockfile WP-21 commits.",
+   "fix": "Under 'Owner device: none.', add: \"**Network:** none. WP-00 runs no pre-step for other WPs; WP-21 does its own one-time npm registry step.\""
+  },
+  {
+   "from": "WP-05",
+   "target": "WP-00",
+   "problem": "WP-03/04/05/06/21 say a 'WP-00 pre-step' writes $SCRATCH/issues/{67,76,116,117,118}.md, but WP-00 contains no such step (grep 'pre-step|issues/' finds nothing).",
+   "fix": "Either add the pre-step (gh issue view for 67, 76, 116, 117, 118 into $SCRATCH/issues/N.md) or drop the reference via bones \u00a70 and make the gh pipe primary."
+  }
+ ]
+}

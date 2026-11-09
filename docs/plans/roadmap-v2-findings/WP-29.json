@@ -1,0 +1,33 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active, so WP-29.md could not be edited. The full replacement text is in roadmap-v2-findings/WP-29-proposal.md, ready to paste. It makes these changes:\n(1) wave 3 \u2192 4 (depends on WP-27, which is wave 3), and depends becomes WP-01, 12, 13, 15, 20, 22, 27;\n(2) adds the 'setup fetch with no key \u2192 exit 2 + error.code usage' case, and asserts error.code == usage on 'launch-env abc', because exit 2 alone also passes for not-built;\n(3) drops src/doctor.rs, since WP-01 adds no crate-root doctor mod. All logic is private in cli/doctor.rs and cli/setup.rs, and the tests go through the frozen cli::{doctor,setup}::run with the bones Ctx{paths,runner,relay,json};\n(4) uses the bones forms link::wivrn::detect_server / detect_quest_app(r, Option<&str>) -> QuestApp{package,label}. The versionName match moves to a Q4 manual flag;\n(5) DTO fields now match WP-21 types.ts: DoctorCheck.fix is a String, and LaunchText is {options};\n(6) the doctor finds the serial with 'adb devices', and the pins source is p.pins() with a fallback to fetch::PINS;\n(7) launch-env lists the exact 3 exec_spec pairs, including STEAM_COMPAT_LAUNCHER_SERVICE=proton;\n(8) the gnirehtet top-folder flag is resolved: WP-13 uses bsdtar -xf, which keeps the folder;\n(9) the tests are concrete, with seeded files, scripted argv, a writes-nothing check and a nothing-to-install case;\n(10) the test file is cli_doctor.rs, not doctor.rs."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-29-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-29",
+   "problem": "Its wave and dependencies are wrong, and it is missing a CLI case.",
+   "fix": "It depends on WP-27, which puts it in wave 4. Add the 'setup fetch with no key exits 2' case."
+  },
+  {
+   "from": "WP-29",
+   "target": "WP-29",
+   "problem": "Plan mode blocked editing WP-29.md. The current file is still wave 3, has no 'setup fetch' no-key case, has pub helpers in cli/setup.rs (bones: helpers stay private), has a src/doctor.rs that WP-01 never creates a mod for, and has a versionName that the frozen QuestApp does not carry.",
+   "fix": "Replace WP-29.md with the block in roadmap-v2-findings/WP-29-proposal.md."
+  },
+  {
+   "from": "WP-27",
+   "target": "WP-29",
+   "problem": "WP-29 depends on WP-27 (setup_fetch), but both are in wave 3.",
+   "fix": "Either drop the dependency (call the WP-01 stub signature; WP-29's tests do not exercise fetch behaviour) or move WP-29 to wave 4, along with WP-33\u21925 and WP-34\u21926 in bones. WP-29 also takes over the 'setup fetch with no key exits 2' parser test from WP-27."
+  },
+  {
+   "from": "WP-33",
+   "target": "WP-29",
+   "problem": "Index and file put WP-29 in wave 3 but its Depends list includes WP-27, also wave 3; a WP must depend only on earlier waves.",
+   "fix": "Move WP-29 to wave 4 (in WP-29.md and the bones index). WP-33 no longer lists WP-29 as a merge dependency, so WP-33 can stay in wave 4."
+  }
+ ]
+}

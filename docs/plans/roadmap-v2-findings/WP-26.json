@@ -1,0 +1,39 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was on, so WP-26.md could not be edited. The cross entries with target WP-26 are the edits to apply there."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-26",
+   "target": "WP-26",
+   "problem": "pin_refs says `plus m[\"uevr-profile\"]`/`m[\"geo11-fix\"]`. Indexing a BTreeMap panics when the key is absent, and the 2075800 seed has no uevr-profile.",
+   "fix": "Reword: Uevr \u21d2 `uevr` plus `m.get(\"uevr-profile\")` when present; Geo11 \u21d2 `geo11` plus `m.get(\"geo11-fix\")` when present."
+  },
+  {
+   "from": "WP-26",
+   "target": "WP-26",
+   "problem": "Test 6 refers to 'the cross-check' but never defines it as a function.",
+   "fix": "Add a test-local `fn missing_pins(refs:&[String], pins:&BTreeMap<String,BTreeMap<String,String>>)->Vec<String>` that returns refs which are not pin keys. Test 6: route Uevr, m from route_settings of `uevr-exe: X\\nuevr-profile: no-such-pin`, real pins \u21d2 result == [\"no-such-pin\"]. Tests 5 and 7 (recipes_repo) assert that it is empty."
+  },
+  {
+   "from": "WP-26",
+   "target": "WP-26",
+   "problem": "recipes_repo test 2 says the name must match `^[0-9]+-[a-z0-9-]+\\.recipe$`, but the engine has no regex crate and Cargo.lock is frozen after WP-01.",
+   "fix": "Say: check by hand, with no regex dependency. Strip `.recipe`, split_once('-'), the left side is all ASCII digits and non-empty, the right side is non-empty and only [a-z0-9-]."
+  },
+  {
+   "from": "WP-26",
+   "target": "WP-26",
+   "problem": "The pins parser strips a trailing ` # \u2026`, but WP-02's format allows no inline comments (a value is everything after the first `: `, and a comment is a whole `#` line).",
+   "fix": "Match WP-02: skip blank lines and lines starting with '#', split at the first `\": \"`, then split the key at the first '.'. Drop the inline-comment strip."
+  },
+  {
+   "from": "WP-26",
+   "target": "WP-26",
+   "problem": "The seeds folder path and the loader for recipe_seeds test 1 are implicit. The Done-check uses an undefined `$SCRATCH`. The Signatures/Seeds sections cite pre-move inject/src and inject/tests line numbers, which WP-00 rustfmt may shift.",
+   "fix": "Add: seeds = `Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(\"tests/fixtures/recipe-seeds\")`, loaded with `load_recipes`; each file's text is read with fs for route_settings. Done-check: `CARGO_TARGET_DIR=<agent scratch>/target`. Cite paths as crates/engine/src/{recipes,injectors}.rs (base inject/src lines for reference; match by content after rustfmt). Add `**Wave:** 2` near Depends."
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was switched on in this session (read-only), so I did not edit WP-17.md. The WP-17 fixes I would have made are listed in cross with target WP-17, so the orchestrator or a later non-plan run can apply them."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-17",
+   "problem": "It uses a ViewerSpec.screen field.",
+   "fix": "Use screen_width_m, distance_m and source:Source."
+  },
+  {
+   "from": "WP-17",
+   "target": "WP-17",
+   "problem": "Owner flag: the 'Also assumed from WP-01' line uses ViewerSpec{layout,swap_eyes,crop_aspect,screen,source}. There is no `screen` field.",
+   "fix": "Replace it with `spec::ViewerSpec{pub layout: Layout, pub source: Source, pub swap_eyes: bool, pub crop_aspect: Option<f32>, pub screen_width_m: f32, pub distance_m: f32}` (derives Default) and `Layout{Sbs (default), Tab, SbsRev, TabRev}`. WP-17 reads only layout, swap_eyes and crop_aspect. Tests build specs as `ViewerSpec{layout: Layout::Sbs, crop_aspect: Some(16.0/9.0), ..ViewerSpec::default()}`. WP-19 passes screen_width_m into quad_size."
+  },
+  {
+   "from": "WP-17",
+   "target": "WP-17",
+   "problem": "The State strings are never given, but the tests require 'the exact line for each of the 4 states'. WP-19:91-92 uses `waiting-headset` and `waiting-source`.",
+   "fix": "Add: as_str = WaitingHeadset\u2192\"waiting-headset\", WaitingSource\u2192\"waiting-source\", Showing\u2192\"showing\", Error\u2192\"error\". List the 4 exact lines in tests/status.rs, e.g. `{\"state\":\"waiting-headset\",\"fps\":0.0,\"w\":0,\"h\":0}`."
+  },
+  {
+   "from": "WP-17",
+   "target": "WP-17",
+   "problem": "The TestPattern drawing is underspecified, and the test can fail or panic. (1) The liveness row has no colour. (2) No draw order is given: on seq 1 the row covers y=1..2, which crosses the mark pixel (2,2). (3) `seq % rh` panics when rh==0, i.e. when w<2 or h<2 makes an eye rect empty. (4) Rows y+1 and the 8x8 mark can spill outside a small rect.",
+   "fix": "Specify all four: the liveness row is white [255,255,255,255]. Draw order: grey fill, then liveness row, then bar (full rect height), then marks last. Skip any eye whose rect has rw==0 or rh==0. Clip the row, bar and mark to the eye rect."
+  },
+  {
+   "from": "WP-17",
+   "target": "WP-17",
+   "problem": "The pacing has no start point, so whether the first fps>0 call is immediate is undefined.",
+   "fix": "Specify: `next_at = Instant::now()` in new(). After returning a frame, `next_at += Duration::from_secs(1)/fps`. Ok(None) does not increment seq. The fps-1 / 10 ms test then gives Some, then None within 200 ms."
+  },
+  {
+   "from": "WP-17",
+   "target": "WP-17",
+   "problem": "The status round-trip cannot pass for 59.94 (it prints 59.9) or for NaN (NaN != NaN). The tall-eye crop test does not give the frame size.",
+   "fix": "Round-trip only fps values with one decimal (59.9, 0.0); for 59.94 and NaN, assert the line only. Tall-eye test: frame 1920x1080 Sbs with crop 16/9 \u2192 [(0,270,960,540),(960,270,960,540)]."
+  },
+  {
+   "from": "WP-17",
+   "target": "WP-17",
+   "problem": "In the done-check, `CARGO_TARGET_DIR=<scratch>/target cargo test ... && cargo clippy ...` applies the variable to the first command only. The two clippy runs then write to the default target dir. It also says 'the viewer has no serde', but WP-01:90 gives the viewer serde.",
+   "fix": "Use `export CARGO_TARGET_DIR=<agent scratch>/target;` before the chain. Reword to 'no serde_json'. Spell out the full paths in **Files** (crates/viewer/src/status.rs, crates/viewer/src/source/test_pattern.rs, crates/viewer/tests/{layout,status}.rs) and add 'wave 2'."
+  },
+  {
+   "from": "WP-18",
+   "target": "WP-17",
+   "problem": "WP-17 lines 4-13 and 90 state a different frame.rs (Plane, FrameData::Mem, DmaBuf{planes}, fourcc, seq) and claim WP-01 froze it, which contradicts bones \u00a72 (PixelFormat, Cpu, single-fd DmaBuf, no seq).",
+   "fix": "Rewrite WP-17's frame block and TestPattern frame to the \u00a72 form: Frame{width,height,format:PixelFormat::Bgra8,data:FrameData::Cpu{stride,bytes}}, with no seq field in Frame (TestPattern may keep a private seq)."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-17",
+   "problem": "WP-17:12 assumes a ViewerSpec field `screen`. WP-01 names it screen_width_m (plus distance_m).",
+   "fix": "Align with WP-01's frozen field names: screen_width_m and distance_m. There is no `screen` field."
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode is active in this session, so WP-24.md was not edited. The full list of proposed edits is in roadmap-v2-findings/WP-24-proposal.md, and each one is repeated as a cross item with target WP-24. The wave (2) is correct: both dependencies, WP-01 and WP-25a, are in wave 1. No other WP owns sessions/, tools/session or tools/stereo. WP-24 touches no Rust code and no locked tests."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-24-proposal.md",
+ "incoming": [
+  {
+   "from": "WP-22",
+   "target": "WP-24",
+   "problem": "The sessions/tools-build.toml row checks the 'sha256sum of the zip'. build-tools.sh downloads it into a random mktemp dir under ~/.cache/flat3d and has already verified it (exit 4 on mismatch), so the session has no path to check.",
+   "fix": "Replace that check with 'build-tools.sh exited 0 (it verifies the pinned sha; exit 4 on mismatch)' plus 'dist/tools/SHA256SUMS lists adb, gnirehtet, gnirehtet.apk'."
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "Private-word check (WP-25a): the rule bans (?i)craft-build and /home/[a-z_]... in every tracked file outside **/tests/**. WP-24 puts craft-build in the device enum, in the TOMLs and in session.py, and test_session.py needs a literal /home/x. A full check.py run fails on these.",
+   "fix": "Rename the device enum to {z13, quest2, build-box, ci}. craft-build may appear only on the single os.environ.get(\"FLAT3D_BUILD_BOX\", \"craft-build\") line. test_session builds \"/home/\" + \"x\" at runtime. session.py's reject regex is written as r\"/home/[^/\\s{]+\". Any Done-when text that hits a private word gets the word replaced by 'the owner'. Add to the done-check: python3 tools/docs/check.py --only private tools/session/*.py tools/stereo/*.py sessions/*.toml"
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "render does not say how it handles placeholders. If it fills {home} or {state}, the output depends on the machine and leaks /home/<user> into docs/STEP0-RUNSHEET.md, which breaks WP-34's diff check and the private check. Its header also differs from the first line WP-34 step 7 requires.",
+   "fix": "render fills only [vars] and strips the '{repo}/' prefix. It leaves {home}, {state}, {re_home}, {build_box} and {ans:*} literal and adds a one-line legend under the header. The header becomes '<!-- generated; edit sessions/<name>.toml -->'. Output goes to stdout unless --out is given."
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "The evidence_only test contradicts the spec. The required line 'This does not close it: #N closes with the works-now recipe PR' contains 'closes', but the test asserts the .md has no 'closes'. The '<appid>' in that line also has no source in the schema.",
+   "fix": "Change the test to: the .md contains 'Evidence for #36' and has no match for (?i)\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s+#36\\b. Take <appid> from [vars].appid, and make check require vars.appid whenever evidence_only is non-empty."
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "run leaves these semantics undefined:\n- the working directory;\n- that run=[argv] has no shell, so globs like 'ls {state}/soak-*.txt' never expand;\n- whether who=you cmds are executed;\n- which steps need a --script answer;\n- --dry-run;\n- what counts as ok for a background cmd;\n- timeouts;\n- how expect is matched;\n- literal braces (Done-when text and regexes can contain {..}, which become unknown-placeholder errors).",
+   "fix": "Add these rules:\n- cwd is {repo} = Path(__file__).resolve().parents[2].\n- A step that needs a glob uses find ... -name.\n- A who=you cmd is printed, not executed, and answered y/n/s (y = ok).\n- Only ask, check and who=you cmd steps need an answer. A measure answer is optional: a path, or empty for the newest input match.\n- s on an optional step does not change the verdict.\n- A background cmd is ok when it is still alive 2 s after start. At session end it gets SIGTERM, then SIGKILL after 5 s.\n- A timeout counts as a fail.\n- expect is checked with re.search(expect, stdout, re.M).\n- --dry-run prints the filled steps, runs and writes nothing, and exits 0.\n- Placeholders are filled only in text/run/expect/input/args, never in done_when or trouble. {{ and }} are literal braces."
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "The q0, q2 and q12 rows follow v1, not \u00a75, and the WP's own flag says \u00a75 wins.\n- \u00a75 Q0's driver is 'pin.sh --all-tbd'. WP-02 does not fix the key names geo11, lana-fix, control-fix and ac7-profile.\n- \u00a75 Q2 is the injector exe (tools/build-win.sh --install, WP-15), not a doctor health check.\n- \u00a75 Q12 is the RE overnight run (WP-30: tools/re/analyze.sh, since pipeline.sh no longer exists), not Decky in Game Mode.\n- q0 and q2 have no issue number, but the schema requires issues \u22651.",
+   "fix": "Allow issues=[] (q0 and q2).\n- q0: who=you cmd 'bash {repo}/packaging/pin.sh --all-tbd'. Gate cmd: grep -qE '\\.sha256: TBD-at-pin$' {repo}/packaging/pins with ok_rc=[1]. needs WP-02.\n- q2: who=you 'bash {repo}/tools/build-win.sh --fetch-sdk' (licence accept, network), then 'bash {repo}/tools/build-win.sh --install'. Gate: ls {home}/.local/share/flat3d/bin/flat3d-uevr-inject.exe. needs WP-15.\n- q12: issues=[19]. Two ask steps, src-exe and dst-exe. Then 'bash {repo}/tools/re/analyze.sh all {re_home}/ghidra {ans:src-exe} {ans:dst-exe} {state}/re/vt-matches.csv' with timeout 43200, then fill_map.py --check per WP-30's signature. needs WP-30.\n- Move the Game Mode gates (the QAM panel, launch options persisting, the collection and toast, surviving a Game Mode restart) into decky.toml (Q14, as WP-32 expects).\n- Move doctor --json with expect '\"ok\":\\s*true' into link-smoke (Q4)."
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "tools-build checks the sha256sum of the gnirehtet zip. WP-22 downloads that zip into a fresh mktemp dir, so the session cannot find it at a fixed path. g2-viewer has two problems:\n- 'distrobox enter ... cargo build' gives no manifest path.\n- It references a --dump-eyes flag that no viewer WP (17/18/19) ships.",
+   "fix": "tools-build: drop the zip sha step. build-tools.sh verifies the pinned sha itself (WP-22 step 1), and a mismatch gives a non-zero rc. g2: add '--manifest-path {repo}/Cargo.toml'. Replace the --dump-eyes measure with an optional disparity measure on {state}/captures/viewer-*.png that never blocks PASS. link-smoke: use find {state} -maxdepth 1 -name 'soak-*.txt' with expect 'soak-'."
+  },
+  {
+   "from": "WP-24",
+   "target": "WP-24",
+   "problem": "Requirements the WP does not state:\n- Copying Done-when verbatim needs read-only network access ('gh issue view').\n- Tests must be unittest.TestCase classes, because the per-folder discover does not collect pytest functions (WP-02 flag).",
+   "fix": "Add to Rules:\n- Network: read-only 'gh issue view N -R iannitram/flat-to-3d' for each Done-when. For q0, q2 and q12, done_when is the \u00a75 'What' text.\n- All tests are unittest.TestCase classes."
+  }
+ ]
+}

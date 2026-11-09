@@ -1,0 +1,21 @@
+{
+ "own_review": {
+  "runnable": true,
+  "changed": "none. Plan mode was active in this session, so I could not use Edit on WP-23.md. The two fixes for WP-23 itself are listed in cross with target WP-23. Everything else checks out. Signatures match the #117 brief and the snippet. GameRow's fields and derives match #76 line 10, which WP-01 line 199 freezes and WP-03 line 31 keeps. The test imports resolve through bones \u00a72 `pub use face::{..rows..}`. Hand-written Default does not trip clippy derivable_impls, because filter is \"all\". Wave 2 depends only on WP-01 (wave 1). No other wave-2 WP owns games_page.rs or tests/games_page.rs. It needs no network and no device."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-23",
+   "target": "WP-23",
+   "problem": "The fmt flag says only lines 8-9 and 22-23 get reflowed. I ran `rustfmt --edition 2021 --check` on the verbatim #117 block: it gives 8 diff hunks (stdin lines 5, 19, 27, 36, 43, 51, 58 and 63), so nearly every test reflows. I could not edit this file because plan mode was active.",
+   "fix": "Replace the sentence with: 'The verbatim #117 body fails `cargo fmt --check` (8 rustfmt hunks: the GameRow literal and most struct-update/assert_eq! lines).' Name the format-only commit command: `rustfmt --edition 2021 crates/app/tests/games_page.rs`."
+  },
+  {
+   "from": "WP-23",
+   "target": "WP-23",
+   "problem": "The Done-check uses `CARGO_TARGET_DIR=$SCRATCH/target`, and `$SCRATCH` is defined nowhere in WP-23 or bones. Bones \u00a70 says `<agent scratch>/target`.",
+   "fix": "Write `CARGO_TARGET_DIR=<agent scratch>/target` (as in bones \u00a70), or define SCRATCH in the WP."
+  }
+ ]
+}

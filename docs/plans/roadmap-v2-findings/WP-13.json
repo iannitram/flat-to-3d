@@ -1,0 +1,15 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none applied. Plan mode was active, so WP-13.md was not edited. The proposed edits, with exact text, are in roadmap-v2-findings/WP-13-proposal.md: (1) add imports (crate::exec::CommandRunner, crate::paths::EnginePaths, crate::api::ApiError, BTreeMap, PathBuf); (2) parse_pins: size absent or bad = 0, fetch auto|manual -> Some(..) else None; (3) pin_in: size==0 -> BadPin{field:\"size\"}, name each BadPin field, fetch None counts as Auto; (4) step 3 create_dir_all(tmp/out) before bsdtar or rename, since bsdtar -C needs the dir to exist; (5) allow_file sets both --proto and --proto-redir to =https,file, and spell out the exact curl argv for curl_argv_is_exact; (6) a sha256sum failure -> Command; (7) From<FetchError> uses ApiError::new(code,&e.to_string()), and the locked codes are at api_response.rs:10-11; (8) give the fixture concrete values (ok.url https://example.invalid/d/ok.zip?x=1, size 5, sha 64x'a', version 1, license MIT); (9) real_pins checks the sha with starts_with(\"4cd6932d\")/ends_with(\"dc6d8\"); (10) live tests build EnginePaths with the bones \u00a72 from_env(&BTreeMap,uid) form, with HOME and XDG_CACHE_HOME under CARGO_TARGET_TMPDIR; (11) owner fix: line 87 -> cache() = $XDG_CACHE_HOME/flat3d, falling back to ~/.cache/flat3d; (12) update the flags: self-hosted runners, libarchive-tools missing from the bones apt list, uevr_cache() has no argument; (13) done-check: set CARGO_TARGET_DIR=<agent scratch>/target on both the test and clippy commands ($SCRATCH is undefined). Wave 2 is correct: WP-01 and WP-02 are both wave 1."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-13-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-13",
+   "problem": "Line 87 says cache() is data/cache.",
+   "fix": "cache() is $XDG_CACHE_HOME/flat3d, falling back to ~/.cache/flat3d."
+  }
+ ]
+}

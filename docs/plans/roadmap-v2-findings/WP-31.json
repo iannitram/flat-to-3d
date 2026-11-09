@@ -1,0 +1,75 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active, so I could not edit WP-31.md. The edits WP-31 needs are listed in cross under target WP-31, ready to apply as written."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-31",
+   "problem": "It edits wrapper_run.rs:206-207 to use CARGO_TARGET_TMPDIR, and its route closure needs the frozen ensure_applied.",
+   "fix": "Leave :206-207 unchanged. The closure looks up steam::Game and route_settings and then calls the 5-argument ensure_applied. Use the frozen signatures."
+  },
+  {
+   "from": "WP-12",
+   "target": "WP-31",
+   "problem": "WP-31.md:17 expects `wivrn::detect_server(&mut dyn CommandRunner)->Result<WivrnDirs,String>`, but bones \u00a72 says `Result<WivrnDirs,ApiError>`. The module path also has to follow the reconciled `link::wivrn`.",
+   "fix": "Use whatever error type the reconciled bones \u00a72 freezes, and the `link::wivrn::detect_server` path."
+  },
+  {
+   "from": "WP-16",
+   "target": "WP-31",
+   "problem": "WP-31:76 expects the sidecar `--screen-width-m 3 --distance-m 2.5`. WP-16 builds `ViewerSpec{layout, ..Default}`, and WP-01 makes the f32s 0.0 ('viewer default'), so the args will differ from what WP-31 expects.",
+   "fix": "WP-31 asserts the sidecar equals `[viewer] ++ ViewerSpec{layout:Sbs,..Default}.to_args()` + `--until-pid N`, not literal numbers. The viewer resolves 0.0 \u2192 3 / 2.5 (WP-19)."
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "Tests line says WP-01 already changed wrapper_run.rs:206-207 to CARGO_TARGET_TMPDIR. WP-01 (Tests table, line 249) and the contract owner both say :206-207 is NOT edited.",
+   "fix": "Replace it with: 'wrapper_run.rs is locked and unchanged, :206-207 included. It still writes under CARGO_MANIFEST_DIR/target/wrapper-tests (crates/engine/target, covered by .gitignore target/).' wrapper_route.rs alone uses env!(\"CARGO_TARGET_TMPDIR\")."
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "The run_with closure calls a 3-argument ensure_applied(paths,id,r) that returns RouteEnv, and has no route settings. The frozen call has 5 arguments: WP-01:181 (appid,&Recipe,&RouteSettings,&EnginePaths,&mut dyn CommandRunner)->Result<RouteEnv,String>, and WP-27:21 has the same shape with game:&steam::Game first.",
+   "fix": "Closure body: (1) game = steam::installed_games(&paths.home.join(steam::DEFAULT_STEAM_ROOT)) and find appid==id. Not found or an IO error gives Err(\"route: game {id} is not installed\"). (2) settings = recipes::route_settings(&text), where text is the recipe text from find_recipe. Then recipes::check_route_settings(&r.route,&settings).map_err(|e| format!(\"route: {e}\")). (3) env = injectors::ensure_applied(<&game, or id if injectors.rs declares appid:u32 first>, r, &settings, paths, &mut *runner).map_err(|e| format!(\"route: {e}\")). (4) dirs = wivrn::detect_server(&mut *runner).map_err(|e| format!(\"wivrn: {e}\")). Ok((env,dirs)). Tell the agent to copy the exact parameter list from `pub fn ensure_applied` in crates/engine/src/injectors.rs as merged."
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "Test 3 lists LinkState 'Error', and Behaviour says 'OD4 is unchanged: Grace counts as Ready'. LinkState only has NoHeadset, Unauthorised, Starting, Ready, Stopped (api.rs:47-53). Grace is a watch Phase, not a LinkState. OD4's default is that a launch in grace plays flat.",
+   "fix": "Test 3: use Starting, Stopped, NoHeadset and Unauthorised. Behaviour: 'The gate stays link == LinkState::Ready inside plan (:270). OD4 is unchanged: grace is not special-cased here.'"
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "The WivrnDirs source and field names are vague. Test 6 needs a WivrnDirs literal, but WP-01 (scope,app_dir) and WP-12 (scope,app_dir,deploy,version) disagree on the fields.",
+   "fix": "Say: import crate::wivrn::{WivrnDirs, FlatpakScope, detect_server} (WP-01 file list, WP-12; link re-exports them). exec_spec_with uses wivrn.app_dir.to_string_lossy() as the folder. Test 6 builds WivrnDirs with every field crates/engine/src/wivrn.rs declares after WP-12: scope System, app_dir /var/lib/flatpak/app/io.github.wivrn.wivrn, deploy = app_dir/x86_64/stable/abc, version None."
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "Some tests are not concrete enough to pass deterministically: testing::FakeRunner has no frozen API, the RECIPE and SETTINGS consts are private to wrapper_run.rs, and the setup for tests 1, 6, 8 and 9 is missing.",
+   "fix": "Tests use a local `struct Rec(Vec<Vec<String>>)` that implements flat3d_inject::link::CommandRunner (returns CommandOutput{success:false,..}) and records argv, so they do not depend on the FakeRunner API. Copy the RECIPE and SETTINGS text verbatim into wrapper_route.rs. Build paths with EnginePaths::from_env(&|k| m.get(k).cloned(), 1000), using HOME and XDG_RUNTIME_DIR under the temp root, then set paths.recipe_dirs = vec![tmp/recipes]. Write a Ready snapshot (LinkSnapshot::stopped(now) with state=Ready) to state::snapshot_path(&paths.state_dir.to_string_lossy()). Tests 1 and 14 expect 'flat: route: game 42 is not installed' because there is no Steam under the temp HOME. Test 6 env has PRESSURE_VESSEL_FILESYSTEMS_RW=/games, and its closure returns RouteEnv{env:[(PROTON_REMOTE_DEBUG_CMD,..)],unset:[XR_RUNTIME_JSON],sidecar:None}. Test 8's closure returns Err(\"wivrn: not installed\"), and the expected message is 'flat: wivrn: not installed'. Test 9 expects 'flat: HOME is missing'."
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "Two gaps in the record rules. 'note when the launch is flat for an error' cannot be decided from a Launch, because no Plan is stored in it. The runs dir is not created before the atomic write.",
+   "fix": "Write `note\\t<message with \\n/\\r replaced by spaces>` whenever record.mode is Flat. Call create_dir_all(state::runs_dir(..)) before fsx::write_atomic. Keep the legacy 'exec: {e}' run.log line when the launcher returns Err (:177-179)."
+  },
+  {
+   "from": "WP-31",
+   "target": "WP-31",
+   "problem": "In the done-check, CARGO_TARGET_DIR is set only for the first cargo command, so the clippy run and check.sh build into the repo's target.",
+   "fix": "Start the done-check with `export CARGO_TARGET_DIR=$SCRATCH/target &&` and then run the same three commands."
+  },
+  {
+   "from": "WP-27",
+   "target": "WP-31",
+   "problem": "WP-31.md:17,25 calls injectors::ensure_applied(&EnginePaths,u32,&Recipe)->Result<RouteEnv,String>. That has no runner and the wrong return type compared with bones \u00a72.",
+   "fix": "Call ensure_applied(paths, id, recipe, runner) and use .env from the Applied it returns. Map the ApiError with format!(\"route: {}\", e.message)."
+  }
+ ]
+}

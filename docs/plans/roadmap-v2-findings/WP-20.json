@@ -1,0 +1,15 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none applied: plan mode was active in this session, which blocks every edit except the plan file. I didn't touch WP-20.md. The full replacement text for WP-20.md is in roadmap-v2-findings/WP-20-proposal.md, ready to copy over. It makes these changes: (1) The signatures now match WP-01.md:171-177. UnitSpec keeps 3 fields {exec_start, start_limit_interval_sec, start_limit_burst}, and Description, RestartSec and WantedBy are fixed text. execute and execute_uninstall take a third argument, &EnginePaths, which is unused. They return install::InstallReport{steps}, not api::InstallReport, with a stated mapping in case WP-01 switches to the api type. (2) WP-20 adds the derives itself (Serialize on InstallReport, Default impl on UnitSpec) and makes its helpers private, per the glob guard. (3) Uninstall now only removes files under ~/.local/bin, ~/.local/share/flat3d and ~/.config/systemd/user, and refuses paths containing '..'. The old rule allowed anything under ~/.local/, which includes ~/.local/state and broke the keep-state rule. (4) Install creates each tree's destination dir, which `dirs` didn't cover. (5) add_wrapper_at falls back to the bare form when the last segment of the absolute path isn't flat3d-run, so remove_wrapper can still find it. (6) Test inputs and expected outputs are now concrete: temp layout, the Fake runner's behaviour, EnginePaths built with the \u00a72 frozen from_env(BTreeMap) form, the exact locked PAIRS for the inverse test, and the fallback cases. (7) Fixed a stale line reference: is_wrapper is at launch_options.rs:51-53, not 142-144. (8) Removed the stale flag claiming WP-08 is in the same wave; WP-08 is wave 3. Added a 'Wave: 2' line, a 'no network or device' note, and clippy, fmt and Cargo.lock checks to the done-check. Wave 2 is correct: the only dependency is WP-01 (wave 1), and no other wave-2 WP owns install.rs, launch_options.rs or packaging/flat3d-link.service."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-20-proposal.md",
+ "incoming": [
+  {
+   "from": "WP-16",
+   "target": "WP-20",
+   "problem": "WP-20 install never copies flat3d-viewer (grep finds no 'viewer' in WP-20), so viewer_check fails after a normal install.",
+   "fix": "The install plan copies flat3d-viewer into the bin dir next to flat3d-run. Done-check: `test -x <bin>/flat3d-viewer` in the install_execute test's fake tree."
+  }
+ ]
+}

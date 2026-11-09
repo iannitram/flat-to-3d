@@ -1,0 +1,33 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. This session is in plan mode, which blocks every edit outside the plan file, so I could not change WP-15.md. The WP-15 fixes I would have made are listed in cross with target WP-15. The checks themselves passed. Every Win32 item and feature gate WP-15 uses exists in windows-sys 0.61.2 in the cargo cache, and `windows_sys::w!` is exported. The wave is right: the file says it depends on WP-00 (wave 0) and WP-01 (wave 1), and the index puts WP-15 in wave 2. No same-wave WP owns any WP-15 file. The host has the msvc target, the xwin binary and the SDK libs. `dist/` and `target/` are in .gitignore. No locked tests are touched."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-15",
+   "target": "WP-15",
+   "problem": "WP-14 (also wave 2, already reviewed) sets the contract for paths: it sends `--dll 'Z:\\\u2026\\openxr_loader.dll'` as full Windows paths. WP-14 says WP-15 accepts only absolute Windows paths, converts nothing, and mirrors its `dll_path_contract_example` test. WP-15 says the opposite in two places: its `to_win_path` turns Unix paths into `Z:` paths, and its 'argv contract for WP-14' tells WP-14 to send Unix paths so that shlex never sees backslashes. Nothing breaks at runtime, because `Z:\\` paths pass through `to_win_path` unchanged, but the two specs disagree.",
+   "fix": "In WP-15.md: (1) Remove `to_win_path` from the Signatures and from `parse`. `--dll` must be an absolute Windows path: ASCII letter, then `:\\\\`. Anything else is an Err, and the value is kept unchanged. (2) Change the parse tests: the first case becomes `--exe SWZeroCompany --dll 'Z:\\c\\openxr_loader.dll' --dll 'Z:\\c\\UEVRBackend.dll'`, and `--pid 4242 --delay 0 --dll Z:\\x.dll` parses. Add Err cases for `--dll x` and `--dll /c/x.dll`. Add `dll_path_contract_example`: `--dll` with WP-14's exact string `Z:\\home\\deck\\.local\\share\\flat3d\\cache\\uevr\\nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d\\openxr_loader.dll` comes back byte-for-byte. (3) Rewrite the 'argv contract' Flag to match WP-14: cmd[0] is the absolute Unix path of the exe, every `--dll` is a single-quoted `Z:\\` path (backslashes stay literal inside '\u2026' for POSIX shlex), and v1's `--uevr-dir` is not used."
+  },
+  {
+   "from": "WP-15",
+   "target": "WP-15",
+   "problem": "On Linux, `cargo clippy --all-targets -D warnings` fails. In main.rs, `parse` succeeds and the `#[cfg(not(windows))]` stub never uses the parsed Args, so the build raises an unused_variables warning, which -D warnings turns into an error.",
+   "fix": "Say in the main.rs bullet that the non-Windows branch does `let _ = a;` (or binds the result as `_a`) before printing the Windows-only message and exiting 3."
+  },
+  {
+   "from": "WP-15",
+   "target": "WP-15",
+   "problem": "The win::run steps leave out Win32 details that an agent working without other context will get wrong. `GetProcAddress` returns `FARPROC`, an `Option<fn>`, and the step transmutes bare fn types. `PROCESSENTRY32W` and `MODULEENTRY32W` need `dwSize` set before `*32FirstW`. `CreateToolhelp32Snapshot` signals failure with `INVALID_HANDLE_VALUE`, while `OpenProcess` returns null. The RAII Handle must not close either of those.",
+   "fix": "Add these to the win::run bullets. `let Some(f) = GetProcAddress(..) else { exit 5 }`, transmute `f`, and pass `Some(start)` as the `LPTHREAD_START_ROUTINE`. Set `entry.dwSize = size_of::<PROCESSENTRY32W>() as u32` (and the same for MODULEENTRY32W). Treat a snapshot equal to INVALID_HANDLE_VALUE, or a null OpenProcess handle, as failure. The module snapshot is `CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid)`; on ERROR_BAD_LENGTH (24), retry up to 5 times, 100 ms apart. `Handle::drop` skips null and INVALID_HANDLE_VALUE. The fallback rule should read: the same pid comes back from `choose` with preferred=false for FALLBACK_AFTER_S seconds in a row."
+  },
+  {
+   "from": "WP-15",
+   "target": "WP-15",
+   "problem": "In the done-check, `CARGO_TARGET_DIR=<scratch>/target cargo test \u2026 && cargo clippy \u2026` sets the variable for the first command only. The two clippy runs then fall back to the default target dir, inside the repo. build-win.sh also uses `$repo` without defining it.",
+   "fix": "Start the done-check with `export CARGO_TARGET_DIR=$SCRATCH/target`, as WP-01 does. In the build-win.sh section, add `repo=$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/..\" && pwd); cd \"$repo\"`. Add an optional host check: the SDK is present on this Deck at ~/.local/share/flat-to-3d/xwin, so `tools/build-win.sh` (without --install) can prove the `+crt-static` link and the MZ check offline. Add a `**Wave:** 2` line. State that `--fetch-sdk` is the only network step and is owner-only (Q2); the agent never runs it."
+  }
+ ]
+}

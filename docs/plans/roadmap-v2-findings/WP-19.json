@@ -1,0 +1,63 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active in this session, so editing WP-19.md was blocked. Every fix I would have made to WP-19 is listed in cross with target WP-19, ready to apply. The wave line in WP-19 is already right (wave 3, depends on WP-01, WP-17 and WP-18). The bones index is wrong about it (see cross)."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-19",
+   "problem": "Its flag has the wrong FrameData shape.",
+   "fix": "Use DmaBuf{planes,modifier} and Mem{stride,bytes}."
+  },
+  {
+   "from": "WP-18",
+   "target": "WP-19",
+   "problem": "WP-19 line 121 expects Frame.fourcc:u32 and FrameData::Mem, and drm_fourcc_to_vk takes DRM fourccs. The frozen \u00a72 Frame has format:PixelFormat and FrameData::Cpu. Also, the WP index lists WP-19 as wave 2 while WP-19 itself says wave 3.",
+   "fix": "Map PixelFormat::{Bgra8\u2192B8G8R8A8_SRGB, Rgba8\u2192R8G8B8A8_SRGB, Nv12\u2192None} instead of DRM fourccs, and fix the flag line to the \u00a72 types."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "The Flag at WP-19.md:121 gives the wrong FrameData shape (DmaBuf{fd,offset,stride,modifier}, Mem{bytes,stride}). The frozen shape the owner gave, which WP-17:5-8 and WP-18:13,52-53 also use, is Plane{fd,offset,stride}, FrameData::{Mem{stride,bytes}, DmaBuf{planes:Vec<Plane>,modifier}} and Frame{width,height,fourcc,seq,data}.",
+   "fix": "Replace the flag with the frozen shape. In the import DmaBuf steps, read planes[0].{fd,offset,stride}; planes.len()!=1 gives ImportError::Unsupported. Rename 'MemFd/shm' to 'FrameData::Mem{stride,bytes}'. Key the dmabuf cache on fstat(planes[0].fd) (st_dev,st_ino) plus modifier."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "Importer::copy_to takes `&crate::source::Frame`. WP-01 as written has no Frame re-export in source.rs.",
+   "fix": "Use `frame: &crate::frame::Frame` (and `crate::frame::{FrameData, Plane}`) everywhere in WP-19."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "The quad size uses quad_size(rect, screen_width_m). WP-17:88 says WP-19 must unsqueeze for half-SBS/TAB. The text also never says how layout::Rect and the (f32,f32) tuple become xr types.",
+   "fix": "size = quad_size(unsqueeze(eyes[0], spec.layout), screen_width_m), converted to xr::Extent2Df{width,height}. Each eye is xr::Rect2Di{offset:Offset2Di{x:r.x as i32,y:r.y as i32},extent:Extent2Di{width:r.w as i32,height:r.h as i32}}. eyes = layout::eye_rects(frame.width, frame.height, &spec)."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "WP-01:108 says ViewerSpec 0.0 means 'viewer default, which WP-19 resolves', but WP-19 has no resolution step.",
+   "fix": "In main: screen_width_m = if spec.screen_width_m > 0.0 {spec.screen_width_m} else {3.0}; distance_m likewise, defaulting to 2.5."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "WP-18's sources need an Offer and portal needs a token_path (WP-18:16,24,27). WP-19 says how to build neither. TestPattern::new(w,h,spec,fps) has no arguments chosen.",
+   "fix": "Offer{fourccs:[XR24,AR24,XB24,AB24] (0x34325258,0x34325241,0x34324258,0x34324241; BGRx first, no NV12), modifiers: Importer::modifiers(ctx, vk::Format::B8G8R8A8_SRGB), max_w:7680, max_h:4320}. Add `pub fn modifiers(ctx:&XrContext, f:vk::Format)->Vec<u64>` to import.rs: DrmFormatModifierPropertiesListEXT entries with TRANSFER_SRC|BLIT_SRC. This also settles the 'only BGRx/BGRA/RGBx/RGBA' flag, so drop that flag. Gamescope: gamescope::open(&offer, Duration::from_secs(2)); Ok(None) gives waiting-source and a retry. Portal: token_path = ${XDG_STATE_HOME:-$HOME/.local/state}/flat3d/portal-token; create_dir_all the parent first. TestPattern::new(3840,1080,spec.clone(),60)."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "Several error and exit paths are unspecified. A source Err(String) from next(), an ImportError, and 'request_exit' (which call?) are all left open.",
+   "fix": "A source Err or ImportError prints an `error` status line plus a stderr message and exits 3. request_exit means `s.session.request_exit()`, then return exit 0. Add `impl From<xr::sys::Result> for XrError` and `impl From<vk::Result> for XrError` so `?` works."
+  },
+  {
+   "from": "WP-19",
+   "target": "WP-19",
+   "problem": "Two flags are stale, and the done-check is incomplete. The gpu.rs facade (WP-01:18,105) and libc (WP-01:58,89) are now in WP-01, but WP-19 still flags them. The done-check uses an undefined $T. The split_until_pid tests (main.rs, xr+capture only) never run, because step 2 is clippy only. Network needs are not stated.",
+   "fix": "Drop the gpu.rs and libc flags, and drop 'WP-01 must add it' from Inline facts. Define T=$SCRATCH/target. Add to step 2: `&& cargo test --locked -p flat3d-viewer --features xr,capture`. State 'Network: none (Cargo.lock frozen; openxr fetched by WP-01)'."
+  }
+ ]
+}

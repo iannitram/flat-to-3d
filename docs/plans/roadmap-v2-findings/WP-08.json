@@ -1,0 +1,27 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode is active in this session, so I could not edit WP-08.md. The full replacement text is in roadmap-v2-findings/WP-08-proposal.md. What it changes:\n- Applies the owner fix: uses the frozen `cli::link::run(&LinkCommand,&mut Ctx)`, makes LinkIo/run_with private and tests them in a `#[cfg(test)]` module, uses WP-20's 2-arg `execute`/`execute_uninstall`, keeps `request_3d(r,p,now)`, and drops its own `parse_any` (WP-01 owns it).\n- Drops `run_link`/`run_link_with`, `install::Plan` and the `inject 5` line (that is WP-27's).\n- Adds `src_dir` to LinkIo for `install_plan`.\n- Uses the `exec(&Launch)` launcher shape and an `exec_launch` that handles unset, sidecar and SteamAppId.\n- Bases snapshot/stale on `api::LinkSnapshot::{stopped,effective}` (api.rs), not WP-07.\n- Splits the tests into integration tests (public API) and unit tests (private seam), with no new dev-deps: temp dirs from CARGO_TARGET_TMPDIR / temp_dir.\n- Depends is now WP-01 + WP-20 (WP-07 dropped). Wave 3 stays, because WP-20 is wave 2.\n- The done-check adds `--lib cli::link` and `--test install_plan`."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-08-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-08",
+   "problem": "It uses install::Plan and a 3-argument execute, and defines its own parse_any.",
+   "fix": "Use WP-20's execute(&InstallPlan,r) and execute_uninstall(&UninstallPlan,r). Implement cli::link::run(&LinkCommand,&mut Ctx). Keep run_with/LinkIo private or test-only. Keep request_3d in its frozen form."
+  },
+  {
+   "from": "WP-08",
+   "target": "WP-08",
+   "problem": "Plan mode blocked my edit. The current WP-08.md still uses run_link/run_link_with, install::Plan, a 3-arg execute and its own parse_any, so it cannot run as written.",
+   "fix": "Replace WP-08.md with the block in roadmap-v2-findings/WP-08-proposal.md."
+  },
+  {
+   "from": "WP-20",
+   "target": "WP-08",
+   "problem": "WP-08 lines 12, 20 and 66 use `install::Plan{Install,Uninstall}` and `install::execute(&Plan, r, p) -> Result<api::InstallReport, ApiError>`. Neither exists in the WP-01 contract (WP-01.md:174-176), which defines `execute(&InstallPlan, &mut dyn CommandRunner, &EnginePaths)`, a separate `execute_uninstall(&UninstallPlan, \u2026)`, and `install::InstallReport{steps}`. WP-08 won't compile against WP-01/WP-20.",
+   "fix": "Call `install::execute(&install_plan(..), ctx.runner, ctx.paths)` and `install::execute_uninstall(&uninstall_plan(..), ctx.runner, ctx.paths)`, and serialise the returned `install::InstallReport` (WP-20 derives Serialize). Drop the `install::Plan` enum and the 'WP-01 must freeze Plan' flag."
+  }
+ ]
+}

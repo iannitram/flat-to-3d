@@ -1,0 +1,33 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was on, so WP-10.md could not be edited. The complete replacement text for WP-10.md is at roadmap-v2-findings/WP-10-proposal.md. It covers:\n- the contract-owner fix: set_wivrn(&mut self,&WivrnStart) stores link::start_3d_commands_with(start), and the legacy start_3d_commands() is used until then; exec.rs is limited to the body of ProcessRunner::run plus private tail_lines/exit_text, and the 'shared with SystemRunner' part is gone; exec.rs leaves the exclusive Files list, tether_runtime.rs joins it, and the stale \u00a70 flag and other WPs' review notes are deleted;\n- a private Via adapter (TetherAdb\u2192RelayRunner) so plan steps still get the adb rewrite, PlanCtx gains adb, and PlanRun gains spawned plus Default;\n- wifi::connect_argv dropped in favour of the existing connect_network_command; connect no longer calls sync_wifi (WP-09 does), and last_wifi_log() is added for redacted logging;\n- exact rules for the tun0 probe, ps and kill, rollback and disconnect errors;\n- tether_runtime Fake edits and the renumbered order spelled out; the new test uses a local Fake (not the unfrozen FakeRunner API) and runs ProcessRunner with sh for the stderr-tail case; a set_wivrn test that does not depend on WP-12's body;\n- the wave stays 3 (it depends on WP-12, wave 2); the done-check exports CARGO_TARGET_DIR for every cargo call and adds a git diff guard on the locked tether files."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-10-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-10",
+   "problem": "It owns exec.rs wholesale and carries a stale \u00a70 flag.",
+   "fix": "Use set_wivrn(&mut self,&WivrnStart). Limit exec.rs edits to runner bodies and private helpers. Delete the \u00a70 flag. The Index row drops exec.rs and adds tether_runtime.rs."
+  },
+  {
+   "from": "WP-12",
+   "target": "WP-10",
+   "problem": "WP-10 depends on WP-12 (`start_3d_commands_with`) and labels itself wave 3, but the bones index puts both WP-10 and WP-12 in wave 2. A dependency inside the same wave breaks 'a WP starts only after every depends is merged'. WP-10 also uses `set_wivrn(app:String, flags:Vec<String>)`, which differs from bones' `set_wivrn(&WivrnStart)`.",
+   "fix": "Move WP-10 to wave 3 in the bones index, or drop the dependency by having WP-10 take a prebuilt `Vec<Vec<String>>`. Align set_wivrn with the reconciled bones form."
+  },
+  {
+   "from": "WP-20",
+   "target": "WP-10",
+   "problem": "The review note at WP-10.md:102 asks WP-01 to freeze `enum install::Plan` and WP-20 to implement it. That contradicts the WP-01 contract (two separate fns: execute and execute_uninstall).",
+   "fix": "Delete or rewrite the note to point at the WP-01 forms. WP-10 doesn't call install."
+  },
+  {
+   "from": "WP-10",
+   "target": "WP-10",
+   "problem": "Plan mode blocked my Edit, so WP-10.md on disk still has the old set_wivrn(app,flags), owns exec.rs wholesale, carries the stale \u00a70 flag, and has a done-check whose second cargo call loses CARGO_TARGET_DIR.",
+   "fix": "Replace the whole of WP-10.md with the text in roadmap-v2-findings/WP-10-proposal.md (below the --- line)."
+  }
+ ]
+}

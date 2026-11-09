@@ -1,0 +1,45 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active in this session, so I made no edits; WP-07.md is unchanged. The edits I propose for WP-07.md are listed in cross under target WP-07. Read-only check, against base 2812f64: steam.rs:10/17-21/29/60/107/162, recipes.rs:113/164 (parse_recipe(appid,text), RecipeError is Display), api.rs:6/47/77-86/216/233, state.rs:83/143 and cli.rs:102/141/152 all match what WP-07 cites. No other wave-2 WP owns catalog.rs, steam.rs, cli/engine.rs or tests/cli_list.rs. WP-01 is wave 1, so wave 2 is correct. Locked cli_json.rs and steam_installed_games.rs need nothing that WP-07 changes."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-07",
+   "problem": "There is no frozen CLI entry point.",
+   "fix": "Implement cli::engine::run(&cli::Command,&mut Ctx)->Result<Value,ApiError>, keeping list/status/status_at as helpers."
+  },
+  {
+   "from": "WP-07",
+   "target": "WP-07",
+   "problem": "There is no frozen CLI entry point (contract owner flag). The Signatures section lists only cli::engine::list/status/status_at, but bones \u00a72 freezes `pub fn run(cmd:&cli::Command, ctx:&mut Ctx<'_>)->Result<serde_json::Value,ApiError>` in cli/engine.rs. WP-01 dispatch calls only that function.",
+   "fix": "Add this as the first item under Signatures: `cli::engine::run(cmd:&cli::Command, ctx:&mut Ctx<'_>)->Result<Value,ApiError>` (bones \u00a72; WP-07 fills the body only and keeps the signature). Body: List \u2192 `serde_json::to_value(list(ctx.paths)?)`; Status \u2192 `to_value(status(ctx.paths)?)`; any other variant \u2192 `Err(NotBuilt(\"cli::engine::run\").into())`; a to_value error \u2192 `ApiError(\"command-failed\",..)`. Keep list/status/status_at as private helpers in the same file. Never read `ctx.now`, because bones and WP-01 disagree on the Ctx fields. `status(p)` = `status_at(p, crate::sys::unix_now())`. In Behaviour, replace 'Only codes ... io and bad-recipe' with 'io, bad-recipe, and command-failed for serialisation only'."
+  },
+  {
+   "from": "WP-07",
+   "target": "WP-07",
+   "problem": "Test 7 calls `execute([\"list\",\"--json\"])` in-process. execute reads the real process env (HOME, XDG_*, FLAT3D_SRC_DIR), so it cannot get a temp HOME without std::env::set_var, which is racy across test threads.",
+   "fix": "Rewrite test 7 to spawn `std::process::Command::new(env!(\"CARGO_BIN_EXE_flat3d-inject\")).args([\"list\",\"--json\"]).env_clear().env(\"HOME\",tmp_home).env(\"XDG_RUNTIME_DIR\",tmp_rt)`, then assert one stdout line, `ok:true`, `command:\"list\"` and `data:[]`. Tests 1-6 build paths with the bones \u00a72 form `EnginePaths::from_env(&map, uid)` (map holds HOME and XDG_RUNTIME_DIR, and no FLAT3D_SRC_DIR), never with process env. Recipes are written into `p.recipe_dirs[0]` after create_dir_all. Snapshots are written as LinkSnapshot JSON to `state::snapshot_path(&p.state_dir.to_string_lossy())` after create_dir_all(&p.state_dir); never hard-code `flat3d/link.json`."
+  },
+  {
+   "from": "WP-07",
+   "target": "WP-07",
+   "problem": "Test 2 is ambiguous as written: '/abs/lib2' is not a writable path, and one vdf cannot use 'both the new and the old forms'.",
+   "fix": "Say: the second library is an absolute temp dir. Run the case twice, once with a new-form vdf (`\"1\" { \"path\" \"<lib2>\" }`) and once with an old-form vdf (`\"1\" \"<lib2>\"`), and expect the same result both times."
+  },
+  {
+   "from": "WP-07",
+   "target": "WP-07",
+   "problem": "The Flags and inline facts are stale or point at files the worker does not have. (1) The cli.rs:198 unit-test flag is already handled: WP-01 replaces it with a routing test (WP-01 'Unit test'; bones A23). (2) The find_recipe return type is confirmed by WP-01: `Result<Option<(PathBuf,String)>,String>`. (3) 'roadmap.md:210-212' and 'roadmap.md:200' point at a file the worker does not have. (4) The EnginePaths field list omits `cache_dir`. (5) find_recipe's Err(String) has no error code.",
+   "fix": "Drop flags 2 and 3. Cite `state::read_snapshot(p:&EnginePaths)->Result<Option<LinkSnapshot>,String>` and EnginePaths as 'WP-01 / bones \u00a72' and remove the roadmap.md refs. List the EnginePaths fields as in WP-01 (with cache_dir), or just say 'see WP-01'. Add: a find_recipe Err \u2192 `ApiError(\"io\", ..)`; a read_snapshot Err \u2192 `\"io\"`; a parse_recipe/check_recipe Err \u2192 `\"bad-recipe\"` with message `\"<path>: <RecipeError Display>\"`. Soften the cli_json :141 note to say the locked test only needs `ok == exit success`."
+  },
+  {
+   "from": "WP-07",
+   "target": "WP-07",
+   "problem": "The done-check runs tools/check.sh, which WP-02 creates, but Depends lists only WP-01. A WP may start as soon as its listed depends are merged, so check.sh might not exist yet. The done-check also hard-codes this planning session's scratch path as CARGO_TARGET_DIR.",
+   "fix": "Change Depends to `WP-01, WP-02 (wave 2)`; both are wave 1, so the wave stays 2. In the done-check use `CARGO_TARGET_DIR=<agent scratch>/target` (bones \u00a70 form) and say 'run from the repo root'."
+  }
+ ]
+}

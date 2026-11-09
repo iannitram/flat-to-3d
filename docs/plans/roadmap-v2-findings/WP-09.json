@@ -1,0 +1,39 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active, so WP-09.md could not be edited. The full corrected WP-09 text is ready to paste from roadmap-v2-findings/WP-09-proposal.md. It moves the wave from 2 to 4, applies the contract owner's fix (tick.heal, QuestApp.package, SERVER_FLAGS\u2192Vec<String>), and makes the other WP-09 fixes listed in cross."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-09-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-09",
+   "problem": "It reads detect_quest_app(..).0, passes the flags as &[..], and reads HealthAction.",
+   "fix": "Use detect_quest_app(r,serial).map(|q|q.package) and WivrnStart{scope:None,app,flags:SERVER_FLAGS.map(String::from).to_vec()}. Read tick.heal."
+  },
+  {
+   "from": "WP-12",
+   "target": "WP-09",
+   "problem": "WP-09 is wave 2 in the bones index but says wave 4 itself, and it depends on WP-10 and WP-12. It also uses the retired WiVRn API: `WivrnStart{app,flags:&[..]}`, `detect_quest_app(...).0`, `->Option<(String,String)>` (WP-09.md:32,56) and `tether.set_wivrn(app, flags)`.",
+   "fix": "Set WP-09 to wave 3 or later in the bones index, after WP-10 and WP-12 (or wave 4 if WP-10 moves to 3). Switch it to the reconciled names: `WivrnStart{app: detect_quest_app(r,serial).map(|q| q.package).unwrap_or(WIVRN_APP.into()), ..Default::default()}`."
+  },
+  {
+   "from": "WP-11",
+   "target": "WP-09",
+   "problem": "WP-09 consumes the health loop but names no shape. Its line 64 says waves 3/4 and depends on WP-10/11/12, yet the bones index lists WP-09 as wave 2 with depends WP-01 only. WP-09 cannot run in parallel with the WPs it depends on.",
+   "fix": "Move WP-09 to wave 3 in the bones index and in WP-09 itself. In WP-09, execute `tick.actions` (Heal ladder as listed; `WriteSoak(line)` \u2192 append to the soak file), push `tick.toast: Option<Toast>` to the ring, and call `tick(Instant, mode, playing, &mut adapter)` with a RelayRunner adapter over TetherAdb, as at watch.rs:660-667."
+  },
+  {
+   "from": "WP-09",
+   "target": "WP-09",
+   "problem": "As written today the WP is not runnable. Its wave is wrong: it says wave 2 while depending on WP-10 (wave 3). It uses WivrnStart{app,flags:&[..]}, detect_quest_app(..).0, HealthAction and set_wivrn(app,flags). It adds a method `note_event(&mut self)`, which shadows the frozen free fn. It calls sync_wifi a second time, although WP-10's connect already runs it. It runs kill-server through TetherAdb, which always adds -s, so test 4's `[<adb>,\"kill-server\"]` can never pass. Test 7 uses `com.x.wivrn`, which is not in QUEST_APPS and is never probed. Heal tests have no way to trigger a heal. The inline tests would sleep for real (about 34 s) after WP-10. exec::testing::FakeRunner is the wrong path.",
+   "fix": "Replace WP-09.md with the text in roadmap-v2-findings/WP-09-proposal.md. Wave 4. WivrnStart{scope:None,app:detect_quest_app(..,&serial).map(|q|q.package).unwrap_or(WIVRN_APP),flags:SERVER_FLAGS.map(String::from).to_vec()}. Read the heal stored from HealthTick.heal. Make Service::heal pub for tests. Run kill-server/start-server directly through self.runner with adb.path. Install a default heartbeat sleeper in Service::new, so run.rs is untouched. Inline service() uses .with_sleep(no-op) and the inline Fake answers tun0 as up. Test 7 uses org.meumeu.wivrn. Use testing::FakeRunner or a local Fake."
+  },
+  {
+   "from": "WP-10",
+   "target": "WP-09",
+   "problem": "WP-09.md:34-35 calls tether.set_wivrn(app, flags) and logs Wi-Fi 'through redact_command' with only a SyncDecision in hand.",
+   "fix": "Call tether.set_wivrn(&start) with a link::wivrn::WivrnStart. Call tether.sync_wifi() after an Own connect (connect no longer does it) and log tether.last_wifi_log() (already redacted). Build PlanRun with PlanRun::default() if it is used."
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "own_review": {
+  "runnable": true,
+  "changed": "none. Plan mode is active in this session, so I made no edits to WP-05.md. Verified OK: the locked test extracted via gh + the WP-03 awk has sha256 894496af\u2026c1b824 (matches); rustfmt changes exactly 45 diff lines; Packages (setup.rs:16-20), AdbSource{Running,Bundled,Missing} (api.rs:148-153), LinkState variants, LinkSnapshot::stopped (api.rs:216) and LinkSnapshot derives (Debug, Clone, PartialEq, so SetupState/Msg derives compile) all exist; wave 2 depends only on WP-01 (wave 1); no other WP owns crates/app/src/setup_page.rs or tests/setup_page.rs; no locked strings, codes or bins are touched. Edits I would make to WP-05.md once allowed: (1) Input: the 'WP-00 pre-step' and $SCRATCH don't exist. Set SCRATCH=$SCRATCH and make the gh path primary: `gh issue view 118 -R iannitram/flat-to-3d --json body -q .body | awk \u2026` (verified on 2026-11-09). Also state the network need: gh read access. (2) Add a '**Wave:** 2' line. (3) Files: say it replaces WP-01's stub and never touches crates/app/src/lib.rs. (4) Done-check: `export CARGO_TARGET_DIR=$SCRATCH/target` for both cargo calls, and add `cargo fmt --all --check` (the clippy call currently has no target dir). (5) Name the format commit command `cargo fmt -p flat3d-app`, citing owner answer 1 and the WP-23 flag. (6) Optionally add `SetupKind::Doctor` \u2192 [\"doctor\",\"--json\"] for WP-33's doctor button."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-33",
+   "target": "WP-05",
+   "problem": "setup_page has no Doctor kind, no summary/note field, and Done carries (), so the app cannot show the install-apps summary. WP-33 now leaves the summary out instead of adding state to lib.rs.",
+   "fix": "Optional follow-up: Done(Result<String,String>) plus SetupState.note. Not needed for this pass."
+  }
+ ]
+}

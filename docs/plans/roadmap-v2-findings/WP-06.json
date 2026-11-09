@@ -1,0 +1,63 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active, so I could not edit WP-06.md. The fixes it needs are listed under cross with target WP-06, ready to apply. Wave 2 is correct: WP-06 depends only on WP-01 (wave 1), and no other wave-2 WP owns any of its 4 files."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "read_logs step 2 calls `p.runs()`, but WP-01's EnginePaths accessor table has no `runs()` (only settings, link_log, run_log, run_paths, watch_paths, cache, env_file, wrapper_bin, pins). As written it does not compile.",
+   "fix": "Use the existing `crate::state::runs_dir(&p.state_dir.to_string_lossy())` (repo state.rs:104-106, `<dir>/runs`). In the Flag paragraph, replace `p.runs()` with that call. In tests, write records to `state::run_record_path(&sd, pid)` (state.rs:109-111)."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "Tests put link.log/run.log 'under log_dir', but WP-01 only says link_log() is 'link log path' and never says it joins log_dir. The EnginePaths struct literal is also not spelled out.",
+   "fix": "In the tests, write logs to `p.link_log()` / `p.run_log()` (create_dir_all the parent) and never hand-join log_dir. Spell out the literal with all 9 pub fields from WP-01: `EnginePaths{home, uid:0, state_dir, config, data, cache_dir, log_dir, bin, recipe_dirs:vec![]}`, all under `env!(\"CARGO_TARGET_TMPDIR\")/face_logs/<test>/`. Do not use from_env, because bones and WP-01 disagree on its shape."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "The `log_lines_matches_newest_first` expectation `==[\"b\"...]` is wrong. log_lines_newest_first does not trim kept lines (repo headset_view.rs:23-33).",
+   "fix": "Assert `log_lines(\"a\\r\\n\\n b\\n\",500) == vec![\" b\",\"a\"]`, and that it equals `headset_view::log_lines_newest_first` on the same input."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "The doc comment in the engine signature block cites `inject/tests/headset_view.rs:26-40`, an inject/ path that is gone after WP-01.",
+   "fix": "Change it to `crates/engine/tests/headset_view.rs:26-40` and call `crate::face::headset_view::log_lines_newest_first` / `log_copy_text`. Mark the other line refs (watch.rs:323/814, wrapper.rs:170, flat3d-run.rs:34, state.rs:86) as main@2812f64 line refs."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "Done-check `CARGO_TARGET_DIR=$SCRATCH/target cargo test ... && cargo test ... && cargo clippy ...` sets the env var for the first command only, and `$SCRATCH` is never defined.",
+   "fix": "Write it as `export CARGO_TARGET_DIR=<agent scratch>/target && cargo test --locked -p flat3d-inject --test face_logs --test headset_view && cargo test --locked -p flat3d-app --test logs_page && cargo clippy --locked --workspace --all-targets -- -D warnings`."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "WP-01's stub defines `logs_page::LOG_LIMIT=200` (WP-01:205), but WP-06 never mentions it and says the app passes DEFAULT_LOG_LINES=500. Dropping LOG_LIMIT would break any caller written against the stub.",
+   "fix": "Keep `pub const LOG_LIMIT: usize = 200;` in logs_page.rs. Say WP-33 loads with `read_logs(&p, logs_page::LOG_LIMIT)`. DEFAULT_LOG_LINES stays the CLI (WP-28) default only."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "`is_error_line` is called 'frozen by WP-01', but WP-01:200 exports only `face::logs::{log_lines, read_logs}`, and bones \u00a72 freezes none of the logs fns.",
+   "fix": "Say WP-06 adds `pub fn is_error_line` and `ERROR_WORDS` in its own logs.rs (allowed under bones \u00a70, new items inside its own file). The 3 fn signatures are WP-01 stubs that WP-06 fills."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "Most test cases name no inputs or expected outputs, and two read_logs details are unclear: the ts parsing rule and how to set a file's mtime.",
+   "fix": "ts rule: `match line.split_once(' ') { Some((t,r)) if t.parse::<u64>().is_ok() => (t,r), _ => (prev_ts, line) }`. Set mtime with `File::options().write(true).open(&f)?.set_modified(UNIX_EPOCH+Duration::from_secs(t))`. Cases: max_truncates_and_blanks_drop: link `\"1 a\\n\\n\\r\\n2 b\\n3 c\\n\"`, max 2 \u2192 [\"3 link: c\",\"2 link: b\"]. untimed_line_inherits_previous_ts: `\"untimed first\\n10 start\\ncontinued line\\n\"` \u2192 [\"10 link: continued line\",\"10 link: start\",\"0 link: untimed first\"]. missing_dirs_give_empty: nothing created \u2192 []. link_log_as_dir_and_garbage_record_are_skipped: create_dir_all(p.link_log()); run.log `\"5 appid=1 pid=2 ok\\n\"`; runs/run-9.txt `\"garbage\\n\"`; runs/notes.txt holding a valid record \u2192 [\"5 run: appid=1 pid=2 ok\"]. tail_reads_last_64k_without_partial_line: 1000 lines `format!(\"{:05} {:0>93}\\n\", i, i)` (100 bytes each, 100000 total), max 10000 \u2192 655 lines, first `format!(\"999 link: {:0>93}\", 999)`, last ts 345. App: lines [\"3 link: Tether command failed: exit 1\",\"2 link: ready\",\"1 run: Could not run tether command\"]; Errors filter \u2192 lines 1 and 3; CopyPressed under Errors \u2192 Copy(those two joined by \\n)."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-06",
+   "problem": "The trailing 'WP-00 pre-step' block (issues 76/116/118, sha256 'above') and the review note do not belong to WP-06. They point at sha values that are not in this file, which would confuse an agent working only from this file.",
+   "fix": "Delete the block and the review note from WP-06 and move the pre-step to bones \u00a70 or WP-03/04/05/23."
+  }
+ ]
+}

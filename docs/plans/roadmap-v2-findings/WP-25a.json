@@ -1,0 +1,21 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active in this session, so I made no edits; WP-25a.md is unchanged. The edits I would make to WP-25a.md are listed as the first cross item (target WP-25a) so the coordinator can apply them. The wave (1) is correct: the depends list is empty and the owned files (tools/docs/check.py, test_check.py, private-allow.txt) are not owned by WP-01 or WP-02."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-25a",
+   "target": "WP-25a",
+   "problem": "Edits I could not apply (plan mode). (1) The bones \u00a70 line 11 and T2 rule is missing: no `inject/` or `app/src` path token in docs/ROADMAP.md or docs/code-map.md outside the `<!-- mv-map -->` block. (2) The status rule cannot handle brace cells such as `crates/engine/src/{api,link,recipes}.rs`, which WP-25b keeps. (3) check.py holds the private regexes as literals, so it is clean only because of its own allow lines, and WP-34 cuts the allow file to one line. The done-check `--only private` on the allow-listed files proves nothing. (4) It is unclear which rules run on which files, and how the `## Commands` column 1 is parsed. (5) check.sh/CI run `python3 -W error -m py_compile`, so invalid escape sequences would fail.",
+   "fix": "Edit WP-25a.md. (a) Add rule `paths` to `--only`: in docs/ROADMAP.md and docs/code-map.md, flag `(?<![\\w./-])(?:inject/|app/src\\b)`, except on lines between two `<!-- mv-map -->` marker lines. Test: a hit becomes a finding, and the same token inside the mv-map block gives none. (b) status: expand one level of `{a,b}` braces in a backticked path, and treat `skeleton` like `stub`. The Parts table is the first table under `## Parts`; column 1 is the path and column 2 is the status. Test: a brace cell with one missing member gives a finding. (c) Rule scope: status, usage and paths run only when docs/code-map.md (and ROADMAP for paths) is in the checked set; links and mermaid run on *.md only; private runs on every UTF-8 file. Skip non-regular files such as submodule gitlinks, and any path with a `tests` component. A PATHS entry that does not exist exits 2. `--root` defaults to `Path(__file__).resolve().parents[2]`. (d) Usage: take string literals matching `usage: flat3d-inject ([^\"]*)`, split on `|`, take each alternative's first word, and skip words starting with `{`, `<` or `[` (cli/link.rs has `format!(\"usage: flat3d-inject {form}\")`). Commands column-1 words are the first word of each backtick span in that cell (the whole cell if it has none), so `` `inject <appid>` `` gives `inject`. (e) Mermaid arrow split regex: `-{2,}>|={2,}>|-\\.+->|-{3,}`. Remove `\"\u2026\"` before `|\u2026|`. Test line: `    Watch --> Link[\"a: b\"]    Watch --> Health[\"c\"]`. (f) Private: assemble every pattern from fragments at runtime, as the tests do, so check.py and test_check.py need no allow lines. Add `--allow FILE` (default `<root>/tools/docs/private-allow.txt`; a missing file means empty). `#` lines and blank lines are ignored. Globs use `fnmatch` on the repo-relative POSIX path. (g) Tests run check.py via `subprocess` with `sys.executable` and `Path(__file__).with_name('check.py')`. (h) Done-check becomes `python3 -m unittest discover -s tools/docs -p 'test_*.py' && python3 -W error -m py_compile tools/docs/check.py tools/docs/test_check.py && python3 tools/docs/check.py --only private --allow /dev/null tools/docs/check.py tools/docs/test_check.py`. (i) State that check.py has no generated-marker rule and no `--write` generator, so WP-30 and WP-34 must not rely on either."
+  },
+  {
+   "from": "WP-34",
+   "target": "WP-25a",
+   "problem": "The bones 'one owner per fact' row says recipes/README route-keys text is generated and checked, but check.py has no route-keys rule and no --write generator. WP-34 step 6 relied on both.",
+   "fix": "Either add a `route-keys` rule to check.py, so the block between `<!-- BEGIN GENERATED: route-keys -->`/`<!-- END GENERATED: route-keys -->` lists every recipes.rs UEVR_KEYS/GEO11_KEYS entry, or have bones drop 'generated \u2026 checked' and rely on WP-34's done-check script."
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode is on in this session, so WP-11.md could not be edited. As written, WP-11 follows WP-01's lines 190-192 instead of bones \u00a72. These edits are needed once bones and WP-01 agree (see cross): (1) Signatures should take the bones \u00a72 form: `HealthLoop::new(start: Instant, soak: Option<PathBuf>)`, `tick(&mut self, now: Instant, mode, playing, r: &mut dyn RelayRunner)`, `HealthTick{health, stats, tunnel, actions: Vec<HealthAction>, toast: Option<api::Toast>}` and `HealthAction::{Heal(Heal), WriteSoak(String)}`. Drop `start_unix`/`mem_start_kb` from `new`, and drop the `heal: Option<Heal>` and `(EventKind, String)` toast. Probe cadence uses `now.duration_since(..).as_secs()`. An in-file extra `finish(self, now: Instant, start_unix, mem_start_kb, mem_end_kb, orphans) -> SoakSummary` builds the summary as `SoakSummary{start: start_unix, mem_start_kb, ..soak.finish(..)}`, since `Soak::new` (stats.rs:98) needs both values. (2) Behaviour item 5 is wrong: `ps -eo pid=,args=` runs on the host, as watch.rs:691 does today, not through `adb`. Only the `ip`, `/proc/net/dev` and `dumpsys` word lists start with `adb`. (3) The test `a_good_tunnel_fills_health_stats_and_tunnel` cannot pass as written. A constant `tun0: 1000` reply gives rx rate 0 (RateMeter, stats.rs:13-55). The `/proc/net/dev` reply must grow between probes (for example 1000 then 6000 \u2192 1000 B/s), and the line must spell out all 16 numeric fields, because tx is field 8 (relay.rs:86-102). Also state that unkeyed argv gets `Err(\"no reply\")`. (4) Tests should use `t0 = Instant::now()` with `t0 + Duration::from_secs(n)`. (5) The warm-toast case should expect `Some(Toast{title: TOAST_TITLE.into(), body: \"Headset is warm: 39.5 C. It may slow down.\".into()})`. (6) Delete \"WP-01 is not changed\" and the Flags that hedge on other shapes (`take_toast`, `with_soak`). Checked and fine: heal.rs is owned only by WP-11 (no other wave-2 WP lists `health_loop.rs`, `heal.rs` or `tests/tether_health.rs`); depends on WP-01 only, so wave 2 is right; tether_heal.rs has 8 tests; adding `Heal::word` and `Healer::tripped` (field exists, heal.rs:26) leaves locked code byte-identical; the heal-ladder test timings (three misses, ten FullReconnects at 120 s, flap trip at t=190 < 400) match `Healer::observe` (heal.rs:47-96)."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-09",
+   "target": "WP-11",
+   "problem": "The 'Contract for WP-09' says RestartClient \u2192 client_start_commands only. WP-09 runs client_stop_command first, then the start commands.",
+   "fix": "Change the contract line to 'RestartClient \u2192 client_stop_command then client_start_commands (WP-09 executes)'."
+  }
+ ]
+}

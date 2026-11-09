@@ -1,0 +1,45 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode is active in this session, so I could not edit WP-28.md. The full corrected WP-28 text is in roadmap-v2-findings/WP-28-proposal.md and should be copied over roadmap-v2.md (WP-28 section). What it changes:\n(1) Adds Wave: 3. Adds WP-07 to depends, as the index already does; all deps are wave 1-2, so the wave is right. Adds #75 to closes.\n(2) Removes the pub rows_cmd/launch_cmd/collection_cmd/toasts_cmd/logs_cmd and LaunchOp. These become private helpers behind the frozen `cli::view::run(&ViewCommand,&mut Ctx)`, using the frozen `ViewCommand::Launch{add,options}` (bones: helpers stay private).\n(3) logs now uses `read_logs(p,limit)` and `LogLines{text:headset_view::log_copy_text(&lines),lines}`, per the contract-owner flag. read_log_text and the local log_lines are gone.\n(4) Compile fixes: `wrapper_bin().to_string_lossy()` for add_wrapper_at; `read_settings(&p.settings()).map_err(|e| ApiError::new(\"io\",&e))` (there is no From<String> for ApiError); games come from `catalog::catalog(p)?.games` (WP-07); `now` from `sys::unix_now()` (the bones Ctx has no now).\n(5) parse_any strips --json anywhere in the head, so `launch add --options x --json` is now accepted and moves from the bad list to the good list. Adds `launch add --options` as a bad line. Notes that a value of exactly `--` or `--json` cannot be passed.\n(6) Tests go through parse_any, cli::view::run with a temp HOME/XDG_RUNTIME_DIR, FakeRunner, and link_model::link_view directly. Concrete toast/collection/logs fixtures (missing steam gives games []).\n(7) Answers launch-sync: no new command. WP-21/WP-32 use `launch add|remove --options`."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-28-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-28",
+   "problem": "logs_cmd uses read_log_text and a pure log_lines->LogLines.",
+   "fix": "Use read_logs(p,limit) and LogLines{text:headset_view::log_copy_text(&lines),lines}."
+  },
+  {
+   "from": "WP-06",
+   "target": "WP-28",
+   "problem": "WP-28:21 declares `face::logs::log_lines(text,limit)->LogLines`, and WP-28:48 reads the text itself. This clashes with WP-06's `log_lines(...)->Vec<String>` and with WP-06's rule that WP-28 reuses read_logs.",
+   "fix": "`logs` command body: `let lines = face::logs::read_logs(ctx.paths, limit.unwrap_or(headset_view::DEFAULT_LOG_LINES)); api::LogLines{text: headset_view::log_copy_text(&lines), lines}`. No local log_lines."
+  },
+  {
+   "from": "WP-21",
+   "target": "WP-28",
+   "problem": "WP-28 makes `launch add --options x --json` a usage error and says 'Nothing may follow the options value'. Its Flag (line 93) asks WP-21's main.py to put `--json` before `--options`. That is impossible: #67's locked order test fixes main.py's argv as `[ENGINE,*args,\"--json\"]`, so every Decky launch call ends in `--json`. WP-01's `parse_any` removes `--json` from the head before the view parser, so through `parse_any` that case parses fine anyway.",
+   "fix": "Allow `--json` anywhere, because `parse_any` already removed it. Drop `launch add --options x --json` from the usage-error table, or replace it with a parse_any case where a trailing `--json` is accepted and `options==\"x\"`. Delete the Flag at line 93. Decky's call is `(\"launch\",\"add\",\"--json\",\"--options\",cur)` plus main.py's trailing `--json`."
+  },
+  {
+   "from": "WP-20",
+   "target": "WP-28",
+   "problem": "WP-28.md:37 calls `launch_options::add_wrapper_at(options, &p.wrapper_bin())`. `wrapper_bin()` returns a PathBuf, so `&PathBuf` isn't `&str` and the call doesn't compile.",
+   "fix": "Use `add_wrapper_at(options, &p.wrapper_bin().to_string_lossy())`."
+  },
+  {
+   "from": "WP-28",
+   "target": "WP-28",
+   "problem": "Plan mode was active, so the edit to WP-28.md was not applied. As written, WP-28 does not compile: it has pub helpers that violate the frozen-run rule, LaunchOp does not match the frozen ViewCommand::Launch{add,options}, read_log_text does not exist, `?` is used on String errors, &PathBuf is passed where &str is expected, and the games source is undefined. Its wave and WP-07 dependency are also missing.",
+   "fix": "Replace the WP-28.md body with the corrected text in roadmap-v2-findings/WP-28-proposal.md."
+  },
+  {
+   "from": "WP-32",
+   "target": "WP-28",
+   "problem": "The parse table's error case `launch add --options x --json` \u2192 usage, and the rule that nothing may follow the options value, conflict with two things. WP-01's parse_any strips `--json` from the head before view parsing (WP-01 parse_any step 2). main.py always appends a trailing `--json`, and #67 locks that argv order. So every Decky launch call ends in `--json`. If the view parser is tested or built on raw argv, Decky's launch sync always gets usage.",
+   "fix": "State that the launch rules apply after parse_any has removed `--json`, so a trailing `--json` is accepted. Replace the error case with an ok case: `launch add --options x --json` parses to options \"x\" with json=true."
+  }
+ ]
+}

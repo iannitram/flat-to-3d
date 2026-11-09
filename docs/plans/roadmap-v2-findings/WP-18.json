@@ -1,0 +1,39 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active, so I could not edit WP-18.md. The edits it needs are listed below under target WP-18 and written out in roadmap-v2-findings/WP-18-proposal.md. Checked and fine: the wave (2, depends only on WP-01 in wave 1); no file overlap with WP-17 (wave 2) or WP-19 (wave 3); no locked tests touched; pipewire-0.10.1 APIs exist with the cited shapes in the local registry (connect_rc/connect_fd_rc, StreamBox::new, Stream::connect(Option<u32>), channel attach, registry global, core.sync, ChunkFlags::CORRUPTED, VideoInfoRaw); ashpd 0.13.13 SelectSourcesOptions setters and Screencast signatures confirmed on docs.rs."
+ },
+ "proposed_edits_file": "roadmap-v2-findings/WP-18-proposal.md",
+ "incoming": [
+  {
+   "from": "CONTRACT",
+   "target": "WP-18",
+   "problem": "It may have a review note saying ApiError does not exist.",
+   "fix": "Delete it if present."
+  },
+  {
+   "from": "WP-18",
+   "target": "WP-18",
+   "problem": "A trailing 'Review note: none rejected...' block covers WP-15/WP-01/WP-00 facts and includes the stale 'ApiError does not exist' line. The contract owner asked for it to be removed.",
+   "fix": "Delete the whole Review note block at the end of WP-18.md."
+  },
+  {
+   "from": "WP-18",
+   "target": "WP-18",
+   "problem": "WP-18 uses Frame{width,height,fourcc,seq,data}, FrameData::Mem and FrameData::DmaBuf{planes,modifier} with Plane. Bones \u00a72 freezes Frame{width,height,format:PixelFormat,data}, FrameData::{Cpu{stride,bytes},DmaBuf{fd:OwnedFd,offset,stride,modifier}} and PixelFormat::{Bgra8,Rgba8,Nv12}. The \u00a72 form wins.",
+   "fix": "1. Import crate::frame::{Frame,FrameData,PixelFormat} (no Plane). 2. Change Offer to {formats:Vec<PixelFormat>,modifiers,max_w,max_h}. 3. Map Bgra8 to BGRx/BGRA, Rgba8 to RGBx/RGBA, Nv12 to NV12. 4. The modifier EnumFormat lists only Bgra8/Rgba8, so NV12 goes over shm only. 5. Build DmaBuf from datas[0] (fd dup, chunk offset/stride, negotiated modifier) and drop the frame if datas.len()!=1. 6. Build Cpu{stride,bytes}. 7. Frame{width,height,format,data} with no seq."
+  },
+  {
+   "from": "WP-18",
+   "target": "WP-18",
+   "problem": "WP-01's source.rs declares `pub mod gamescope;` without a cfg gate, but WP-18 says all three files are behind feature=capture. gamescope::open uses PwSource/Offer, which exist only with capture, so a host `cargo check --workspace` with no features would fail.",
+   "fix": "In gamescope.rs, leave NODE_NAME ungated and put #[cfg(feature = \"capture\")] on `open` and its use lines. Fix the 'All three files are behind feature = capture' bullet to say this."
+  },
+  {
+   "from": "WP-18",
+   "target": "WP-18",
+   "problem": "`impl FrameSource for PwSource/PortalSource` does not name the trait method.",
+   "fix": "State it as fn next(&mut self, timeout: Duration) -> Result<Option<Frame>, String>, the form WP-17 uses, once WP-01 freezes it."
+  }
+ ]
+}

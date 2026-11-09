@@ -1,0 +1,75 @@
+{
+ "own_review": {
+  "runnable": false,
+  "changed": "none. Plan mode was active in this session, so I could not edit WP-30.md. The WP-30 fixes it needs are listed under cross with target WP-30, ready to apply as written."
+ },
+ "proposed_edits_file": null,
+ "incoming": [
+  {
+   "from": "WP-25a",
+   "target": "WP-30",
+   "problem": "`**Depends on:** WP-02, WP-25`: WP-25 no longer exists. Its Flags also claim that WP-25's check.py matches `<!-- BEGIN GENERATED: fill_map prio-N -->`, but check.py (WP-25a) has no marker rule. WP-25b sets the literal markers `<!-- BEGIN GENERATED -->`/`<!-- END GENERATED -->` with no suffix, which conflicts with WP-30's prio-N suffix.",
+   "fix": "Change depends to WP-02 and WP-25b, and remove the claim that check.py checks the marker. Settle the marker literal between WP-25b and WP-30 (one literal, written in both files)."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "The marker literal is wrong. WP-25b:65 puts ONE unsuffixed pair, `<!-- BEGIN GENERATED -->` and `<!-- END GENERATED -->`, around all three prio tables. WP-25b:105 says to change WP-30 and not WP-25b. WP-30 instead uses a per-prio `<!-- BEGIN GENERATED: fill_map prio-N -->` and `splice(doc,prio,table)`. Its Flag that this 'replaces WP-25's ...' is stale. Its claim that 'WP-25's check.py matches the same literal' is false: WP-25a's check.py has no marker check.",
+   "fix": "Use the unsuffixed pair, with one block. Signatures become `render_block(items, vt, herovr)->str`, which runs `render_table(prio,...)` for p=1,2,3 and prints each `### Priority N. <pn[N]>` heading from mkmap.py:10-11, then the HEROVR table. `splice(doc:str, block:str)->str` replaces what sits between the two literal lines. Missing or duplicated markers exit 2. Delete the check.py sentence and the second Flag. State that the markers enclose doc :62 to :161 (the Priority 1 heading through the end of the Priority 3 table)."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "The `vt` headless argv cannot work. 'spiderman' is the project name, not a folder, so the AutoVT source path `/spiderman/<src>` does not exist. The script's third arg is a project file path (AutoVersionTrackingScript.java:129 defineProjectFile). An import stores the program at `/<slug>/<exe basename>`. `-process <dst>` in the project root also matches nothing, because the program sits in folder /<dst-slug> under its exe basename. A slug-only `vt` signature therefore cannot name either program.",
+   "fix": "Change the signature to `analyze.sh vt <projdir> <src-exe> <dst-exe> <out.csv> [--dry-run]`, with each slug from exe_id and each name from basename. The argv becomes `headless.sh <projdir> spiderman/<dst-slug> -process <dst-basename> -preScript Flat3dVtOptions.java -postScript AutoVersionTrackingScript.java / <session> /<src-slug>/<src-basename> -postScript ExportVtMatches.java /<session> <out.csv> -scriptPath tools/ghidra`. Update the done-check to `FLAT3D_EXE_ID=<stub> tools/re/analyze.sh vt /tmp/p /tmp/Spider-Man.exe /tmp/Spider-Man2.exe /tmp/o.csv --dry-run`, and have the test assert this exact argv."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "`FLAT3D_EXE_ID` has no defined meaning ('stubbed through FLAT3D_EXE_ID or a fixture'), so the done-check value 'stub' is arbitrary. It is also unclear whether `--dry-run` needs the exe to exist. `-log <log>` has no path.",
+   "fix": "Define it: when FLAT3D_EXE_ID is set, analyze.sh uses it as the command run in place of `python3 tools/re/exe_id.py` (called as `$FLAT3D_EXE_ID <exe>`; the first field of its output is the slug). The test writes a stub script that prints `<slug> <sha> <ver>` based on the basename. `--dry-run` never checks that files exist. The log goes to `<projdir>/logs/analyze-<slug>.log` and the session name is `vt-$(date +%s)`; in the test, assert it with a regex."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "The done-check fails on this host: shellcheck is not installed (WP-02:113, K10). test_analyze_sh's 'shellcheck clean' would also fail without it.",
+   "fix": "Done-check: `python3 -m unittest discover -s tools/re -p 'test_*.py' && { command -v shellcheck >/dev/null || echo 'shellcheck missing'; } && { ! command -v shellcheck >/dev/null || shellcheck tools/re/analyze.sh; } && <dry-run>`. In the test, wrap the shellcheck case in `@unittest.skipUnless(shutil.which('shellcheck'), ...)`. Also mark analyze.sh executable (git mode 100755)."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "The #37 HEROVR column is never rendered. The issue asks for a 'checked against HEROVR's list' column. render_table copies mkmap's 8-column header verbatim, and nothing says how `[[herovr]]` rows H1-H11 appear in the doc. The map.toml schema (item fields) is also unspecified, and the H1-H11 item names are not given inline. Getting them needs a network read of HEROVR BUILD-SM2.md@82f3ffe, which the WP does not state.",
+   "fix": "Specify the schema. One `[[item]]` per targets.py row (85): name, rem_rva (hex str), kind, prio, sm2 (\"\" or hex), sig, conf, how, status (pending|found), plus similarity, confidence and correlator when found. One `[[herovr]]` per H1-H11: id, what (prose, no hex), check, item (our item name or \"\"), evidence (our tool name). After the prio tables, render a `### Checked against HEROVR's list` table with columns `| HEROVR item | Our row | Check | Evidence |`. Inline the 11 H names, or state 'network: read-only fetch of BUILD-SM2.md at herovr_rev'. Seed every item from targets.py with status pending."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "VT addresses vs RVAs, and duplicate matches, are undefined. ExportVtMatches writes Ghidra addresses (VA, image base 0x140000000), but load_vt is keyed by an int 'Remastered RVA'. One source address can carry several matches across match sets.",
+   "fix": "ExportVtMatches writes `src_rva,dst_rva` as `addr.subtract(program.getImageBase())` for each program, in hex with 0x. load_vt keeps the row with the highest similarity, then confidence, then the first seen. The 3-row fixture includes a duplicate source to test this."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "The committed doc is never regenerated and drift is never checked. `--vt` is mandatory, but no VT csv exists in the pass. The WP does not own docs/spiderman2/address-map.md, yet adding the HEROVR table means writing that doc. WP-25b (wave 2) owns it; WP-30 is wave 3, so writing it after WP-25b is safe.",
+   "fix": "Make `--vt` optional: no csv means every item stays as map.toml says. Add `docs/spiderman2/address-map.md` to the WP-30 files, limited to the generated block. Add `games/spiderman2/map.toml` seeding as a step. Append to the done-check: `python3 tools/re/fill_map.py --map games/spiderman2/map.toml --targets tools/xmatch/targets.py --doc docs/spiderman2/address-map.md --check`. Load targets.py with importlib.util.spec_from_file_location, with no sys.path edits."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "exe_id details are underspecified. inspect_game.py:17-21 KNOWN_BUILDS maps sha\u2192description string, not to a slug. The version for a non-PE fixture or a file without a version resource is undefined.",
+   "fix": "Use `KNOWN_BUILDS={sha:(slug,version)}`, where e297\u2026\u2192('remastered-4.630','4.630.0.0') and c9b9\u2026\u2192('sm2-2.810','2.810.0.0'), with each description kept as a comment. `identify` returns (slug, sha, pe_version or '-'). An unknown hash prints `unknown <sha>` to stderr and exits 3."
+  },
+  {
+   "from": "WP-30",
+   "target": "WP-30",
+   "problem": "Depends and stray text. 'WP-25' is now split: WP-25a is wave 1 and WP-25b is wave 2, and the markers, doc move and headless.sh env vars all come from WP-25b. The trailing 'Review note' about WP-28 and WP-06 log_lines has nothing to do with WP-30 and would mislead the worker.",
+   "fix": "Change to `**Depends on:** WP-02, WP-25b.` (wave 3 stays correct; no wave-3 WP touches tools/re, tools/ghidra/*.java, games/ or the address-map doc). Delete the WP-28/WP-06 review note."
+  },
+  {
+   "from": "WP-25b",
+   "target": "WP-30",
+   "problem": "There are two marker conflicts. WP-30:64,104 uses the per-prio markers `<!-- BEGIN GENERATED: fill_map prio-N -->`, while WP-25b (the contract) writes the bare `<!-- BEGIN GENERATED -->`/`<!-- END GENERATED -->` pair and says WP-30 changes. WP-30 also claims WP-25's check.py matches the marker, but WP-25a has no marker rule. In addition, WP-30:88 still says headless.sh exits 75 on qwen.lock, while WP-25b replaces that with FLAT3D_HEAVY_LOCK.",
+   "fix": "In WP-30: splice between the exact literals `<!-- BEGIN GENERATED -->` and `<!-- END GENERATED -->`, one block covering all three prio sections. Drop the 'check.py matches the same literal' clause. :88 \u2192 'exits 75 when $FLAT3D_HEAVY_LOCK exists or another headless Ghidra runs'. Change Depends on to 'WP-02, WP-25a, WP-25b'."
+  }
+ ]
+}
