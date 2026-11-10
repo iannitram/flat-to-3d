@@ -1,8 +1,10 @@
 # Roadmap v2 (split)
 
-Roadmap v2 used to be one 393 KB file, too big for one agent context. It is now one file per section and one per work package. Read `00-run-the-pass.md`, the parts of `01-new-bones.md` your WP names, your own `WP-NN.md`, and the `questions.md` entries under §0, §2 and your WP.
+Roadmap v2 used to be one 393 KB file, too big for one agent context. It is now one file per section and one per work package. Read `00-run-the-pass.md`, the parts of `01-new-bones.md` your WP names, your own `WP-NN.md` (WP-01 is four files, `WP-01a.md` to `WP-01d.md`, one per builder), and the `questions.md` entries under §0, §2 and your WP.
 
-Old line numbers (`L1969`, `roadmap-v2.md:1969`) in the findings, the Craft review and older notes map to files through this table. Each file's first line also gives its old range.
+**Unattended run:** start at `00-run-the-pass.md` §0a. It is the one entry point: what to read, wave order, branch names, `progress.md` and when to stop.
+
+History only (a builder does not need this): old line numbers (`L1969`, `roadmap-v2.md:1969`) in the findings, the Craft review and older notes map to files through this table. Each file's first line also gives its old range.
 
 | File | Old lines | Contents |
 |---|---|---|
@@ -11,7 +13,11 @@ Old line numbers (`L1969`, `roadmap-v2.md:1969`) in the findings, the Craft revi
 | [02-queues-and-decisions.md](02-queues-and-decisions.md) | 477-609 | §3 conversions, §5 owner-device queue, §6 issue housekeeping, §7 owner decisions, Not in this pass |
 | [03-wp-index.md](03-wp-index.md) | 610-651 | §4 Work packages: index |
 | [WP-00.md](WP-00.md) | 652-754 | WP-00: cargo fmt + clippy gate (#183) |
-| [WP-01.md](WP-01.md) | 755-1385 | WP-01: Workspace reshape + frozen bones |
+| [WP-01.md](WP-01.md) | 755-1385 | WP-01: Workspace reshape + frozen bones. Pointer only: the WP is split into the four parts below, built in order. "Depends on WP-01" means all four merged |
+| [WP-01a.md](WP-01a.md) | 755-1385 (part) | WP-01a: Workspace reshape: moves, manifests, CI |
+| [WP-01b.md](WP-01b.md) | 755-1385 (part) | WP-01b: Leaf modules, exec split, architecture test |
+| [WP-01c.md](WP-01c.md) | 755-1385 (part) | WP-01c: CLI bones: parse_any, command registry, exit hook, error_help |
+| [WP-01d.md](WP-01d.md) | 755-1385 (part) | WP-01d: Frozen stubs later WPs fill, and the wiring to them |
 | [WP-02.md](WP-02.md) | 1386-1542 | WP-02: Repo tooling: check.sh, pins, pin.sh, issues report |
 | [WP-03.md](WP-03.md) | 1543-1608 | WP-03: GameRow rows view (#76) |
 | [WP-04.md](WP-04.md) | 1609-1656 | WP-04: App Headset page (#116) |
@@ -46,5 +52,7 @@ Old line numbers (`L1969`, `roadmap-v2.md:1969`) in the findings, the Craft revi
 | [WP-32.md](WP-32.md) | 4416-4485 | WP-32: Decky panel, launch sync, collection, toasts (#131-#133) |
 | [WP-33.md](WP-33.md) | 4486-4594 | WP-33: App views + main wiring (#122/#123) |
 | [WP-34.md](WP-34.md) | 4595-4709 | WP-34: Docs sync after the pass |
+| [progress.md](progress.md) | — | Coordinator's status table for the unattended run (§0a) |
+| [rulings-2026-11-09.md](rulings-2026-11-09.md) | — | Owner rulings D1-D6 (already folded into §0, §2, §7 and the WPs) |
 | [questions.md](questions.md) | — | Open owner questions with recommended answers, and unresolved verify problems |
 | [fold-log/](fold-log/) | — | One record per WP and section of each fold decision (history, not contract) |

@@ -7,7 +7,8 @@
 - C1, C3, C4, C23 and C24 are DECISIONS.md edits. OD7 keeps that file untouched, and the wording is owner-blocked (O-1..O-4).
 - C9 is the `Cargo.toml` description, frozen after wave 1. WP-01 owns it.
 
-**Files:** as in the index.
+**Files** (the whole list; the index row says the same):
+- Edited in place: `README.md`, `SPEC.md`, `PIPELINE.md`, `AGENTS.md`, `CHANGELOG.md`, `docs/ROADMAP.md`, `docs/code-map.md`, `docs/STEP0-RUNSHEET.md`, `recipes/README.md`, `tools/ghidra/headless.sh` (after WP-02), `tools/build-spidy.sh`, `tools/research/research_game.py`, `tools/xmatch/targets.py`.
 - `git mv` moves:
   - `docs/PORT-SPIDERMAN2.md` → `docs/spiderman2/plan.md`
   - `docs/spidy-stereo-core-map.md` → `docs/spiderman2/spidy-core-map.md`
@@ -17,6 +18,10 @@
 - `tools/check.sh` is not touched. WP-02 owns it, and its docs step already runs `python3 tools/docs/check.py` behind the guard `[ -f docs/workbench.md ]` (bones §2 "CI final shape"; check.yml uses the same guard). Creating `docs/workbench.md` turns that step on, so the full-repo `check.py` must pass on this WP's branch.
 - Untouched: `docs/notes/DECISIONS.md` and the SPEC Musts (SPEC.md:15-51).
 - No `docs/archive/README.md` or scan-leg files exist today. `docs/notes/**` stays where it is (WP-25a allow-lists it).
+
+**Line numbers:** every `:N` below is a line of the file as at the base commit `2812f64`. `docs/code-map.md` was edited by WP-01 in wave 1 (path tokens, two new rows, the mv-map block), so its lines may have moved: find each code-map line by the quoted text, not by its number. Make the edits inside one file from the bottom up, or find by content, so an earlier edit does not shift a later line number.
+
+**Must not touch:** `docs/notes/**`, `docs/plans/**`, `tools/check.sh`, `tools/docs/**` (the allow-list included), `Cargo.*`, `crates/**`, `.github/**`, `decky/**`. No GitHub writes. If the full-repo `check.py` reports a finding in a file outside the Files list, do not edit that file: stop and report the finding.
 
 **Edits:**
 - **README.md**, rewritten:
@@ -61,7 +66,10 @@
   - :152: cite the `decky/main.py` shim (`io`/`command-failed`) instead of #67 (C18).
   - One error-code table under "API shape": the 8 `ERROR_CODES` (`usage not-built not-found bad-recipe refused link-not-ready command-failed io`), each with its exit (`usage` and `not-built` 2, the rest 1) and the `api::error_help` retryable flag and fix text. Say that `api.rs` owns them and the table copies it.
   - One paths table under "State, IPC and files": `~/.local/share/flat3d`, `~/.local/state/flat3d` (logs, soak, sessions), `~/.config/flat3d/settings`, `$XDG_RUNTIME_DIR`, `$FLAT3D_RE_HOME`.
-  - New `## Commands` table under Parts, one row per `cli::COMMANDS` entry (WP-01), in registry order. Column 1 is the entry's `id` exactly as typed (`list`, `setup fetch`), because check.py's usage rule reads column 1. Columns: `| Command | Group | Module | JSON (api.rs type) | WP |`, the layout WP-34 updates in place.
+  - New `## Commands` table under Parts, one row per `cli::COMMANDS` entry (WP-01c), in registry order. Column 1 is the entry's `id` exactly as typed (`list`, `setup fetch`), because check.py's usage rule reads column 1. Columns: `| Command | Group | Module | JSON (api.rs type) | WP |`, the layout WP-34 updates in place.
+    - Read the rows from `pub static COMMANDS` in `crates/engine/src/cli.rs`. Command = `id` in backticks, Group = `group`, JSON = `output` (`—` when empty).
+    - Module = the `crates/engine/src/cli/*.rs` file that handles the command: `cli/engine.rs` for group Engine, except `inject` → `cli/inject.rs` and `undo` → `cli/undo.rs`; `cli/link.rs` for Link; `cli/view.rs` for View; `cli/setup.rs` for Setup, except `setup fetch` → `cli/setup_fetch.rs`; `cli/doctor.rs` for Doctor.
+    - WP = the `WP-NN` named in that module's `NotBuilt("… (WP-NN)")` stub message; `—` when the module has no such stub (it already works). WP-34 corrects this column later, so do not research it further.
   - Keep these three Parts rows, each its own row and starting with exactly this text (the locked asserts at api_response.rs:69, link_stop.rs:112 and recipe_load.rs:150 each look for their own cell):
     - ``| `crates/engine/src/api.rs` | present |``
     - ``| `crates/engine/src/link.rs` | present |``
@@ -123,6 +131,7 @@ Locked tests that read docs and must stay green: `api_response.rs`, `link_stop.r
 
 **Notes:**
 - WP-30 uses the marker literals given above. If WP-30 names a suffixed marker, WP-30 changes, not this WP.
-- WP-25b places the marker pair only in address-map.md. WP-34 adds the same unsuffixed pair to recipes/README.md by hand (its step 6). STEP0-RUNSHEET.md has no markers: WP-24's header line marks the whole file as generated.
+- WP-25b places the marker pair only in address-map.md. WP-34 adds the same unsuffixed pair to recipes/README.md by hand (its step 6). This overrides the recommended answer to `questions.md` question 46 (a suffixed pair placed by WP-25b): do not place any marker in recipes/README.md. STEP0-RUNSHEET.md has no markers: WP-24's header line marks the whole file as generated.
+- `tools/docs/check.py` always skips `docs/plans/` (WP-25a, "Always skipped"). So the plan files, which quote the rule words, demo ids and marker strings, cannot fail this WP's full-repo `check.py` run, and this WP does not edit them.
 
 ---

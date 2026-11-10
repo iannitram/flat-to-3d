@@ -15,13 +15,13 @@
   - `PATHS` (repo-relative) limits the check to those files. Docs-writing WPs check only their own files, before WP-25b has scrubbed the rest. A `PATHS` entry that does not exist exits 2.
   - `--changed BASE` checks the files `git -C root diff --name-only --diff-filter=d $(git merge-base BASE HEAD)` lists, so a branch checks only what it changed. It exits 2 when root is not a git repo or BASE does not resolve. `--changed` together with `PATHS` exits 2.
   - With neither, it checks `git -C root ls-files`, or walks the directory when there is no `.git`.
-- Always skipped: `third_party/`, any path with a `tests` component (so `**/tests/**` and `crates/*/tests/`), `Cargo.lock`, `pnpm-lock.yaml`, non-regular files (such as submodule gitlinks), and anything not UTF-8.
+- Always skipped: `docs/plans/` (the plan files quote the rule words, demo ids and marker strings on purpose, so no rule runs on them), `third_party/`, any path with a `tests` component (so `**/tests/**` and `crates/*/tests/`), `Cargo.lock`, `pnpm-lock.yaml`, non-regular files (such as submodule gitlinks), and anything not UTF-8.
 - Rule scope:
   - `status` and `usage` run only when `docs/code-map.md` is in the checked set. `paths` runs on `docs/ROADMAP.md` and `docs/code-map.md` when they are in it.
   - `links`, `mermaid`, `ids` and `generated` run on `*.md` only. `generated` also reads `recipes.rs` and runs `session.py render` as inputs; it reports findings only in the `.md` files.
   - `private` runs on every checked UTF-8 file.
 - check.py only reads. It has no `--write` and no generator, so a WP that owns a generated block writes the block itself (WP-30's `fill_map.py`, WP-24's `session.py render`, WP-34's hand-written route-keys block).
-- check.py has no plan lint. Waves, depends and `files:` lists are checked by `tools/pm/issues_report.py --roadmap` (WP-02). Architecture lints (no I/O in the app, only exec.rs spawns) are WP-01's and WP-02's.
+- check.py has no plan lint. Waves, depends and `files:` lists are checked by `tools/pm/issues_report.py --roadmap` (WP-02). Architecture lints (no I/O in the app, only exec.rs spawns) are WP-02's and WP-01b's.
 
 Rules:
 - **status:** the Parts table is the first table under code-map's `## Parts`. Column 1 is the path, column 2 the status. When the status cell starts with `present`, `partly present`, `stub` or `skeleton`, every backticked path in cell 1 must exist.
@@ -47,7 +47,7 @@ Rules:
   - No `## Commands` table is one finding. WP-25b adds the table, so a full run fails here until then.
   - One-way only: K11, and the locked USAGE at cli.rs:50-51 omits `undo`. The check of the table against `cli::COMMANDS` is WP-34's, not check.py's.
   - fix: add a `<word>` row to code-map `## Commands`.
-- **paths:** in `docs/ROADMAP.md` and `docs/code-map.md`, flag `(?<![\w./-])(?:inject/|app/src\b)`, except on the lines from a `<!-- mv-map -->` line to the next `<!-- /mv-map -->` line. WP-01 writes that block in code-map; it is the one exemption (§0, bones §2).
+- **paths:** in `docs/ROADMAP.md` and `docs/code-map.md`, flag `(?<![\w./-])(?:inject/|app/src\b)`, except on the lines from a `<!-- mv-map -->` line to the next `<!-- /mv-map -->` line. WP-01a writes that block in code-map; it is the one exemption (§0, bones §2).
   - fix: write the `crates/engine/` or `crates/app/src` path.
 - **ids:** every cited spec item and ruling must exist.
   - `\bM(\d+)\b` must have a row `| M<n> |` in `SPEC.md`.
@@ -88,7 +88,7 @@ docs/workbench.md	craft-build
 - paths: an `inject/` token in code-map → finding; the same token inside the mv-map block → none; `crates/engine/` and `flat3d-inject/` → none.
 - ids: `M99` with no SPEC row → finding; `rulings 26, 27` with both rows → none; `ruling 2026-10-31` → none; a retired `Ruling 14 ` line counts.
 - generated: a BEGIN with no END → finding; a recipes/README block missing one `GEO11_KEYS` entry → finding; a runsheet that differs from a stand-in `session.py render` → finding whose fix is the regenerate command.
-- private: a hit → finding; a whole-file glob or substring allow → none; a `tests/` path is exempt; `iannitram/flat-to-3d` passes; `--allow /dev/null` lifts nothing.
+- private: a hit → finding; a whole-file glob or substring allow → none; a `tests/` path is exempt; a file under `docs/plans/` is exempt from every rule; `iannitram/flat-to-3d` passes; `--allow /dev/null` lifts nothing.
 - `PATHS`: a finding in an unlisted file is not reported; a missing `PATHS` entry exits 2.
 - `--changed`: in a temp git repo (skipped when `git` is absent), a finding in an unchanged file is not reported; `--changed` with `PATHS` exits 2.
 - `--json`: the array holds the same findings as the text output, with the same exit code.

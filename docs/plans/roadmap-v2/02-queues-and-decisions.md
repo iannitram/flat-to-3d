@@ -54,7 +54,7 @@
 - Each deferred device claim maps to a session step:
   - link-smoke (Q3): unplug/replug and sleep/wake heal (WP-09); tun0 has `inet`, the gnirehtet package is present, and Wi-Fi comes back after a disconnect (WP-10); `stop-3d` twice, then status shows stopped, plus a Quest app version check (WP-12); `list --json` (WP-07).
   - decky (Q14): `launch-opts-persist`, `collection-save-persist`, `toast-shows`, `xdg-runtime-set` (WP-32), plus the Game Mode gates (the QAM panel renders, the plugin survives a Game Mode restart).
-  - g2-viewer (Q10): ask steps `overlay-in-capture` and `portal-window-kde` (WP-18).
+  - g2-viewer (Q10): ask steps `overlay-in-capture`, `portal-window-kde` and `portal-restore-token` (WP-18), and `xr-runtime-found`, `quad-shows`, `eyes-left-right`, `dmabuf-import`, `recenter-works` and `exits-with-game` (WP-19). WP-24's Session index row has the wording of each.
 - **Closing (rulings D1, D5):** the rule lives in `01-new-bones.md` §2 "PR and issue rules" (Refs vs Closes) and §0 "PR body" (`## Verified` / `## Not verified`). In short, a WP named under "Needs WPs" writes `Refs #N`, lists the Q row under `## Not verified`, and the owner or PM closes the issue when its session passes.
 
 ## 6. Issue housekeeping (owner/PM; the pass makes no GitHub writes)
@@ -97,7 +97,7 @@
 | OD7 | private-name policy O-9 + DECISIONS/SPEC wording O-1..O-8 | **scrub docs; DECISIONS untouched + allow-listed; uncharted3 → docs/archive** | WP-25b, WP-34 |
 | OD8 | approve `pin.sh --all-tbd` downloads + AC7 manual prereqs (Nexus 2179/2274, Flat2VR Discord pak) | **approve** | Q0, Q8 |
 
-Owner rulings, 2026-11-09 (section D of the Craft review; full text in `rulings-2026-11-09.md`). This file cites them as "ruling D1" to "ruling D6". The bare D-numbers in the OD table and in the list below are the older plan decisions, not these.
+Owner rulings, 2026-11-09 (section D of the Craft review; full text in `rulings-2026-11-09.md`). This file cites them as "ruling D1" to "ruling D6". The bare D-numbers in the OD table and in the list below are the older plan decisions, not these. This note is the whole fix: the older decisions are not renamed to PD-n, and no WP owns such a rename (WP-34 cannot edit this file).
 - **D1 PR rules:** every PR body has `## Verified` (each done-check command and its exit status) and `## Not verified` (each host skip it hit, plus its device Q row) sections, and never claims a run that was not done. A merge takes only the head commit the review passed. The two-commit landings (WP-00) stay as two commits.
 - **D2 WP-01 contract, three additions:** `api::error_help(code) -> (retryable, fix)` with a test that every code has an entry; a dispatch hook that lets a command set its own exit code; and a full `cli::COMMANDS` registry in which each command declares its id, args and effects. The usage text, the Decky wrappers, the app's effect args and the code-map Commands table are checked against the registry.
 - **D3 WP-05 hint:** fixed in WP-05. The step-1 hint drops "install Quest Tether" (stale under ruling 30) and points at the engine's own setup command. The brief is updated to match. No WP-34 follow-up.
@@ -157,3 +157,7 @@ Review note: the §2 frozen forms were reconciled against the implementing WPs. 
 - `LOG_LIMIT`;
 - the `wrapper_run.rs:206-207` edit;
 - moving WP-33 to wave 5 (its CLI uses of WP-29/WP-27/WP-08 are runtime, not merge deps).
+
+Review note (moved from WP-26, where it sat though it is about WP-24's sessions): WP-24's z2 capture fix does not use the viewer's `--dump-eyes` for UEVR. UEVR submits straight to the OpenXR runtime, so the SBS viewer (geo11-viewer.md:3,65) never sees its frames, and no WiVRn per-eye dump is confirmed in the reports. z2's depth gate is owner-judged and its disparity measure is optional. No viewer WP ships an eye-dump flag, so g2-viewer's disparity measure is optional and never blocks PASS (WP-24).
+
+Review note (moved from WP-26, about WP-24's sessions): q0, q2 and q12 follow §5 (02-queues-and-decisions.md), not v1 roadmap.md. Q0 records the TBD shas with `packaging/pin.sh --all-tbd`. Q2 runs the injector build (`tools/build-win.sh`), not doctor. Q12 is the RE overnight run. WP-24 writes those TOMLs.
