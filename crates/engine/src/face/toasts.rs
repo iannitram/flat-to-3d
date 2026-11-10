@@ -2,7 +2,7 @@
 
 use crate::api::LinkEvent;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ToastBatch {
     pub toasts: Vec<LinkEvent>,
     pub last_seq: u64,
