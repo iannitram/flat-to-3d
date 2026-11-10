@@ -17,6 +17,18 @@ pub enum Heal {
     GiveUp,
 }
 
+impl Heal {
+    pub fn word(self) -> &'static str {
+        match self {
+            Heal::None => "none",
+            Heal::RestartClient => "restart-client",
+            Heal::RestartAdbThenClient => "restart-adb-then-client",
+            Heal::FullReconnect => "full-reconnect",
+            Heal::GiveUp => "give-up",
+        }
+    }
+}
+
 pub struct Healer {
     misses: u32,
     stage: u8,
@@ -97,5 +109,9 @@ impl Healer {
 
     pub fn reconnects(&self) -> u32 {
         self.reconnects
+    }
+
+    pub fn tripped(&self) -> bool {
+        self.tripped
     }
 }
