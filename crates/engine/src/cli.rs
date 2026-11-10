@@ -543,6 +543,9 @@ pub fn execute_with(args: &[String], ctx: &mut Ctx<'_>) -> Output {
             let mut out = render(name, result, parsed.json);
             if out.stderr.is_empty() {
                 if let Ok(data) = serde_json::from_str::<serde_json::Value>(out.stdout.trim()) {
+                    if data.get("ok") == Some(&serde_json::Value::Bool(false)) {
+                        return out;
+                    }
                     out.code = ok_exit(&parsed.command, &data);
                 }
             }
