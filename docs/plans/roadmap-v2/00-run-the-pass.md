@@ -92,7 +92,7 @@ Sections 0-7 and the WP files are the contract. The reviewer fixes, the Craft re
 - **Never in the pass:**
   - downloading release archives (fetch and pin tests use `file://` fixtures);
   - `pin.sh` real runs;
-  - GitHub writes (section 6 is for the owner/PM). One exception **[default, owner to confirm]**: a builder may push its own `v2/wp-NN-*` branch and open one PR for it, as §0a "Builder rules" says. That is why every WP has a PR body. Nothing else: no merge, no issue edit or close, no label, no comment;
+  - GitHub writes (section 6 is for the owner/PM). One exception (owner ruling, 2026-11-10): a builder may push its own `v2/wp-NN-*` branch and open one PR for it, as §0a "Builder rules" says. That is why every WP has a PR body. Nothing else: no merge, no issue edit or close, no label, no comment;
   - editing `docs/notes/DECISIONS.md`.
 - **Device work** is written as `sessions/*.toml` and run by the owner with `tools/session/session.py run` (section 5).
 - **Frozen after wave 1 (only the named WP may edit):**
@@ -114,7 +114,7 @@ Sections 0-7 and the WP files are the contract. The reviewer fixes, the Craft re
 
 ## 0a. Unattended run (coordinator loop)
 
-This section is the entry point for a run with nobody watching. It adds to §0 and changes two §0 rules for the unattended run only; both are marked "owner to confirm" below. Everything else in §0 holds.
+This section is the entry point for a run with nobody watching. It adds to §0 and changes two §0 rules for the unattended run only; the owner confirmed both on 2026-11-10. Everything else in §0 holds.
 
 **Who reads what**
 - Coordinator: this file (§0 and §0a), `03-wp-index.md`, `progress.md`. It does not read WP files or §2.
