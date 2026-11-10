@@ -13,14 +13,24 @@ fn snap(state: LinkState, adb: AdbSource) -> LinkSnapshot {
 fn done(v: &[flat3d_app::setup_page::Step]) -> Vec<bool> {
     v.iter().map(|s| s.done).collect()
 }
-const BOTH: Packages = Packages { wivrn: true, gnirehtet: true };
+const BOTH: Packages = Packages {
+    wivrn: true,
+    gnirehtet: true,
+};
 
 #[test]
 fn six_steps_in_order() {
     let titles: Vec<&str> = steps(None, None).iter().map(|s| s.title).collect();
     assert_eq!(
         titles,
-        vec!["adb found", "Headset plugged in", "USB debugging allowed", "WiVRn on the headset", "Tunnel app on the headset", "Seated boundary"]
+        vec![
+            "adb found",
+            "Headset plugged in",
+            "USB debugging allowed",
+            "WiVRn on the headset",
+            "Tunnel app on the headset",
+            "Seated boundary"
+        ]
     );
 }
 
@@ -31,14 +41,20 @@ fn with_nothing_known_nothing_is_done() {
 
 #[test]
 fn a_ready_headset_with_both_apps_is_all_done_but_the_boundary() {
-    let v = steps(Some(&BOTH), Some(&snap(LinkState::Ready, AdbSource::Bundled)));
+    let v = steps(
+        Some(&BOTH),
+        Some(&snap(LinkState::Ready, AdbSource::Bundled)),
+    );
     assert_eq!(done(&v), vec![true, true, true, true, true, false]);
     assert!(all_done(&v));
 }
 
 #[test]
 fn an_unauthorised_headset_is_plugged_in_but_not_allowed() {
-    let v = steps(Some(&BOTH), Some(&snap(LinkState::Unauthorised, AdbSource::Running)));
+    let v = steps(
+        Some(&BOTH),
+        Some(&snap(LinkState::Unauthorised, AdbSource::Running)),
+    );
     assert_eq!(done(&v)[..3], [true, true, false]);
     assert!(!all_done(&v));
 }
@@ -65,15 +81,30 @@ fn a_missing_adb_is_not_found() {
 
 #[test]
 fn each_app_is_checked_alone() {
-    let v = steps(Some(&Packages { wivrn: true, gnirehtet: false }), None);
+    let v = steps(
+        Some(&Packages {
+            wivrn: true,
+            gnirehtet: false,
+        }),
+        None,
+    );
     assert_eq!(done(&v)[3..5], [true, false]);
-    let v = steps(Some(&Packages { wivrn: false, gnirehtet: true }), None);
+    let v = steps(
+        Some(&Packages {
+            wivrn: false,
+            gnirehtet: true,
+        }),
+        None,
+    );
     assert_eq!(done(&v)[3..5], [false, true]);
 }
 
 #[test]
 fn only_the_boundary_is_manual() {
     let v = steps(None, None);
-    assert_eq!(v.iter().map(|s| s.manual).collect::<Vec<_>>(), vec![false, false, false, false, false, true]);
+    assert_eq!(
+        v.iter().map(|s| s.manual).collect::<Vec<_>>(),
+        vec![false, false, false, false, false, true]
+    );
     assert!(!v[5].hint.is_empty());
 }
