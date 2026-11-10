@@ -92,7 +92,7 @@ Sections 0-7 and the WP files are the contract. The reviewer fixes, the Craft re
 - **Never in the pass:**
   - downloading release archives (fetch and pin tests use `file://` fixtures);
   - `pin.sh` real runs;
-  - GitHub writes (section 6 is for the owner/PM). One exception **[default, owner to confirm]**: a builder may push its own `v2/wp-NN-*` branch and open one PR for it, as §0a "Builder rules" says. That is why every WP has a PR body. Nothing else: no merge, no issue edit or close, no label, no comment;
+  - GitHub writes (section 6 is for the owner/PM). One exception (owner ruling, 2026-11-10): a builder may push its own `v2/wp-NN-*` branch and open one PR for it, as §0a "Builder rules" says. That is why every WP has a PR body. Nothing else: no merge, no issue edit or close, no label, no comment;
   - editing `docs/notes/DECISIONS.md`.
 - **Device work** is written as `sessions/*.toml` and run by the owner with `tools/session/session.py run` (section 5).
 - **Frozen after wave 1 (only the named WP may edit):**
@@ -114,7 +114,7 @@ Sections 0-7 and the WP files are the contract. The reviewer fixes, the Craft re
 
 ## 0a. Unattended run (coordinator loop)
 
-This section is the entry point for a run with nobody watching. It adds to §0 and changes two §0 rules for the unattended run only; both are marked "owner to confirm" below. Everything else in §0 holds.
+This section is the entry point for a run with nobody watching. It adds to §0 and changes two §0 rules for the unattended run only; the owner confirmed both on 2026-11-10. Everything else in §0 holds.
 
 **Who reads what**
 - Coordinator: this file (§0 and §0a), `03-wp-index.md`, `progress.md`. It does not read WP files or §2.
@@ -130,7 +130,7 @@ This section is the entry point for a run with nobody watching. It adds to §0 a
 - Each WP gets its own worktree and one branch `v2/wp-NN-<slug>` (slug: the WP title in lower-case words joined by `-`, at most four words), cut from the tip of `v2/integration` at the moment the WP is handed out. Each builder gets its own `$SCRATCH`.
 - Nothing merges to `main` overnight. Wave N+1 builds on wave N like this: after a WP's done-check passes, the coordinator runs `git merge --no-ff v2/wp-NN-<slug>` on `v2/integration` (the default subject keeps the branch name, which `issues_report.py --roadmap` needs). Then, if `tools/check.sh` exists, it runs `tools/check.sh` on `v2/integration`. If that fails, it puts `v2/integration` back to the commit before this merge and marks the WP `blocked`. `v2/integration` is never pushed.
 - Straight after WP-00's merge into `v2/integration` is settled, and before WP-01a is handed out, the coordinator runs `git tag v2-wp00 v2/integration` (§0 "Git references in done-checks"). On a resume with WP-00 `done` and no tag, it places the tag on WP-00's merge commit: `git tag v2-wp00 "$(git log --merges --first-parent --format=%H --grep='v2/wp-00-' v2/integration | tail -n1)"`. The tag is never pushed.
-- So for this run, §0 "merged" (in "A WP starts only after every WP in its `depends` is merged" and "branches from `main` only after all of wave 1 has merged") means "merged into `v2/integration`", and "branches from `main`" means "branches from `v2/integration`". **Owner to confirm.**
+- So for this run, §0 "merged" (in "A WP starts only after every WP in its `depends` is merged" and "branches from `main` only after all of wave 1 has merged") means "merged into `v2/integration`", and "branches from `main`" means "branches from `v2/integration`". Owner ruling, 2026-11-10.
 - Integration line: the coordinator exports `FLAT3D_BASE=v2/integration` for every builder, from WP-00 on. Every done-check reads it as `"${FLAT3D_BASE:-origin/main}"` (§0 "Git references in done-checks"), so no done-check looks at `main`, which lacks every WP merged this run.
 - Scope step: `tools/check.sh` passes `--base "${FLAT3D_BASE:-origin/main}"` to `issues_report.py --scope` (WP-02 writes it so). With `FLAT3D_BASE=v2/integration` exported, the scope step sees only the WP's own changes. The coordinator calls `issues_report.py --roadmap --base v2/integration`.
 
@@ -145,7 +145,7 @@ This section is the entry point for a run with nobody watching. It adds to §0 a
 - Run the WP's done-check exactly as written. Done means every command in it exited 0.
 - Owner questions: build what the WP file says. Where the WP is silent, use the **Rec** in `questions.md`, or the §7 default. A Rec that needs a GitHub write, an owner setting, a device, or an edit outside the WP's Files list is not done by the builder: list it under `## Not verified` as "Owner follow-up (question N)".
 - Blocked: if the WP cannot be built as written (a missing input, two texts that disagree and §0/§2 do not settle it, a done-check that needs a device, a download, or a file no earlier wave made, or the done-check still failing after two fix attempts), stop. Do not guess and do not weaken a test. Commit nothing further, and report `blocked` with the file, the line and the reason.
-- GitHub: the builder's only writes are `git push -u origin v2/wp-NN-<slug>` and one `gh pr create --base main` for that branch, with the §0 "PR body" sections and a first line `Stacked on v2/integration@<sha>; contains WP-…` listing the earlier WPs in the branch. No merge, no issue edit or close, no label, no comment, no push to any other branch, no force push. A blocked WP opens no PR. This is the one exception that §0 "Never in the pass: GitHub writes" names. **[default, owner to confirm]**; if the owner says no, builders stop after the local done-check and the PR column stays `-`.
+- GitHub: the builder's only writes are `git push -u origin v2/wp-NN-<slug>` and one `gh pr create --base main` for that branch, with the §0 "PR body" sections and a first line `Stacked on v2/integration@<sha>; contains WP-…` listing the earlier WPs in the branch. No merge, no issue edit or close, no label, no comment, no push to any other branch, no force push. A blocked WP opens no PR. This is the one exception that §0 "Never in the pass: GitHub writes" names. Owner ruling, 2026-11-10.
 
 **Progress file (resume point)**
 - `docs/plans/roadmap-v2/progress.md`, in the coordinator's own checkout of the plan. Only the coordinator writes it. It is never committed on a `v2/wp-*` branch and never copied into a builder worktree as an untracked file (the scope step would fail).
