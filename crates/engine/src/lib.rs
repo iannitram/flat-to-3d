@@ -2,6 +2,7 @@
 
 pub mod api;
 pub mod cli;
+pub mod exec;
 pub use cli::link as cli_link;
 pub use face::{collection, headset_view, link_view, toasts, view};
 pub mod face;

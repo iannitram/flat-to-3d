@@ -1,6 +1,7 @@
 //! Choosing the adb executable shared by the tether and link service.
 
 use crate::api::AdbSource;
+pub use crate::exec::{ProcessRunner, RelayRunner, RelayRunner as CommandRunner};
 use crate::link;
 
 pub fn listener_pid(ss_output: &str, port: u16) -> Option<u32> {
@@ -57,70 +58,6 @@ pub fn choose_adb(running_exe: Option<&str>, bundled: Option<&str>) -> AdbChoice
     AdbChoice {
         path: String::new(),
         source: AdbSource::Missing,
-    }
-}
-
-/// Process operations used by the tether; tests supply a recording runner.
-pub trait CommandRunner {
-    fn run(&mut self, command: &[String]) -> Result<String, String>;
-    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String>;
-    fn stop_relay(&mut self) -> Result<(), String>;
-}
-
-/// The real runner owns only the relay it starts.
-#[derive(Default)]
-pub struct ProcessRunner {
-    relay: Option<std::process::Child>,
-}
-
-impl CommandRunner for ProcessRunner {
-    fn run(&mut self, command: &[String]) -> Result<String, String> {
-        let output = std::process::Command::new(&command[0])
-            .args(&command[1..])
-            .output()
-            .map_err(|_| "Could not run tether command".to_string())?;
-        if !output.status.success() {
-            return Err("Tether command failed".to_string());
-        }
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-    }
-
-    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String> {
-        let mut child = std::process::Command::new(&command[0])
-            .args(&command[1..])
-            .env("ADB", adb)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .map_err(|_| "Could not start tether relay".to_string())?;
-        match child.try_wait() {
-            Ok(None) => {
-                self.relay = Some(child);
-                Ok(())
-            }
-            Ok(Some(_)) => Err("Tether relay exited during startup".to_string()),
-            Err(_) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                Err("Could not check tether relay".to_string())
-            }
-        }
-    }
-
-    fn stop_relay(&mut self) -> Result<(), String> {
-        if let Some(child) = self.relay.as_mut() {
-            if child
-                .try_wait()
-                .map_err(|_| "Could not check tether relay")?
-                .is_none()
-            {
-                child.kill().map_err(|_| "Could not stop tether relay")?;
-            }
-            child.wait().map_err(|_| "Could not reap tether relay")?;
-            self.relay = None;
-        }
-        Ok(())
     }
 }
 
