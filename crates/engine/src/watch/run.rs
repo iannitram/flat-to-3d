@@ -1,4 +1,4 @@
-use super::files::{game_modes, read_settings, take_request, Paths};
+use super::files::{game_modes, take_request, Paths};
 use super::service::Service;
 use super::service::TrackDevices;
 use crate::api::LinkSnapshot;
@@ -54,7 +54,8 @@ pub fn run(paths: &Paths) -> ! {
     }
     loop {
         let now = unix_now();
-        let settings = read_settings(&paths.settings());
+        let settings =
+            crate::switches::read_settings(Path::new(&paths.settings())).unwrap_or_default();
         let request = take_request(&paths.request());
         let modes = game_modes(&paths.runs());
         service.tick(now, &settings, request, modes);
