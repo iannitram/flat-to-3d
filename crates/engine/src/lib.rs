@@ -1,8 +1,14 @@
 //! Flat to 3D engine: installed games, recipes, stereo routes, the link service and launch wrapper.
 
 pub mod api;
+pub mod catalog;
 pub mod cli;
 pub mod exec;
+pub mod fsx;
+pub mod paths;
+pub mod sys;
+#[doc(hidden)]
+pub mod testing;
 pub use cli::link as cli_link;
 pub use face::{collection, headset_view, link_view, toasts, view};
 pub mod face;

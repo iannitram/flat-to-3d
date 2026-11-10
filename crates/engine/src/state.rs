@@ -1,6 +1,9 @@
 //! The files the link service and its clients share: docs/code-map.md, API shape, State, IPC and files.
 
 use crate::api::{EventKind, LinkEvent};
+use crate::paths::EnginePaths;
+use std::io;
+use std::path::PathBuf;
 
 /// The maximum number of link events kept in memory.
 pub const RING_MAX: usize = 10;
@@ -142,4 +145,23 @@ pub fn request_text(r: Request) -> &'static str {
 /// Whether `updated` is more than [`STALE_SECS`] behind `now`; a future `updated` is not stale.
 pub fn is_stale(updated: u64, now: u64) -> bool {
     now.saturating_sub(updated) > STALE_SECS
+}
+
+/// Read the shared link snapshot, with absence represented separately from malformed data.
+pub fn read_snapshot(paths: &EnginePaths) -> Result<Option<crate::api::LinkSnapshot>, String> {
+    let path = PathBuf::from(snapshot_path(&paths.state_dir.to_string_lossy()));
+    let Some(text) =
+        crate::fsx::read_opt(&path).map_err(|error| format!("{}: {error}", path.display()))?
+    else {
+        return Ok(None);
+    };
+    serde_json::from_str(&text)
+        .map(Some)
+        .map_err(|error| format!("{}: {error}", path.display()))
+}
+
+/// Atomically write the one-line link-service request.
+pub fn write_request(paths: &EnginePaths, request: Request) -> io::Result<()> {
+    let path = PathBuf::from(request_path(&paths.state_dir.to_string_lossy()));
+    crate::fsx::write_atomic(&path, format!("{}\n", request_text(request)).as_bytes())
 }
