@@ -45,6 +45,21 @@ pub enum LinkCommand {
     Run { appid: u32, argv: Vec<String> },
 }
 
+pub fn run(
+    _cmd: &LinkCommand,
+    _ctx: &mut super::Ctx<'_>,
+) -> Result<serde_json::Value, crate::api::ApiError> {
+    Err(crate::NotBuilt("cli::link::run (WP-08)").into())
+}
+
+pub fn request_3d(
+    _r: crate::state::Request,
+    _p: &crate::paths::EnginePaths,
+    _now: u64,
+) -> Result<crate::api::LinkReport, crate::api::ApiError> {
+    Err(crate::NotBuilt("cli::link::request_3d (WP-08)").into())
+}
+
 /// Parse the arguments after the program name. `None` when the first word is not one of
 /// ours (or there are no words); `Some(Err)` carries a usage message for a bad form.
 pub fn parse_link(args: &[String]) -> Option<Result<LinkCommand, String>> {
