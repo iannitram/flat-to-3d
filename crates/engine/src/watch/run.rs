@@ -1,4 +1,4 @@
-use super::files::{game_modes, read_settings, take_request, Paths};
+use super::files::{game_modes, take_request, Paths};
 use super::service::Service;
 use super::service::TrackDevices;
 use crate::api::LinkSnapshot;
@@ -15,6 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const ADB_SERVER_PORT: u16 = 5037;
 
 fn running_adb_exe() -> Option<String> {
+    // architecture-allowlist: follow-up (watch probe remains outside the runner seam).
     let output = Command::new("ss").arg("-tlnp").output().ok()?;
     let pid = tether_adb::listener_pid(&String::from_utf8_lossy(&output.stdout), ADB_SERVER_PORT)?;
     fs::read_link(tether_adb::proc_exe_path(pid))
@@ -54,7 +55,8 @@ pub fn run(paths: &Paths) -> ! {
     }
     loop {
         let now = unix_now();
-        let settings = read_settings(&paths.settings());
+        let settings =
+            crate::switches::read_settings(Path::new(&paths.settings())).unwrap_or_default();
         let request = take_request(&paths.request());
         let modes = game_modes(&paths.runs());
         service.tick(now, &settings, request, modes);

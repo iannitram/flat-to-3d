@@ -1,6 +1,8 @@
 //! Settings: Auto 3D, the tunnel and the per-game 3D switches. docs/code-map.md, API shape, State, IPC and files.
 
 use std::collections::BTreeSet;
+use std::io;
+use std::path::Path;
 
 const HEADER: &str = "flat3d-settings 1";
 
@@ -83,4 +85,18 @@ pub fn parse_settings(text: &str) -> Settings {
         }
     }
     s
+}
+
+/// Read settings, using defaults when the file has not been created yet.
+pub fn read_settings(path: &Path) -> Result<Settings, String> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => Ok(parse_settings(&text)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Settings::default()),
+        Err(error) => Err(format!("{}: {error}", path.display())),
+    }
+}
+
+/// Atomically persist settings.
+pub fn write_settings(path: &Path, settings: &Settings) -> io::Result<()> {
+    crate::fsx::write_atomic(path, settings_text(settings).as_bytes())
 }

@@ -1,5 +1,7 @@
 //! Start 3D and Stop 3D over WiVRn's wired mode (`adb reverse tcp:9757`).
 
+pub use crate::exec::{CommandOutput, CommandRunner, SystemRunner};
+
 /// WiVRn's port, reversed over USB.
 pub const WIVRN_PORT: u16 = 9757;
 
@@ -93,50 +95,6 @@ pub fn stop_3d_commands() -> Vec<Vec<String>> {
         vec!["adb".into(), "reverse".into(), "--remove".into(), port],
         vec!["systemctl".into(), "--user".into(), "stop".into(), unit],
     ]
-}
-
-/// What one command left behind.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandOutput {
-    /// The command exited with success.
-    pub success: bool,
-    /// Its standard output, as lossy UTF-8.
-    pub stdout: String,
-    /// Its standard error, as lossy UTF-8.
-    pub stderr: String,
-}
-
-/// Runs one command and waits for it (tests fake this).
-pub trait CommandRunner {
-    /// Run `command` (program, then its arguments) and report its output.
-    fn run(&mut self, command: &[String]) -> CommandOutput;
-}
-
-/// The real runner: `std::process::Command`, waiting for the exit.
-pub struct SystemRunner;
-
-impl CommandRunner for SystemRunner {
-    fn run(&mut self, command: &[String]) -> CommandOutput {
-        let Some((program, args)) = command.split_first() else {
-            return CommandOutput {
-                success: false,
-                stdout: String::new(),
-                stderr: "empty command".into(),
-            };
-        };
-        match std::process::Command::new(program).args(args).output() {
-            Ok(output) => CommandOutput {
-                success: output.status.success(),
-                stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-            },
-            Err(error) => CommandOutput {
-                success: false,
-                stdout: String::new(),
-                stderr: format!("{program}: {error}"),
-            },
-        }
-    }
 }
 
 /// A Start 3D command that failed: its words, and its trimmed stderr.

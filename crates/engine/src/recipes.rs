@@ -5,6 +5,132 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+pub type RouteSettings = BTreeMap<String, String>;
+pub const UEVR_KEYS: [&str; 6] = [
+    "uevr-exe",
+    "uevr-rendering",
+    "uevr-2d-screen",
+    "uevr-native-stereo-fix",
+    "uevr-delay",
+    "uevr-profile",
+];
+pub const GEO11_KEYS: [&str; 7] = [
+    "geo11-fix",
+    "geo11-exe",
+    "geo11-layout",
+    "geo11-separation",
+    "geo11-convergence",
+    "geo11-d3dx",
+    "geo11-remove-first",
+];
+pub const PORT_KEYS: [&str; 0] = [];
+
+/// Read only route-specific settings from a recipe text.
+pub fn route_settings(text: &str) -> RouteSettings {
+    let mut result = BTreeMap::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, raw_value)) = line.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        if !key.starts_with("uevr-") && !key.starts_with("geo11-") && !key.starts_with("port-") {
+            continue;
+        }
+        let value = raw_value.trim();
+        let value = if value.len() >= 2 && value.starts_with('"') && value.ends_with('"') {
+            &value[1..value.len() - 1]
+        } else {
+            value
+        };
+        result.insert(key.to_string(), value.to_string());
+    }
+    result
+}
+
+/// Validate route settings against the selected recipe route and its value rules.
+pub fn check_route_settings(route: &str, settings: &RouteSettings) -> Result<(), String> {
+    use crate::injectors::{route_of, Route};
+    let allowed: &[&str] = match route_of(route) {
+        Route::Uevr => &UEVR_KEYS,
+        Route::Geo11 => &GEO11_KEYS,
+        Route::Port | Route::NoRoute => PORT_KEYS.as_slice(),
+    };
+    if settings.is_empty() {
+        if matches!(route_of(route), Route::Uevr | Route::Geo11) {
+            return Err("route settings are missing required keys".into());
+        }
+        return Ok(());
+    }
+    if matches!(route_of(route), Route::Port | Route::NoRoute) {
+        return Err("route does not accept route settings".into());
+    }
+    for (key, value) in settings {
+        if !allowed.contains(&key.as_str()) {
+            return Err(format!("key `{key}` is not allowed for this route"));
+        }
+        let valid = match key.as_str() {
+            "uevr-exe" | "geo11-exe" => !value.trim().is_empty(),
+            "uevr-rendering" => matches!(value.as_str(), "native" | "synced"),
+            "uevr-2d-screen" | "uevr-native-stereo-fix" => matches!(value.as_str(), "yes" | "no"),
+            "uevr-delay" => value.parse::<u32>().is_ok_and(|n| n <= 120),
+            "uevr-profile" | "geo11-fix" => is_pin_key(value),
+            "geo11-layout" => matches!(
+                value.as_str(),
+                "sbs" | "tab" | "sbs_reversed" | "tab_reversed"
+            ),
+            "geo11-separation" => value.parse::<u32>().is_ok_and(|n| n <= 100),
+            "geo11-convergence" => value.parse::<f32>().is_ok_and(|n| n > 0.0),
+            "geo11-d3dx" => valid_pairs(value),
+            "geo11-remove-first" => valid_relative_paths(value),
+            _ => false,
+        };
+        if !valid {
+            return Err(format!("bad value for `{key}`: `{value}`"));
+        }
+    }
+    for required in match route_of(route) {
+        Route::Uevr => &UEVR_KEYS[0..1],
+        Route::Geo11 => &GEO11_KEYS[0..2],
+        _ => &[],
+    } {
+        if !settings.contains_key(*required) {
+            return Err(format!("missing required key `{required}`"));
+        }
+    }
+    Ok(())
+}
+
+fn is_pin_key(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
+
+fn valid_pairs(value: &str) -> bool {
+    !value.is_empty()
+        && value.split(';').all(|pair| {
+            pair.split_once('=')
+                .is_some_and(|(key, val)| !key.is_empty() && !val.is_empty() && !val.contains('='))
+        })
+}
+
+fn valid_relative_paths(value: &str) -> bool {
+    !value.is_empty()
+        && value.split(';').all(|entry| {
+            let path = Path::new(entry);
+            !entry.is_empty()
+                && !path.is_absolute()
+                && path
+                    .components()
+                    .all(|component| matches!(component, std::path::Component::Normal(_)))
+        })
+}
+
 /// Allowed `stereo-status` values.
 pub const STATUSES: [&str; 6] = [
     "works-now",
