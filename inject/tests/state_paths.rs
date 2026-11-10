@@ -7,8 +7,14 @@ use flat3d_inject::state::{
 
 #[test]
 fn the_directory_is_under_the_runtime_dir() {
-    assert_eq!(state_dir(Some("/run/user/1000"), 1000), "/run/user/1000/flat3d");
-    assert_eq!(state_dir(Some("/run/user/1000/"), 1000), "/run/user/1000/flat3d");
+    assert_eq!(
+        state_dir(Some("/run/user/1000"), 1000),
+        "/run/user/1000/flat3d"
+    );
+    assert_eq!(
+        state_dir(Some("/run/user/1000/"), 1000),
+        "/run/user/1000/flat3d"
+    );
 }
 
 #[test]
@@ -23,7 +29,10 @@ fn the_paths_inside_it() {
     assert_eq!(snapshot_path(d), "/run/user/1000/flat3d/link.json");
     assert_eq!(request_path(d), "/run/user/1000/flat3d/request");
     assert_eq!(runs_dir(d), "/run/user/1000/flat3d/runs");
-    assert_eq!(run_record_path(d, 4242), "/run/user/1000/flat3d/runs/run-4242.txt");
+    assert_eq!(
+        run_record_path(d, 4242),
+        "/run/user/1000/flat3d/runs/run-4242.txt"
+    );
 }
 
 #[test]
@@ -34,7 +43,10 @@ fn requests_parse_and_print() {
     assert_eq!(parse_request(""), None);
     assert_eq!(request_text(Request::Start3d), "start-3d");
     assert_eq!(request_text(Request::Stop3d), "stop-3d");
-    assert_eq!(parse_request(request_text(Request::Stop3d)), Some(Request::Stop3d));
+    assert_eq!(
+        parse_request(request_text(Request::Stop3d)),
+        Some(Request::Stop3d)
+    );
 }
 
 #[test]

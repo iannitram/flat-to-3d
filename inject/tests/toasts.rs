@@ -4,7 +4,11 @@ use flat3d_inject::api::{EventKind, LinkEvent};
 use flat3d_inject::toasts::toasts_since;
 
 fn e(seq: u64) -> LinkEvent {
-    LinkEvent { seq, kind: EventKind::Ready, text: format!("event {seq}") }
+    LinkEvent {
+        seq,
+        kind: EventKind::Ready,
+        text: format!("event {seq}"),
+    }
 }
 fn seqs(events: &[LinkEvent]) -> Vec<u64> {
     events.iter().map(|x| x.seq).collect()

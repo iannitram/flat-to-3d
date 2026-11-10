@@ -1,7 +1,7 @@
 //! Locked tests for issue #24: `steam::installed_games`. Builds its sample Steam
 //! folders in a temp dir, so no fixture files are needed. Linux paths.
 
-use flat3d_inject::steam::{Game, installed_games};
+use flat3d_inject::steam::{installed_games, Game};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -21,7 +21,11 @@ fn manifest(appid: u32, name: &str, installdir: &str, flags: u32) -> String {
 fn add_manifest(library: &Path, appid: u32, name: &str, installdir: &str, flags: u32) {
     let apps = library.join("steamapps");
     fs::create_dir_all(&apps).unwrap();
-    fs::write(apps.join(format!("appmanifest_{appid}.acf")), manifest(appid, name, installdir, flags)).unwrap();
+    fs::write(
+        apps.join(format!("appmanifest_{appid}.acf")),
+        manifest(appid, name, installdir, flags),
+    )
+    .unwrap();
 }
 
 fn write_vdf(root: &Path, header_comment: bool, libraries: &[&Path]) {
@@ -31,7 +35,10 @@ fn write_vdf(root: &Path, header_comment: bool, libraries: &[&Path]) {
     }
     text.push_str("\"libraryfolders\"\n{\n");
     for (i, lib) in libraries.iter().enumerate() {
-        text.push_str(&format!("\t\"{i}\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t\t\"label\"\t\t\"\"\n\t}}\n", lib.display()));
+        text.push_str(&format!(
+            "\t\"{i}\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t\t\"label\"\t\t\"\"\n\t}}\n",
+            lib.display()
+        ));
     }
     text.push_str("}\n");
     fs::create_dir_all(root.join("steamapps")).unwrap();
@@ -49,8 +56,16 @@ fn two_libraries_give_two_games_sorted_by_name_ignoring_case() {
     assert_eq!(
         games,
         vec![
-            Game { appid: 200, name: "alpha game".into(), install_dir: sd.join("steamapps/common/alpha dir") },
-            Game { appid: 100, name: "Beta Game".into(), install_dir: root.join("steamapps/common/Beta Game") },
+            Game {
+                appid: 200,
+                name: "alpha game".into(),
+                install_dir: sd.join("steamapps/common/alpha dir")
+            },
+            Game {
+                appid: 100,
+                name: "Beta Game".into(),
+                install_dir: root.join("steamapps/common/Beta Game")
+            },
         ]
     );
 }
@@ -87,7 +102,13 @@ fn a_missing_vdf_gives_an_empty_list() {
 fn an_apostrophe_in_installdir_is_kept() {
     let root = fresh_dir("apos-root");
     write_vdf(&root, false, &[&root]);
-    add_manifest(&root, 2651280, "Marvel's Spider-Man 2", "Marvel's Spider-Man 2", 4);
+    add_manifest(
+        &root,
+        2651280,
+        "Marvel's Spider-Man 2",
+        "Marvel's Spider-Man 2",
+        4,
+    );
     let games = installed_games(&root).unwrap();
     assert_eq!(
         games,

@@ -63,7 +63,13 @@ fn reset_re_arms_and_unknown_changes_nothing() {
 
 #[test]
 fn the_wording() {
-    assert_eq!(toast_text(EventKind::Warm, 38.5), "Headset is warm: 38.5 C. It may slow down.");
-    assert_eq!(toast_text(EventKind::Hot, 42.46), "Headset is hot: 42.5 C. Take a break.");
+    assert_eq!(
+        toast_text(EventKind::Warm, 38.5),
+        "Headset is warm: 38.5 C. It may slow down."
+    );
+    assert_eq!(
+        toast_text(EventKind::Hot, 42.46),
+        "Headset is hot: 42.5 C. Take a break."
+    );
     assert_eq!(toast_text(EventKind::Ready, 30.0), "");
 }

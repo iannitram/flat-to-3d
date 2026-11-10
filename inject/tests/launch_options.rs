@@ -8,8 +8,14 @@ const PAIRS: [(&str, &str); 7] = [
     ("mangohud %command%", "flat3d-run mangohud %command%"),
     ("-novid", "flat3d-run %command% -novid"),
     ("FOO=1 BAR=2 %command%", "FOO=1 BAR=2 flat3d-run %command%"),
-    ("FOO=1 mangohud %command% -x", "FOO=1 flat3d-run mangohud %command% -x"),
-    ("gamemoderun %command% -windowed", "flat3d-run gamemoderun %command% -windowed"),
+    (
+        "FOO=1 mangohud %command% -x",
+        "FOO=1 flat3d-run mangohud %command% -x",
+    ),
+    (
+        "gamemoderun %command% -windowed",
+        "flat3d-run gamemoderun %command% -windowed",
+    ),
 ];
 
 #[test]
@@ -28,7 +34,10 @@ fn add_does_nothing_when_the_wrapper_is_already_there() {
 
 #[test]
 fn add_collapses_extra_spaces() {
-    assert_eq!(add_wrapper("  mangohud   %command%  "), "flat3d-run mangohud %command%");
+    assert_eq!(
+        add_wrapper("  mangohud   %command%  "),
+        "flat3d-run mangohud %command%"
+    );
 }
 
 #[test]
@@ -41,14 +50,22 @@ fn remove_is_the_inverse_of_add() {
 
 #[test]
 fn remove_leaves_options_without_the_wrapper_alone() {
-    for o in ["", "mangohud %command%", "-novid", "flat3d-runner %command%"] {
+    for o in [
+        "",
+        "mangohud %command%",
+        "-novid",
+        "flat3d-runner %command%",
+    ] {
         assert_eq!(remove_wrapper(o), o);
     }
 }
 
 #[test]
 fn remove_takes_out_the_wrapper_given_by_full_path() {
-    assert_eq!(remove_wrapper("/home/deck/.local/bin/flat3d-run %command%"), "");
+    assert_eq!(
+        remove_wrapper("/home/deck/.local/bin/flat3d-run %command%"),
+        ""
+    );
 }
 
 #[test]

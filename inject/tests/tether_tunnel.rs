@@ -15,7 +15,9 @@ fn tun0_is_present_when_it_has_an_inet_address() {
 
 #[test]
 fn tun0_without_an_address_is_not_present() {
-    assert!(!tun0_present("5: tun0: <POINTOPOINT> mtu 1500\n    inet6 fe80::1/64 scope link\n"));
+    assert!(!tun0_present(
+        "5: tun0: <POINTOPOINT> mtu 1500\n    inet6 fe80::1/64 scope link\n"
+    ));
     assert!(!tun0_present(""));
 }
 
