@@ -11,7 +11,10 @@ fn everything_is_on_by_default() {
 
 #[test]
 fn the_default_text_is_exactly_this() {
-    assert_eq!(settings_text(&Settings::default()), "flat3d-settings 1\nauto-3d\ton\ntunnel\ton\n");
+    assert_eq!(
+        settings_text(&Settings::default()),
+        "flat3d-settings 1\nauto-3d\ton\ntunnel\ton\n"
+    );
 }
 
 #[test]
@@ -38,12 +41,16 @@ fn it_reads_back_equal() {
 fn a_missing_or_wrong_header_gives_the_defaults() {
     assert_eq!(parse_settings(""), Settings::default());
     assert_eq!(parse_settings("auto-3d\toff\n"), Settings::default());
-    assert_eq!(parse_settings("flat3d-settings 2\nauto-3d\toff\n"), Settings::default());
+    assert_eq!(
+        parse_settings("flat3d-settings 2\nauto-3d\toff\n"),
+        Settings::default()
+    );
 }
 
 #[test]
 fn reading_is_tolerant() {
-    let t = "flat3d-settings 1\nauto-3d\tmaybe\ntunnel\toff\ngame-off\tx\ngame-off\t9\nwhat\tever\n";
+    let t =
+        "flat3d-settings 1\nauto-3d\tmaybe\ntunnel\toff\ngame-off\tx\ngame-off\t9\nwhat\tever\n";
     let s = parse_settings(t);
     assert!(s.auto_3d);
     assert!(!s.tunnel);

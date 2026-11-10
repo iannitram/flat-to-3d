@@ -14,8 +14,16 @@ const ARGV: [&str; 3] = ["proton", "waitforexitandrun", "game.exe"];
 
 #[test]
 fn flat_is_the_original_command_and_nothing_else() {
-    let p = Plan::Flat { reason: FlatReason::SwitchOff };
-    let spec = exec_spec(&p, &s(&ARGV), &[pair("X", "1")], "/home/deck", Some("/data"));
+    let p = Plan::Flat {
+        reason: FlatReason::SwitchOff,
+    };
+    let spec = exec_spec(
+        &p,
+        &s(&ARGV),
+        &[pair("X", "1")],
+        "/home/deck",
+        Some("/data"),
+    );
     assert_eq!(spec.argv, s(&ARGV));
     assert!(spec.env.is_empty());
 }
@@ -39,7 +47,13 @@ fn three_d_adds_the_proton_variables() {
 fn an_existing_value_is_kept_first() {
     let p = Plan::ThreeD { route: Route::Uevr };
     let spec = exec_spec(&p, &s(&ARGV), &[], "/home/deck", Some("/mnt/games"));
-    assert_eq!(spec.env[1], pair("PRESSURE_VESSEL_FILESYSTEMS_RW", &format!("/mnt/games:{FOLDER}")));
+    assert_eq!(
+        spec.env[1],
+        pair(
+            "PRESSURE_VESSEL_FILESYSTEMS_RW",
+            &format!("/mnt/games:{FOLDER}")
+        )
+    );
 }
 
 #[test]
@@ -59,8 +73,16 @@ fn an_empty_existing_value_counts_as_none() {
 
 #[test]
 fn the_routes_variables_come_last_in_order() {
-    let p = Plan::ThreeD { route: Route::Geo11 };
-    let spec = exec_spec(&p, &s(&ARGV), &[pair("A", "1"), pair("B", "2")], "/home/deck", None);
+    let p = Plan::ThreeD {
+        route: Route::Geo11,
+    };
+    let spec = exec_spec(
+        &p,
+        &s(&ARGV),
+        &[pair("A", "1"), pair("B", "2")],
+        "/home/deck",
+        None,
+    );
     assert_eq!(spec.env.len(), 5);
     assert_eq!(&spec.env[3..], &[pair("A", "1"), pair("B", "2")]);
 }

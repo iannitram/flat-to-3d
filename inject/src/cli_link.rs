@@ -116,13 +116,15 @@ fn parse_setting(rest: &[String]) -> Result<LinkCommand, String> {
 fn parse_run(rest: &[String]) -> Result<LinkCommand, String> {
     const FORM: &str = "run <appid> -- <command words...>";
     match rest {
-        [appid, dashes, words @ ..] if dashes == "--" && !words.is_empty() => match parse_appid(appid) {
-            Some(appid) => Ok(LinkCommand::Run {
-                appid,
-                argv: words.to_vec(),
-            }),
-            None => Err(usage(FORM)),
-        },
+        [appid, dashes, words @ ..] if dashes == "--" && !words.is_empty() => {
+            match parse_appid(appid) {
+                Some(appid) => Ok(LinkCommand::Run {
+                    appid,
+                    argv: words.to_vec(),
+                }),
+                None => Err(usage(FORM)),
+            }
+        }
         _ => Err(usage(FORM)),
     }
 }

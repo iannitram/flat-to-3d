@@ -43,11 +43,22 @@ fn since_returns_only_newer_events() {
 #[test]
 fn numbering_resumes_from_a_saved_list() {
     let saved = vec![
-        LinkEvent { seq: 7, kind: EventKind::Ready, text: "a".into() },
-        LinkEvent { seq: 8, kind: EventKind::Hot, text: "b".into() },
+        LinkEvent {
+            seq: 7,
+            kind: EventKind::Ready,
+            text: "a".into(),
+        },
+        LinkEvent {
+            seq: 8,
+            kind: EventKind::Hot,
+            text: "b".into(),
+        },
     ];
     let mut r = EventRing::from_events(saved);
     assert_eq!(r.push(EventKind::Warm, "c"), 9);
     assert_eq!(seqs(r.events()), vec![7, 8, 9]);
-    assert_eq!(EventRing::from_events(vec![]).push(EventKind::Ready, "z"), 1);
+    assert_eq!(
+        EventRing::from_events(vec![]).push(EventKind::Ready, "z"),
+        1
+    );
 }

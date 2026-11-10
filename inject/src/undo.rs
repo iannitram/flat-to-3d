@@ -183,7 +183,10 @@ pub fn record_path(data_dir: &Path, appid: u32) -> PathBuf {
 pub fn data_dir(xdg_data_home: Option<&str>, home: &str) -> PathBuf {
     match xdg_data_home.filter(|s| !s.is_empty()) {
         Some(xdg) => PathBuf::from(xdg).join("flat3d"),
-        None => PathBuf::from(home).join(".local").join("share").join("flat3d"),
+        None => PathBuf::from(home)
+            .join(".local")
+            .join("share")
+            .join("flat3d"),
     }
 }
 
@@ -211,7 +214,10 @@ pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
         Err(e) => return Err(io_error("cannot read", &path, &e)),
     };
     let record = UndoRecord::from_text(&text).map_err(|m| {
-        ApiError::new("command-failed", &format!("undo record for {}: {}", appid, m))
+        ApiError::new(
+            "command-failed",
+            &format!("undo record for {}: {}", appid, m),
+        )
     })?;
     if record.appid != appid {
         return Err(ApiError::new(
@@ -233,7 +239,11 @@ pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
             UndoAction::RestoreFile { backup, path } => match fs::copy(&backup, &path) {
                 Ok(_) => {
                     fs::remove_file(&backup).map_err(|e| io_error("cannot remove", &backup, &e))?;
-                    restored.push(format!("restored {} from {}", path.display(), backup.display()));
+                    restored.push(format!(
+                        "restored {} from {}",
+                        path.display(),
+                        backup.display()
+                    ));
                 }
                 Err(e) if e.kind() == io::ErrorKind::NotFound && !backup.exists() => {
                     restored.push(format!("already restored {}", path.display()))
@@ -355,7 +365,13 @@ mod tests {
     #[test]
     fn data_dir_uses_xdg_then_home() {
         assert_eq!(data_dir(Some("/x"), "/h"), PathBuf::from("/x/flat3d"));
-        assert_eq!(data_dir(Some(""), "/h"), PathBuf::from("/h/.local/share/flat3d"));
-        assert_eq!(data_dir(None, "/h"), PathBuf::from("/h/.local/share/flat3d"));
+        assert_eq!(
+            data_dir(Some(""), "/h"),
+            PathBuf::from("/h/.local/share/flat3d")
+        );
+        assert_eq!(
+            data_dir(None, "/h"),
+            PathBuf::from("/h/.local/share/flat3d")
+        );
     }
 }

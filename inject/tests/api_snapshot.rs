@@ -12,9 +12,23 @@ fn full() -> LinkSnapshot {
         auto_3d: true,
         adb: "/usr/bin/adb".into(),
         adb_source: AdbSource::Running,
-        health: Some(Health { battery: Some(80), status: "Discharging".into(), temp_c: Some(36.5), zone: Zone::Green }),
-        stats: Some(Stats { rx_bytes_s: 1000, tx_bytes_s: 20, uptime_s: 61, reconnects: 2 }),
-        events: vec![LinkEvent { seq: 4, kind: EventKind::LatePlug, text: "t".into() }],
+        health: Some(Health {
+            battery: Some(80),
+            status: "Discharging".into(),
+            temp_c: Some(36.5),
+            zone: Zone::Green,
+        }),
+        stats: Some(Stats {
+            rx_bytes_s: 1000,
+            tx_bytes_s: 20,
+            uptime_s: 61,
+            reconnects: 2,
+        }),
+        events: vec![LinkEvent {
+            seq: 4,
+            kind: EventKind::LatePlug,
+            text: "t".into(),
+        }],
         updated: 77,
     }
 }
@@ -41,16 +55,26 @@ fn a_snapshot_reads_back_equal() {
 #[test]
 fn the_enums_use_these_strings() {
     let kinds = [
-        (EventKind::Ready, "ready"), (EventKind::LatePlug, "late-plug"),
-        (EventKind::GraceEnded, "grace-ended"), (EventKind::AllowDebugging, "allow-debugging"),
-        (EventKind::Warm, "warm"), (EventKind::Hot, "hot"), (EventKind::TetherError, "tether-error"),
+        (EventKind::Ready, "ready"),
+        (EventKind::LatePlug, "late-plug"),
+        (EventKind::GraceEnded, "grace-ended"),
+        (EventKind::AllowDebugging, "allow-debugging"),
+        (EventKind::Warm, "warm"),
+        (EventKind::Hot, "hot"),
+        (EventKind::TetherError, "tether-error"),
     ];
     for (k, s) in kinds {
         assert_eq!(serde_json::to_value(k).unwrap(), json!(s));
     }
-    assert_eq!(serde_json::to_value(Zone::Unknown).unwrap(), json!("unknown"));
+    assert_eq!(
+        serde_json::to_value(Zone::Unknown).unwrap(),
+        json!("unknown")
+    );
     assert_eq!(serde_json::to_value(TetherMode::Off).unwrap(), json!("off"));
-    assert_eq!(serde_json::to_value(AdbSource::Bundled).unwrap(), json!("bundled"));
+    assert_eq!(
+        serde_json::to_value(AdbSource::Bundled).unwrap(),
+        json!("bundled")
+    );
 }
 
 #[test]
@@ -61,10 +85,31 @@ fn a_bad_enum_string_does_not_read() {
 
 #[test]
 fn the_small_reports_have_these_keys() {
-    assert_eq!(serde_json::to_value(SwitchState { appid: 2075800, on: false }).unwrap(), json!({"appid": 2075800, "on": false}));
-    assert_eq!(serde_json::to_value(SettingState { key: "tunnel".into(), on: true }).unwrap(), json!({"key": "tunnel", "on": true}));
-    let r = InstallReport { written: vec!["a".into()], ran: vec!["b".into()], summary: "s".into() };
-    assert_eq!(serde_json::to_value(r).unwrap(), json!({"written": ["a"], "ran": ["b"], "summary": "s"}));
+    assert_eq!(
+        serde_json::to_value(SwitchState {
+            appid: 2075800,
+            on: false
+        })
+        .unwrap(),
+        json!({"appid": 2075800, "on": false})
+    );
+    assert_eq!(
+        serde_json::to_value(SettingState {
+            key: "tunnel".into(),
+            on: true
+        })
+        .unwrap(),
+        json!({"key": "tunnel", "on": true})
+    );
+    let r = InstallReport {
+        written: vec!["a".into()],
+        ran: vec!["b".into()],
+        summary: "s".into(),
+    };
+    assert_eq!(
+        serde_json::to_value(r).unwrap(),
+        json!({"written": ["a"], "ran": ["b"], "summary": "s"})
+    );
 }
 
 #[test]
@@ -74,7 +119,10 @@ fn stopped_is_the_documented_snapshot() {
         "auto_3d": false, "adb": "", "adb_source": "missing", "health": null, "stats": null,
         "events": [], "updated": 5
     });
-    assert_eq!(serde_json::to_value(LinkSnapshot::stopped(5)).unwrap(), want);
+    assert_eq!(
+        serde_json::to_value(LinkSnapshot::stopped(5)).unwrap(),
+        want
+    );
 }
 
 #[test]

@@ -33,7 +33,10 @@ fn a_different_network_is_switched_until_three_tries_failed() {
 
 #[test]
 fn names_compare_exactly() {
-    assert_eq!(sync_decision(Some("Home"), Some("home"), 0), SyncDecision::Switch);
+    assert_eq!(
+        sync_decision(Some("Home"), Some("home"), 0),
+        SyncDecision::Switch
+    );
 }
 
 #[test]

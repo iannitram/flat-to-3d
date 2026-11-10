@@ -98,7 +98,10 @@ pub fn apply(
         rollback(&record);
         return Err(e);
     }
-    Ok(Applied { record, env: Vec::new() })
+    Ok(Applied {
+        record,
+        env: Vec::new(),
+    })
 }
 
 fn write_all(
@@ -150,7 +153,8 @@ mod tests {
     };
 
     fn fake_compatdata(name: &str) -> PathBuf {
-        let root = std::env::temp_dir().join(format!("flat3d-uevr-{}-{}", name, std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("flat3d-uevr-{}-{}", name, std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
         root
@@ -169,7 +173,10 @@ mod tests {
 
     fn files_in(dir: &Path) -> Vec<String> {
         let mut v: Vec<String> = fs::read_dir(dir)
-            .map(|d| d.map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect())
+            .map(|d| {
+                d.map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                    .collect()
+            })
             .unwrap_or_default();
         v.sort();
         v
@@ -178,12 +185,25 @@ mod tests {
     #[test]
     fn a_fresh_prefix_gets_the_profile_and_no_env_yet() {
         let root = fake_compatdata("fresh");
-        let a = apply(&root, 7, "Game-Win64-Shipping.exe", &SETTINGS, "-x %command%").unwrap();
+        let a = apply(
+            &root,
+            7,
+            "Game-Win64-Shipping.exe",
+            &SETTINGS,
+            "-x %command%",
+        )
+        .unwrap();
         let dir = profile_dir(&root, 7, "Game-Win64-Shipping.exe");
-        assert_eq!(fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(), profile_text(&SETTINGS));
+        assert_eq!(
+            fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(),
+            profile_text(&SETTINGS)
+        );
         assert_eq!(a.record.appid, 7);
         assert_eq!(a.record.launch_options_before, "-x %command%");
-        assert_eq!(a.record.created, vec![dir.join(MARKER_FILE), dir.join(PROFILE_FILE)]);
+        assert_eq!(
+            a.record.created,
+            vec![dir.join(MARKER_FILE), dir.join(PROFILE_FILE)]
+        );
         assert!(a.record.replaced.is_empty());
         assert!(a.env.is_empty());
     }
@@ -206,7 +226,10 @@ mod tests {
         assert_eq!(fs::read_to_string(dir.join(BACKUP_FILE)).unwrap(), "mine\n");
         assert_eq!(a.record.replaced.len(), 1);
         undo(&a.record);
-        assert_eq!(fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(), "mine\n");
+        assert_eq!(
+            fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(),
+            "mine\n"
+        );
         assert_eq!(files_in(&dir), vec![PROFILE_FILE.to_owned()]);
     }
 
@@ -216,10 +239,16 @@ mod tests {
         let first = apply(&root, 7, "G.exe", &SETTINGS, "").unwrap();
         let dir = profile_dir(&root, 7, "G.exe");
         let before = files_in(&dir);
-        let other = UevrSettings { rendering: Rendering::SynchronizedSequential, screen_2d: false };
+        let other = UevrSettings {
+            rendering: Rendering::SynchronizedSequential,
+            screen_2d: false,
+        };
         assert!(apply(&root, 7, "G.exe", &other, "").is_err());
         assert_eq!(files_in(&dir), before);
-        assert_eq!(fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(), profile_text(&SETTINGS));
+        assert_eq!(
+            fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(),
+            profile_text(&SETTINGS)
+        );
         undo(&first.record);
         assert!(files_in(&dir).is_empty());
     }
@@ -234,7 +263,10 @@ mod tests {
         assert!(apply(&root, 7, "G.exe", &SETTINGS, "").is_err());
         assert_eq!(fs::read_to_string(dir.join(BACKUP_FILE)).unwrap(), "mine\n");
         undo(&first.record);
-        assert_eq!(fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(), "mine\n");
+        assert_eq!(
+            fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(),
+            "mine\n"
+        );
     }
 
     #[test]
@@ -266,7 +298,10 @@ mod tests {
         assert!(apply(&root, 7, "G.exe", &SETTINGS, "").is_err());
         assert!(!dir.join(BACKUP_FILE).exists());
         assert!(!dir.join(MARKER_FILE).exists());
-        assert_eq!(fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(), "mine\n");
+        assert_eq!(
+            fs::read_to_string(dir.join(PROFILE_FILE)).unwrap(),
+            "mine\n"
+        );
         fs::remove_dir(dir.join(BACKUP_PARTIAL_FILE)).unwrap();
         let a = apply(&root, 7, "G.exe", &SETTINGS, "").unwrap();
         assert_eq!(fs::read_to_string(dir.join(BACKUP_FILE)).unwrap(), "mine\n");

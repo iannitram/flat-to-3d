@@ -13,8 +13,14 @@ pub enum TetherStep {
     IfVpnUp(Vec<String>),
     /// Run the commands only if tun0 is still absent.
     IfNoTun0(Vec<Vec<String>>),
-    WaitTun0 { tries: u32, every_ms: u64 },
-    WaitWifi { tries: u32, every_ms: u64 },
+    WaitTun0 {
+        tries: u32,
+        every_ms: u64,
+    },
+    WaitWifi {
+        tries: u32,
+        every_ms: u64,
+    },
     KillStaleRelay,
     SpawnRelay,
     CheckRelayAlive,

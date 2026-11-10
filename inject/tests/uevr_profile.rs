@@ -10,27 +10,41 @@ const TAIL: &str = "pfx/drive_c/users/steamuser/AppData/Roaming/UnrealVRMod";
 
 #[test]
 fn native_stereo_with_the_2d_screen_on() {
-    let s = UevrSettings { rendering: Rendering::NativeStereo, screen_2d: true };
-    assert_eq!(profile_text(&s), "VR_RenderingMethod=0\nVR_2DScreenMode=true\n");
+    let s = UevrSettings {
+        rendering: Rendering::NativeStereo,
+        screen_2d: true,
+    };
+    assert_eq!(
+        profile_text(&s),
+        "VR_RenderingMethod=0\nVR_2DScreenMode=true\n"
+    );
 }
 
 #[test]
 fn synchronized_sequential_adds_its_method_line() {
-    let s = UevrSettings { rendering: Rendering::SynchronizedSequential, screen_2d: false };
+    let s = UevrSettings {
+        rendering: Rendering::SynchronizedSequential,
+        screen_2d: false,
+    };
     let want = "VR_RenderingMethod=1\nVR_SyncedSequentialMethod=1\nVR_2DScreenMode=false\n";
     assert_eq!(profile_text(&s), want);
 }
 
 #[test]
 fn native_stereo_never_writes_the_synced_line() {
-    let s = UevrSettings { rendering: Rendering::NativeStereo, screen_2d: false };
+    let s = UevrSettings {
+        rendering: Rendering::NativeStereo,
+        screen_2d: false,
+    };
     assert!(!profile_text(&s).contains("Synced"));
 }
 
 #[test]
 fn the_profile_dir_is_inside_the_games_prefix_under_the_exe_name() {
     let got = profile_dir(Path::new(COMPAT), 2075800, "ZeroCompany-Win64-Shipping.exe");
-    let want = PathBuf::from(format!("{COMPAT}/2075800/{TAIL}/ZeroCompany-Win64-Shipping"));
+    let want = PathBuf::from(format!(
+        "{COMPAT}/2075800/{TAIL}/ZeroCompany-Win64-Shipping"
+    ));
     assert_eq!(got, want);
 }
 

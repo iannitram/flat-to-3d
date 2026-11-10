@@ -3,7 +3,11 @@
 use flat3d_inject::runs::{parse_run_record, running_modes, RunMode, RunRecord};
 
 fn rec(pid: u32, mode: RunMode) -> RunRecord {
-    RunRecord { appid: 2075800, pid, mode }
+    RunRecord {
+        appid: 2075800,
+        pid,
+        mode,
+    }
 }
 
 #[test]
@@ -29,16 +33,32 @@ fn it_reads_back_equal() {
 #[test]
 fn extra_lines_are_ignored() {
     let t = "flat3d-run 1\nappid\t5\npid\t6\nmode\tflat\nnote\thello\n";
-    assert_eq!(parse_run_record(t), Some(RunRecord { appid: 5, pid: 6, mode: RunMode::Flat }));
+    assert_eq!(
+        parse_run_record(t),
+        Some(RunRecord {
+            appid: 5,
+            pid: 6,
+            mode: RunMode::Flat
+        })
+    );
 }
 
 #[test]
 fn bad_text_gives_none() {
     assert_eq!(parse_run_record(""), None);
-    assert_eq!(parse_run_record("flat3d-run 2\nappid\t5\npid\t6\nmode\t3d\n"), None);
+    assert_eq!(
+        parse_run_record("flat3d-run 2\nappid\t5\npid\t6\nmode\t3d\n"),
+        None
+    );
     assert_eq!(parse_run_record("flat3d-run 1\nappid\t5\nmode\t3d\n"), None);
-    assert_eq!(parse_run_record("flat3d-run 1\nappid\tx\npid\t6\nmode\t3d\n"), None);
-    assert_eq!(parse_run_record("flat3d-run 1\nappid\t5\npid\t6\nmode\tvr\n"), None);
+    assert_eq!(
+        parse_run_record("flat3d-run 1\nappid\tx\npid\t6\nmode\t3d\n"),
+        None
+    );
+    assert_eq!(
+        parse_run_record("flat3d-run 1\nappid\t5\npid\t6\nmode\tvr\n"),
+        None
+    );
 }
 
 #[test]

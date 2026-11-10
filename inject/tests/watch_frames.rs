@@ -3,7 +3,10 @@
 use flat3d_inject::watch::{parse_track_frames, Device};
 
 fn d(serial: &str, state: &str) -> Device {
-    Device { serial: serial.to_string(), state: state.to_string() }
+    Device {
+        serial: serial.to_string(),
+        state: state.to_string(),
+    }
 }
 
 #[test]
@@ -22,20 +25,29 @@ fn one_frame_with_two_devices() {
     let got = parse_track_frames("001cAAA\tunauthorized\nBBB\tdevice\n");
     assert_eq!(
         got,
-        (vec![vec![d("AAA", "unauthorized"), d("BBB", "device")]], String::new())
+        (
+            vec![vec![d("AAA", "unauthorized"), d("BBB", "device")]],
+            String::new()
+        )
     );
 }
 
 #[test]
 fn two_frames_back_to_back() {
     let got = parse_track_frames("0000000eABC123\tdevice\n");
-    assert_eq!(got, (vec![vec![], vec![d("ABC123", "device")]], String::new()));
+    assert_eq!(
+        got,
+        (vec![vec![], vec![d("ABC123", "device")]], String::new())
+    );
 }
 
 #[test]
 fn a_cut_frame_is_kept_for_the_next_read() {
     let got = parse_track_frames("000eABC123\tdevice\n000eABC");
-    assert_eq!(got, (vec![vec![d("ABC123", "device")]], "000eABC".to_string()));
+    assert_eq!(
+        got,
+        (vec![vec![d("ABC123", "device")]], "000eABC".to_string())
+    );
     let whole = parse_track_frames("000eABC123\tdev");
     assert_eq!(whole, (vec![], "000eABC123\tdev".to_string()));
 }

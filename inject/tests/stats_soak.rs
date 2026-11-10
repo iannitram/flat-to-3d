@@ -28,7 +28,10 @@ fn peak_and_average() {
 fn an_empty_session_has_zero_figures() {
     let sum = Soak::new(5, 7).finish(9, 8, 3, 2);
     assert_eq!((sum.peak_bytes_s, sum.avg_bytes_s), (0, 0));
-    assert_eq!((sum.start, sum.end, sum.reconnects, sum.orphans), (5, 9, 3, 2));
+    assert_eq!(
+        (sum.start, sum.end, sum.reconnects, sum.orphans),
+        (5, 9, 3, 2)
+    );
     assert_eq!((sum.mem_start_kb, sum.mem_end_kb), (7, 8));
 }
 
@@ -42,5 +45,8 @@ fn memory_used_is_total_minus_available() {
 
 #[test]
 fn the_file_path() {
-    assert_eq!(soak_path("/home/deck", 1762000000), "/home/deck/.local/state/flat3d/soak-1762000000.txt");
+    assert_eq!(
+        soak_path("/home/deck", 1762000000),
+        "/home/deck/.local/state/flat3d/soak-1762000000.txt"
+    );
 }

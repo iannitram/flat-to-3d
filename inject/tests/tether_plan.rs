@@ -1,7 +1,9 @@
 //! Locked tests for E6e: the tether's connect and disconnect plans. Pure.
 
 use flat3d_inject::tether::plan::{connect_plan, disconnect_plan, TetherStep};
-use flat3d_inject::tether::relay::{client_start_commands, client_stop_command, force_stop_command, remove_reverse_command};
+use flat3d_inject::tether::relay::{
+    client_start_commands, client_stop_command, force_stop_command, remove_reverse_command,
+};
 
 fn c(words: &[&str]) -> Vec<String> {
     words.iter().map(|w| w.to_string()).collect()
@@ -14,9 +16,15 @@ fn connect_goes_in_this_order() {
         TetherStep::SpawnRelay,
         TetherStep::SleepMs(1500),
         TetherStep::CheckRelayAlive,
-        TetherStep::WaitTun0 { tries: 15, every_ms: 1500 },
+        TetherStep::WaitTun0 {
+            tries: 15,
+            every_ms: 1500,
+        },
         TetherStep::IfNoTun0(client_start_commands()),
-        TetherStep::WaitTun0 { tries: 8, every_ms: 1500 },
+        TetherStep::WaitTun0 {
+            tries: 8,
+            every_ms: 1500,
+        },
     ];
     assert_eq!(connect_plan(), want);
 }
@@ -30,7 +38,10 @@ fn disconnect_goes_in_this_order() {
         TetherStep::Run(c(&["adb", "shell", "svc", "wifi", "disable"])),
         TetherStep::SleepMs(4000),
         TetherStep::Run(c(&["adb", "shell", "svc", "wifi", "enable"])),
-        TetherStep::WaitWifi { tries: 6, every_ms: 1500 },
+        TetherStep::WaitWifi {
+            tries: 6,
+            every_ms: 1500,
+        },
         TetherStep::KillRelay,
         TetherStep::Run(remove_reverse_command()),
     ];
@@ -40,9 +51,15 @@ fn disconnect_goes_in_this_order() {
 #[test]
 fn the_relay_is_killed_only_after_the_wifi_wait() {
     let p = disconnect_plan();
-    let wifi = p.iter().position(|s| matches!(s, TetherStep::WaitWifi { .. })).unwrap();
+    let wifi = p
+        .iter()
+        .position(|s| matches!(s, TetherStep::WaitWifi { .. }))
+        .unwrap();
     let kill = p.iter().position(|s| *s == TetherStep::KillRelay).unwrap();
-    let stop = p.iter().position(|s| *s == TetherStep::Run(client_stop_command())).unwrap();
+    let stop = p
+        .iter()
+        .position(|s| *s == TetherStep::Run(client_stop_command()))
+        .unwrap();
     assert!(stop < wifi && wifi < kill);
 }
 

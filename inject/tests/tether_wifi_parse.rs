@@ -4,12 +4,18 @@ use flat3d_inject::tether::wifi::*;
 
 #[test]
 fn the_active_network_is_the_yes_line() {
-    assert_eq!(parse_active_ssid("no:Cafe\nyes:HomeNet\nno:Other\n"), Some("HomeNet".to_string()));
+    assert_eq!(
+        parse_active_ssid("no:Cafe\nyes:HomeNet\nno:Other\n"),
+        Some("HomeNet".to_string())
+    );
 }
 
 #[test]
 fn escaped_colons_and_backslashes_are_undone() {
-    assert_eq!(parse_active_ssid("yes:My\\:Net\n"), Some("My:Net".to_string()));
+    assert_eq!(
+        parse_active_ssid("yes:My\\:Net\n"),
+        Some("My:Net".to_string())
+    );
     assert_eq!(parse_active_ssid("yes:A\\\\B\n"), Some("A\\B".to_string()));
 }
 
@@ -22,8 +28,14 @@ fn no_active_network_is_none() {
 
 #[test]
 fn the_quest_network_is_the_quoted_name() {
-    assert_eq!(parse_quest_ssid("Wifi is enabled\nWifi is connected to \"HomeNet\"\n"), Some("HomeNet".to_string()));
-    assert_eq!(parse_quest_ssid("Wifi is connected to \"My Net\" extra"), Some("My Net".to_string()));
+    assert_eq!(
+        parse_quest_ssid("Wifi is enabled\nWifi is connected to \"HomeNet\"\n"),
+        Some("HomeNet".to_string())
+    );
+    assert_eq!(
+        parse_quest_ssid("Wifi is connected to \"My Net\" extra"),
+        Some("My Net".to_string())
+    );
 }
 
 #[test]
