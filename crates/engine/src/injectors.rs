@@ -4,7 +4,27 @@ use crate::recipes::Recipe;
 use crate::steam::Game;
 use crate::NotBuilt;
 
+pub mod fetch;
+pub mod geo11;
+pub mod port;
 pub mod uevr;
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RouteEnv {
+    pub env: Vec<(String, String)>,
+    pub unset: Vec<String>,
+    pub sidecar: Option<Vec<String>>,
+}
+
+pub fn ensure_applied(
+    _game: &Game,
+    _recipe: &Recipe,
+    _settings: &crate::recipes::RouteSettings,
+    _p: &crate::paths::EnginePaths,
+    _r: &mut dyn crate::link::CommandRunner,
+) -> Result<RouteEnv, String> {
+    Err("not-built: injectors::ensure_applied (WP-27)".into())
+}
 
 /// Which injector module a recipe's `stereo-route` text names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

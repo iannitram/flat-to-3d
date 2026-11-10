@@ -1,5 +1,11 @@
 //! Start 3D and Stop 3D over WiVRn's wired mode (`adb reverse tcp:9757`).
 
+pub mod wivrn;
+pub use wivrn::{
+    detect_quest_app, detect_server, FlatpakScope, QuestApp, WivrnDirs, WivrnStart, QUEST_APPS,
+    SERVER_FLAGS,
+};
+
 pub use crate::exec::{CommandOutput, CommandRunner, SystemRunner};
 
 /// WiVRn's port, reversed over USB.
@@ -78,6 +84,10 @@ pub fn start_3d_commands() -> Vec<Vec<String>> {
             WIVRN_APP.into(),
         ],
     ]
+}
+
+pub fn start_3d_commands_with(_s: &WivrnStart) -> Vec<Vec<String>> {
+    start_3d_commands()
 }
 
 /// The commands Stop 3D runs, in order (pure: tests assert on this list).
