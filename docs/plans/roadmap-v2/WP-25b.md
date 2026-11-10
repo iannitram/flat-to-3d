@@ -106,7 +106,7 @@
     - xwin: `$FLAT3D_RE_HOME/xwin`; check `ls "$FLAT3D_RE_HOME/xwin"`;
     - Ghidra 12.1.4: `$FLAT3D_RE_HOME/ghidra`; check `test -x "$FLAT3D_RE_HOME/ghidra/support/analyzeHeadless"`;
     - JDK 21: `$FLAT3D_RE_HOME/jdk/current`; check `"$FLAT3D_RE_HOME/jdk/current/bin/java" -version`.
-  - Above the table, one line gives the defaults the check commands assume: `FLAT3D_RE_HOME` unset means `$HOME/.local/share/flat-to-3d` (headless.sh :7), and `FLAT3D_BUILD_BOX` unset means `craft-build`. The xwin row says that `cmake/clang-cl-xwin.cmake` reads it through `XWIN_DIR` (default `$HOME/.local/share/flat-to-3d/xwin`, :13).
+  - Above the table, one line gives the defaults the check commands assume: `FLAT3D_RE_HOME` unset means `$HOME/.local/share/flat-to-3d` (headless.sh :7, after this WP's rename under Tools below), and `FLAT3D_BUILD_BOX` unset means `craft-build`. The xwin row says that `cmake/clang-cl-xwin.cmake` reads it through `XWIN_DIR` (default `$HOME/.local/share/flat-to-3d/xwin`, :13).
   - Heavy-job rules: `FLAT3D_HEAVY_LOCK`, the 2 GiB watch, one job at a time.
   - Exit codes: `headless.sh` exit 75 (another heavy job, or the lock) and exit 137 (stopped by the 2 GiB watch) both mean "retry later".
   - The Ghidra command from ROADMAP :176-184 is written with `tools/ghidra/headless.sh` and `$FLAT3D_RE_HOME` paths, with no home path. `tools/re/analyze.sh` comes later (WP-30, wave 3), so the page does not name it yet.
@@ -115,7 +115,7 @@
     - :3 → "refuses while `$FLAT3D_HEAVY_LOCK` exists".
     - :5 → `$FLAT3D_RE_HOME`.
     - :6 → `(see docs/workbench.md#ghidra; results in docs/spiderman2/address-map.md)`.
-    - :7 → `F=${FLAT3D_RE_HOME:-${FLAT3D_HOME:-$HOME/.local/share/flat-to-3d}}`.
+    - :7 → `F=${FLAT3D_RE_HOME:-${FLAT3D_HOME:-$HOME/.local/share/flat-to-3d}}`. This is a rename: the line today reads `F=${FLAT3D_HOME:-$HOME/.local/share/flat-to-3d}`, and `FLAT3D_HOME` appears nowhere else in the repo. `FLAT3D_RE_HOME` is the name every plan file and doc uses from this WP on; the old name stays only as this fallback, so an existing setup keeps working. Until this WP lands, the script reads `FLAT3D_HOME` only.
     - :11-12 → `LOCK=${FLAT3D_HEAVY_LOCK:-}; [ -n "$LOCK" ] && [ -e "$LOCK" ] && { echo "headless: $LOCK exists (another heavy job); retry when it is gone" >&2; exit 75; }`.
   - `tools/build-spidy.sh:2` → "(run inside the distrobox build container, `$FLAT3D_BUILD_BOX`, default craft-build)".
   - `tools/research/research_game.py:18` → `$FLAT3D_RE_HOME/venv`.

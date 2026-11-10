@@ -205,8 +205,13 @@ The moved test files stay byte-identical to what WP-01a left (the done-check's `
 **Done-check** (run after committing on this part's branch, `v2/wp-01c-*`). Each step is labelled. A failing step prints `FAIL <step>: fix: <hint>` and stops (Craft review A2).
 ```sh
 export CARGO_TARGET_DIR=$SCRATCH/target
-B=$(git merge-base main HEAD)
+T=v2-wp00
 fail() { echo "FAIL $1: fix: $2"; exit 1; }
+git rev-parse -q --verify "refs/tags/$T^{commit}" >/dev/null \
+  || fail tag "the local tag v2-wp00 is missing: report blocked; the runner places it on the commit where WP-00 landed (§0); do not guess a commit"
+git merge-base --is-ancestor "$T" HEAD || fail tag-ancestor "v2-wp00 is not an ancestor of this branch: report blocked; the runner re-places it on the commit where WP-00 landed (§0)"
+git show "$T:inject/Cargo.toml" 2>/dev/null | grep -q field_reassign_with_default \
+  || fail tag-wp00 "v2-wp00 must sit on a commit that holds WP-00 and still has inject/: report blocked; the runner re-places it (§0)"
 { test ! -e inject && test ! -e app; } || fail moved "git mv inject/ and app/ under crates/"
 test -z "$(git ls-files '*mod.rs')" || fail no-mod-rs "use the facade-file form (x.rs + x/)"
 cargo metadata --locked --offline --format-version 1 >/dev/null || fail lock "re-seed Cargo.lock as in Fetching dependencies"
@@ -219,20 +224,22 @@ XDG_RUNTIME_DIR=$(mktemp -d) cargo test --locked -p flat3d-inject --test tether_
   || fail runners "keep the exec split re-exports (tether::adb::CommandRunner)"
 cargo clippy --locked -p flat3d-uevr-inject --target x86_64-pc-windows-msvc -- -D warnings || fail clippy-win "fix the uevr-inject lints it names"
 git diff --exit-code Cargo.lock || fail lock-frozen "restore the committed Cargo.lock; never run cargo update"
-test "$(git ls-tree --name-only "$B" inject/tests/ | grep -c '\.rs$')" = 55 || fail tests-55 "the merge-base must hold 55 inject/tests files"
-for f in $(git ls-tree --name-only "$B" inject/tests/); do
+test "$(git ls-tree --name-only "$T" inject/tests/ | grep -c '\.rs$')" = 55 || fail tests-55 "v2-wp00 must hold 55 inject/tests files: report blocked; the runner re-places the tag (§0)"
+for f in $(git ls-tree --name-only "$T" inject/tests/); do
   test -f "crates/engine/tests/${f#inject/tests/}" || fail tests-moved "git mv $f"
 done
 for t in paths fsx catalog_find switches_io state_io route_settings cli_any architecture; do
   test -f "crates/engine/tests/$t.rs" || fail tests-new "add crates/engine/tests/$t.rs"
 done
 test -f crates/viewer/tests/spec.rs || fail tests-new "add crates/viewer/tests/spec.rs"
-test "$(for f in $(git ls-tree --name-only "$B" inject/tests/); do git show "$B:$f" | diff -u - "crates/engine/tests/${f#inject/tests/}"; done | grep -c '^[-+][^-+]')" = 14 \
+test "$(for f in $(git ls-tree --name-only "$T" inject/tests/); do git show "$T:$f" | diff -u - "crates/engine/tests/${f#inject/tests/}"; done | grep -c '^[-+][^-+]')" = 14 \
   || fail locked-14 "undo every edit to a moved test file except the 7 sanctioned ones"
 if [ -x tools/check.sh ]; then tools/check.sh || fail check.sh "fix the step check.sh names"
 else echo "SKIP check.sh: WP-02 not merged yet"; fi
 ```
-- `$B` is the merge-base, so the check stays valid after `main` moves.
+- `$T` is the fixed local tag `v2-wp00` (§0 "Git references in done-checks"): the integration-line commit where WP-00 landed, so `inject/tests/` as WP-00's rustfmt left it. It is the same commit in both run modes and for all four WP-01 parts, so these steps do not depend on where `main` or the integration line is now, or on which parts have already merged.
+- `tests-55`, `tests-moved` and `locked-14` read the old path `inject/tests/<f>` from the tag and the new path `crates/engine/tests/<f>` from the working tree. `inject/` is never looked for in this branch's own base.
+- This part never places the tag. `inject/` is already gone from this branch's base (WP-01a moved it), so no commit here can stand in for it; a missing or wrong tag is `blocked`.
 - The `locked-14` step proves that exactly the 7 sanctioned edits (14 diff lines) touched the 55 moved test files.
 - The `architecture` test runs inside the `test` step; `tests-new` checks that its file exists.
 - Python, shellcheck and decky are not run here. Their CI steps are guarded until WP-02, WP-21 and WP-25b land.

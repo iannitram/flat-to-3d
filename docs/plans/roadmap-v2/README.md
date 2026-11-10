@@ -42,10 +42,10 @@ History only (a builder does not need this): old line numbers (`L1969`, `roadmap
 | [WP-23.md](WP-23.md) | 3420-3489 | WP-23: App Games page (#117) |
 | [WP-24.md](WP-24.md) | 3490-3645 | WP-24: Session runner, stereo gates, device sessions |
 | [WP-25a.md](WP-25a.md) | 3646-3712 | WP-25a: Docs check (wave 1) |
-| [WP-25b.md](WP-25b.md) | 3713-3820 | WP-25b: Docs scrub + contradictions |
+| [WP-25b.md](WP-25b.md) | 3713-3820 | WP-25b: Docs scrub + contradictions (wave 2) |
 | [WP-26.md](WP-26.md) | 3821-3902 | WP-26: Recipe seeds + repo recipe lint |
 | [WP-27.md](WP-27.md) | 3903-4022 | WP-27: inject, undo and setup fetch commands + ensure_applied (#27a) |
-| [WP-28.md](WP-28.md) | 4023-4124 | WP-28: View commands (#121) |
+| [WP-28.md](WP-28.md) | 4023-4124 | WP-28: View commands (#121, #75) |
 | [WP-29.md](WP-29.md) | 4125-4214 | WP-29: doctor + setup commands |
 | [WP-30.md](WP-30.md) | 4215-4327 | WP-30: RE tooling + address map (#19 tools, #37 column) |
 | [WP-31.md](WP-31.md) | 4328-4415 | WP-31: Wrapper route end-to-end |

@@ -95,7 +95,7 @@ docs/workbench.md	craft-build
 - `--only`: an unknown rule name exits 2.
 - Exit codes are 0/1/2.
 
-**Done-check for wave-2 docs writers** (WP-24, WP-25b, and any other WP that writes `.md`): `python3 tools/docs/check.py --changed main`, or `python3 tools/docs/check.py <the .md files it wrote or changed>`. A full-repo `check.py` with no paths is expected to fail until WP-25b lands.
+**Done-check for wave-2 docs writers** (WP-24, WP-25b, and any other WP that writes `.md`): `python3 tools/docs/check.py --changed "${FLAT3D_BASE:-origin/main}"` (the integration line, §0 "Git references in done-checks"; check.py takes the merge-base itself), or `python3 tools/docs/check.py <the .md files it wrote or changed>`. A full-repo `check.py` with no paths is expected to fail until WP-25b lands.
 
 **Depends on:** WP-00 (as the index lists; its tests use temp trees, so it does not wait for WP-01's `crates/` paths).
 
