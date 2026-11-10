@@ -208,7 +208,7 @@ pub fn fetch_with(
         &pin.key,
     )?;
     let allow_file = o.allow_file;
-    if !pin.url.starts_with("https://") && !(allow_file && pin.url.starts_with("file://")) {
+    if !(pin.url.starts_with("https://") || allow_file && pin.url.starts_with("file://")) {
         return Err(FetchError::Scheme(pin.url));
     }
     let dir = cache_dir(&pin, p);
