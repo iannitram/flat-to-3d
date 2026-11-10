@@ -9,7 +9,11 @@ fn snap(state: LinkState) -> LinkSnapshot {
     s
 }
 fn with(state: LinkState) -> HeadsetState {
-    HeadsetState { snapshot: Some(snap(state)), busy: false, error: None }
+    HeadsetState {
+        snapshot: Some(snap(state)),
+        busy: false,
+        error: None,
+    }
 }
 
 #[test]
@@ -20,8 +24,14 @@ fn a_new_page_has_nothing() {
 
 #[test]
 fn a_snapshot_is_stored_and_clears_the_error() {
-    let mut s = HeadsetState { error: Some("old".into()), ..HeadsetState::default() };
-    assert_eq!(update(&mut s, Msg::Snapshot(Ok(snap(LinkState::Ready)))), None);
+    let mut s = HeadsetState {
+        error: Some("old".into()),
+        ..HeadsetState::default()
+    };
+    assert_eq!(
+        update(&mut s, Msg::Snapshot(Ok(snap(LinkState::Ready)))),
+        None
+    );
     assert_eq!(s.snapshot.as_ref().unwrap().state, LinkState::Ready);
     assert!(s.error.is_none());
 }
@@ -80,7 +90,19 @@ fn a_failed_command_shows_the_error() {
 #[test]
 fn the_switches_ask_for_a_setting() {
     let mut s = with(LinkState::Ready);
-    assert_eq!(update(&mut s, Msg::SetAuto3d(true)), Some(Action::SetSetting { key: "auto-3d", on: true }));
+    assert_eq!(
+        update(&mut s, Msg::SetAuto3d(true)),
+        Some(Action::SetSetting {
+            key: "auto-3d",
+            on: true
+        })
+    );
     assert!(s.snapshot.as_ref().unwrap().auto_3d);
-    assert_eq!(update(&mut s, Msg::SetTunnel(false)), Some(Action::SetSetting { key: "tunnel", on: false }));
+    assert_eq!(
+        update(&mut s, Msg::SetTunnel(false)),
+        Some(Action::SetSetting {
+            key: "tunnel",
+            on: false
+        })
+    );
 }
