@@ -75,27 +75,25 @@ impl Geo11Settings {
                         s.d3dx.push((k.to_owned(), v.to_owned()));
                     }
                 }
-                "geo11-remove-first" => {
-                    if !value.is_empty() {
-                        for item in value.split(';') {
-                            let p = Path::new(item);
-                            if item.is_empty()
-                                || p.is_absolute()
-                                || item.starts_with(['/', '\\'])
-                                || item.as_bytes().get(1) == Some(&b':')
-                                || p.components().any(|c| {
-                                    matches!(
-                                        c,
-                                        Component::ParentDir
-                                            | Component::RootDir
-                                            | Component::Prefix(_)
-                                    )
-                                })
-                            {
-                                return Err(bad_recipe(format!(
-                                    "invalid geo11-remove-first path: {item}"
-                                )));
-                            }
+                "geo11-remove-first" if !value.is_empty() => {
+                    for item in value.split(';') {
+                        let p = Path::new(item);
+                        if item.is_empty()
+                            || p.is_absolute()
+                            || item.starts_with(['/', '\\'])
+                            || item.as_bytes().get(1) == Some(&b':')
+                            || p.components().any(|c| {
+                                matches!(
+                                    c,
+                                    Component::ParentDir
+                                        | Component::RootDir
+                                        | Component::Prefix(_)
+                                )
+                            })
+                        {
+                            return Err(bad_recipe(format!(
+                                "invalid geo11-remove-first path: {item}"
+                            )));
                         }
                     }
                 }
