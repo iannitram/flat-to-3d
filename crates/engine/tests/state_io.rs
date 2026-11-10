@@ -10,7 +10,10 @@ fn missing_snapshot_and_request_round_trip() {
     let paths = EnginePaths::from_env(
         &BTreeMap::from([
             ("HOME".into(), home.to_string_lossy().into_owned()),
-            ("XDG_RUNTIME_DIR".into(), runtime.to_string_lossy().into_owned()),
+            (
+                "XDG_RUNTIME_DIR".into(),
+                runtime.to_string_lossy().into_owned(),
+            ),
         ]),
         12,
     )

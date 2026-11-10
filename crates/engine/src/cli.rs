@@ -147,7 +147,7 @@ fn dispatch(command: &Command) -> Result<Value, ApiError> {
             serde_json::to_value(result)
                 .map_err(|e| ApiError::new("command-failed", &e.to_string()))
         }
-        _ => Err(NotBuilt("cli: the command bodies are wired by #27").into()),
+        _ => Err(NotBuilt("cli::engine::run (WP-07)").into()),
     }
 }
 
@@ -204,7 +204,7 @@ mod tests {
         assert_eq!(out.stdout, "");
         assert_eq!(
             out.stderr,
-            "error: not built yet: cli: the command bodies are wired by #27\n"
+            "error: not built yet: cli::engine::run (WP-07)\n"
         );
     }
 }

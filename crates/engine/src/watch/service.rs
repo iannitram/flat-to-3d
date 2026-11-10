@@ -53,6 +53,7 @@ impl TrackDevices {
         if self.adb.is_empty() {
             return;
         }
+        // architecture-allowlist: follow-up (track-devices remains outside the runner seam).
         let Ok(mut child) = Command::new(&self.adb)
             .arg("track-devices")
             .stdin(Stdio::null())
