@@ -1,6 +1,6 @@
 # Roadmap v2 (split)
 
-Roadmap v2 used to be one 393 KB file, too big for one agent context. It is now one file per section and one per work package. Read `00-run-the-pass.md`, the parts of `01-new-bones.md` your WP names, and your own `WP-NN.md`.
+Roadmap v2 used to be one 393 KB file, too big for one agent context. It is now one file per section and one per work package. Read `00-run-the-pass.md`, the parts of `01-new-bones.md` your WP names, your own `WP-NN.md`, and the `questions.md` entries under §0, §2 and your WP.
 
 Old line numbers (`L1969`, `roadmap-v2.md:1969`) in the findings, the Craft review and older notes map to files through this table. Each file's first line also gives its old range.
 
@@ -46,3 +46,5 @@ Old line numbers (`L1969`, `roadmap-v2.md:1969`) in the findings, the Craft revi
 | [WP-32.md](WP-32.md) | 4416-4485 | WP-32: Decky panel, launch sync, collection, toasts (#131-#133) |
 | [WP-33.md](WP-33.md) | 4486-4594 | WP-33: App views + main wiring (#122/#123) |
 | [WP-34.md](WP-34.md) | 4595-4709 | WP-34: Docs sync after the pass |
+| [questions.md](questions.md) | — | Open owner questions with recommended answers, and unresolved verify problems |
+| [fold-log/](fold-log/) | — | One record per WP and section of each fold decision (history, not contract) |
