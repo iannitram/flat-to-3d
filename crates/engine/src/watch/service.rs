@@ -1,331 +1,29 @@
-//! The link service: reads adb track-devices, decides, and runs the link. docs/code-map.md, Parts.
-
 use std::cell::RefCell;
+#[cfg(test)]
 use std::fs;
-use std::io::{Read, Write};
-use std::path::Path;
+use std::io::Read;
 use std::process::{Child, Command, Stdio};
 use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::api::{EventKind, LinkEvent, LinkSnapshot, LinkState, TetherMode};
-use crate::link::{self, Headset};
-use crate::runs::{parse_run_record, running_modes, RunRecord};
-use crate::state::{self, EventRing, Request};
-use crate::switches::{parse_settings, Settings};
-use crate::tether::adb::{self as tether_adb, AdbChoice, CommandRunner, ProcessRunner, TetherAdb};
+use super::files::{append_log, write_snapshot, Paths};
+use super::frames::{parse_track_frames, Device};
+use super::machine::{
+    link_commands, note_event, note_text, step, Effect, Event, Inputs, Phase, Watch,
+};
+#[cfg(test)]
+use super::machine::{note_kind, Note};
+#[cfg(test)]
+use crate::api::EventKind;
+use crate::api::{LinkEvent, LinkSnapshot, LinkState, TetherMode};
+use crate::link;
+use crate::link::Headset;
+use crate::state::{EventRing, Request};
+use crate::switches::Settings;
+use crate::tether::adb::{AdbChoice, CommandRunner, TetherAdb};
 use crate::tether::{stepaside, Tether};
 
-/// The adb server's port: where a running server listens.
-const ADB_SERVER_PORT: u16 = 5037;
-
-/// One device listed in an `adb track-devices` frame.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Device {
-    /// The device's serial.
-    pub serial: String,
-    /// adb's state word, e.g. `device` or `unauthorized`.
-    pub state: String,
-}
-
-/// Read `adb track-devices` output into the devices of every complete frame, in order, plus the
-/// unconsumed rest of the buffer.
-///
-/// A frame is four hex digits holding the payload length in bytes, then that many bytes of
-/// `serial<TAB>state` lines. A frame that is not complete yet is left in the rest for the next
-/// read; a bad header drops the whole buffer.
-pub fn parse_track_frames(buf: &str) -> (Vec<Vec<Device>>, String) {
-    let mut frames = Vec::new();
-    let mut pos = 0;
-    loop {
-        let header_start = pos;
-        let header_end = header_start + 4;
-        let present = header_end.min(buf.len());
-        // `get` is None when the header cut lands inside a multi-byte character: that is a
-        // non-hex char, so the buffer is bad too.
-        let Some(header) = buf.get(header_start..present) else {
-            return (frames, String::new());
-        };
-        if !header.bytes().all(|b| b.is_ascii_hexdigit()) {
-            return (frames, String::new());
-        }
-        if present - header_start < 4 {
-            return (frames, buf[header_start..].to_string());
-        }
-        let Ok(len) = usize::from_str_radix(header, 16) else {
-            return (frames, String::new());
-        };
-        let frame_end = header_end + len;
-        if buf.len() < frame_end {
-            return (frames, buf[header_start..].to_string());
-        }
-        let Some(payload) = buf.get(header_end..frame_end) else {
-            return (frames, buf[header_start..].to_string());
-        };
-        frames.push(parse_payload(payload));
-        pos = frame_end;
-    }
-}
-
-/// The devices in one frame's payload, skipping blank lines and lines without a tab.
-fn parse_payload(payload: &str) -> Vec<Device> {
-    let mut devices = Vec::new();
-    for line in payload.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let Some((serial, state)) = line.split_once('\t') else {
-            continue;
-        };
-        devices.push(Device {
-            serial: serial.to_string(),
-            state: state.to_string(),
-        });
-    }
-    devices
-}
-
-pub const GRACE_SECS: u64 = 120;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Phase {
-    Absent,
-    Plugged,
-    Up,
-    Grace { since: u64 },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Watch {
-    pub phase: Phase,
-}
-
-impl Watch {
-    pub fn new() -> Watch {
-        Watch {
-            phase: Phase::Absent,
-        }
-    }
-}
-
-impl Default for Watch {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Event {
-    Plugged,
-    Unplugged,
-    Tick,
-    StartRequested,
-    StopRequested,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Inputs {
-    pub auto_3d: bool,
-    pub tunnel_on: bool,
-    pub game_3d_running: bool,
-    pub game_flat_running: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Note {
-    Ready,
-    LateRestartFor3d,
-    StoppedRestartForFlat,
-    AllowUsbDebugging,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Effect {
-    StartTether,
-    StopTether,
-    StartLink,
-    Reattach,
-    StopLink,
-    Notify(Note),
-}
-
-/// Apply one event (plug, unplug, tick, or a hand-pressed Start/Stop) without running its effects.
-pub fn step(w: &Watch, e: &Event, now: u64, i: &Inputs) -> (Watch, Vec<Effect>) {
-    match (w.phase, e) {
-        (Phase::Absent, Event::Plugged) if i.auto_3d => {
-            let mut effects = Vec::new();
-            if i.tunnel_on {
-                effects.push(Effect::StartTether);
-            }
-            effects.push(Effect::StartLink);
-            effects.push(Effect::Notify(if i.game_flat_running {
-                Note::LateRestartFor3d
-            } else {
-                Note::Ready
-            }));
-            (Watch { phase: Phase::Up }, effects)
-        }
-        (Phase::Absent, Event::Plugged) => {
-            let effects = if i.tunnel_on {
-                vec![Effect::StartTether]
-            } else {
-                vec![]
-            };
-            (
-                Watch {
-                    phase: Phase::Plugged,
-                },
-                effects,
-            )
-        }
-        (Phase::Grace { .. }, Event::Plugged) => {
-            (Watch { phase: Phase::Up }, vec![Effect::Reattach])
-        }
-        (Phase::Up, Event::Unplugged) if i.game_3d_running => (
-            Watch {
-                phase: Phase::Grace { since: now },
-            },
-            vec![],
-        ),
-        (Phase::Up, Event::Unplugged) => {
-            let mut effects = vec![Effect::StopLink];
-            if i.tunnel_on {
-                effects.push(Effect::StopTether);
-            }
-            (
-                Watch {
-                    phase: Phase::Absent,
-                },
-                effects,
-            )
-        }
-        (Phase::Plugged, Event::Unplugged) => {
-            let effects = if i.tunnel_on {
-                vec![Effect::StopTether]
-            } else {
-                vec![]
-            };
-            (
-                Watch {
-                    phase: Phase::Absent,
-                },
-                effects,
-            )
-        }
-        (Phase::Grace { .. }, Event::Tick) if !i.game_3d_running => {
-            let mut effects = vec![Effect::StopLink];
-            if i.tunnel_on {
-                effects.push(Effect::StopTether);
-            }
-            (
-                Watch {
-                    phase: Phase::Absent,
-                },
-                effects,
-            )
-        }
-        (Phase::Grace { since }, Event::Tick) if now.saturating_sub(since) >= GRACE_SECS => {
-            let mut effects = vec![Effect::StopLink];
-            if i.tunnel_on {
-                effects.push(Effect::StopTether);
-            }
-            effects.push(Effect::Notify(Note::StoppedRestartForFlat));
-            (
-                Watch {
-                    phase: Phase::Absent,
-                },
-                effects,
-            )
-        }
-        (Phase::Plugged, Event::StartRequested) => (
-            Watch { phase: Phase::Up },
-            vec![Effect::StartLink, Effect::Notify(Note::Ready)],
-        ),
-        (Phase::Grace { .. }, Event::StartRequested) => {
-            (Watch { phase: Phase::Up }, vec![Effect::Reattach])
-        }
-        (Phase::Up | Phase::Grace { .. }, Event::StopRequested) => (
-            Watch {
-                phase: Phase::Plugged,
-            },
-            vec![Effect::StopLink],
-        ),
-        _ => (*w, vec![]),
-    }
-}
-
-/// The link commands an effect runs: Start 3D's list, the reattach part of it (from `adb
-/// reverse` on; the server unit is already running), or Stop 3D's list. The tether and toast
-/// effects run no link commands.
-pub fn link_commands(effect: &Effect) -> Vec<Vec<String>> {
-    match effect {
-        Effect::StartLink => crate::link::start_3d_commands(),
-        Effect::Reattach => crate::link::start_3d_commands()[2..].to_vec(),
-        Effect::StopLink => crate::link::stop_3d_commands(),
-        Effect::StartTether | Effect::StopTether | Effect::Notify(_) => Vec::new(),
-    }
-}
-
-/// The toast text for a note, the same on every face.
-pub fn note_text(n: Note) -> &'static str {
-    match n {
-        Note::Ready => "3D is ready. Press Play on a 3D Ready game.",
-        Note::LateRestartFor3d => "Headset connected. Restart the game to play it in 3D.",
-        Note::StoppedRestartForFlat => "Headset link closed. Restart the game to play it flat.",
-        Note::AllowUsbDebugging => "Put the headset on and allow USB debugging.",
-    }
-}
-
-/// The note's kind word, for the state file.
-pub fn note_kind(n: Note) -> &'static str {
-    match n {
-        Note::Ready => "ready",
-        Note::LateRestartFor3d => "late-plug",
-        Note::StoppedRestartForFlat => "grace-ended",
-        Note::AllowUsbDebugging => "allow-debugging",
-    }
-}
-
-/// The files the link service reads and writes, under the user's home and the state directory.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Paths {
-    /// The user's home directory.
-    pub home: String,
-    /// The shared state directory (`state::state_dir`).
-    pub state_dir: String,
-}
-
-impl Paths {
-    /// The state file, `link.json`.
-    pub fn snapshot(&self) -> String {
-        state::snapshot_path(&self.state_dir)
-    }
-
-    /// The one-line request file.
-    pub fn request(&self) -> String {
-        state::request_path(&self.state_dir)
-    }
-
-    /// The directory of run records.
-    pub fn runs(&self) -> String {
-        state::runs_dir(&self.state_dir)
-    }
-
-    /// The settings file (`setting set`, `switch set`).
-    pub fn settings(&self) -> String {
-        format!("{}/.config/flat3d/settings", self.home)
-    }
-
-    /// The service's own log, `link.log`.
-    pub fn log(&self) -> String {
-        format!("{}/.local/state/flat3d/link.log", self.home)
-    }
-}
-
-/// Where the device list comes from: the newest `adb track-devices` frame, when one arrived since
-/// the last call.
 pub trait Feed {
     fn poll(&mut self) -> Option<Vec<Device>>;
 }
@@ -446,16 +144,6 @@ fn classify(devices: &[Device]) -> Seen {
         return Seen::Unauthorised;
     }
     Seen::Absent
-}
-
-/// The event kind a note is written under in the state file and the event ring.
-pub fn note_event(n: Note) -> EventKind {
-    match n {
-        Note::Ready => EventKind::Ready,
-        Note::LateRestartFor3d => EventKind::LatePlug,
-        Note::StoppedRestartForFlat => EventKind::GraceEnded,
-        Note::AllowUsbDebugging => EventKind::AllowDebugging,
-    }
 }
 
 /// The one runner the link service and its tether share, so both act through the same process
@@ -795,102 +483,6 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
 }
 
 /// Write the snapshot to `path` atomically: a temp file, then a rename.
-pub fn write_snapshot(path: &str, snapshot: &LinkSnapshot) -> Result<(), String> {
-    let text = serde_json::to_string(snapshot).map_err(|error| error.to_string())?;
-    let target = Path::new(path);
-    if let Some(dir) = target.parent() {
-        fs::create_dir_all(dir).map_err(|error| format!("{}: {error}", dir.display()))?;
-    }
-    let tmp = format!("{path}.tmp");
-    fs::write(&tmp, text.as_bytes()).map_err(|error| format!("{tmp}: {error}"))?;
-    fs::rename(&tmp, target).map_err(|error| format!("{path}: {error}"))
-}
-
-fn append_log(path: &str, now: u64, line: &str) {
-    if let Some(dir) = Path::new(path).parent() {
-        let _ = fs::create_dir_all(dir);
-    }
-    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
-        let _ = writeln!(file, "{now} {line}");
-    }
-}
-
-/// Read the request file and remove it. Anything but `start-3d` or `stop-3d` is dropped.
-fn take_request(path: &str) -> Option<Request> {
-    let text = fs::read_to_string(path).ok()?;
-    let _ = fs::remove_file(path);
-    state::parse_request(&text)
-}
-
-/// The settings, or the defaults when the file is missing.
-fn read_settings(path: &str) -> Settings {
-    fs::read_to_string(path)
-        .map(|text| parse_settings(&text))
-        .unwrap_or_default()
-}
-
-/// Whether a live game runs in 3D and whether one runs flat, from the run records.
-fn game_modes(runs_dir: &str) -> (bool, bool) {
-    let records: Vec<RunRecord> = fs::read_dir(runs_dir)
-        .into_iter()
-        .flatten()
-        .filter_map(Result::ok)
-        .filter_map(|entry| fs::read_to_string(entry.path()).ok())
-        .filter_map(|text| parse_run_record(&text))
-        .collect();
-    let alive = |pid: u32| Path::new(&format!("/proc/{pid}")).exists();
-    running_modes(&records, &alive)
-}
-
-/// The adb server's binary, when one is running (the one the tether and link should use).
-fn running_adb_exe() -> Option<String> {
-    let output = Command::new("ss").arg("-tlnp").output().ok()?;
-    let pid = tether_adb::listener_pid(&String::from_utf8_lossy(&output.stdout), ADB_SERVER_PORT)?;
-    fs::read_link(tether_adb::proc_exe_path(pid))
-        .ok()
-        .map(|path| path.to_string_lossy().into_owned())
-}
-
-fn unix_now() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|time| time.as_secs())
-        .unwrap_or_default()
-}
-
-/// The link service's loop: every second, read the settings, the request file, the run records
-/// and the device list, and carry out what they decide. Runs until it is stopped.
-pub fn run(paths: &Paths) -> ! {
-    let bundled_path = tether_adb::bundled_adb(&paths.home);
-    let bundled = if Path::new(&bundled_path).is_file() {
-        Some(bundled_path)
-    } else {
-        None
-    };
-    let choice = tether_adb::choose_adb(running_adb_exe().as_deref(), bundled.as_deref());
-    let feed = TrackDevices::new(&choice.path);
-    let previous = fs::read_to_string(paths.snapshot())
-        .ok()
-        .and_then(|text| serde_json::from_str::<LinkSnapshot>(&text).ok());
-    let mut service = Service::new(
-        paths.clone(),
-        Rc::new(RefCell::new(ProcessRunner::default())),
-        feed,
-        choice,
-    );
-    if let Some(previous) = previous {
-        service.restore(previous.events);
-    }
-    loop {
-        let now = unix_now();
-        let settings = read_settings(&paths.settings());
-        let request = take_request(&paths.request());
-        let modes = game_modes(&paths.runs());
-        service.tick(now, &settings, request, modes);
-        thread::sleep(Duration::from_secs(1));
-    }
-}
-
 #[cfg(test)]
 mod service_tests {
     use super::*;
@@ -1182,17 +774,5 @@ mod service_tests {
             let kind = serde_json::to_value(note_event(note)).unwrap();
             assert_eq!(kind, serde_json::Value::String(note_kind(note).to_string()));
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse_track_frames;
-
-    #[test]
-    fn a_non_ascii_char_in_the_header_drops_the_buffer() {
-        assert_eq!(parse_track_frames("zzz\u{e9}rest"), (vec![], String::new()));
-        assert_eq!(parse_track_frames("abc\u{e9}"), (vec![], String::new()));
-        assert_eq!(parse_track_frames("0\u{e9}"), (vec![], String::new()));
     }
 }

@@ -64,7 +64,7 @@ fn a_list_response_carries_an_array_of_games() {
 
 #[test]
 fn the_code_map_says_api_rs_is_present() {
-    let map = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/code-map.md");
+    let map = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/code-map.md");
     let text = std::fs::read_to_string(map).unwrap();
-    assert!(text.contains("| `inject/src/api.rs` | present |"));
+    assert!(text.contains("| `crates/engine/src/api.rs` | present |"));
 }

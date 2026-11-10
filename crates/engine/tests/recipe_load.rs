@@ -135,7 +135,7 @@ fn the_error_text_names_the_file() {
 #[test]
 fn the_repo_recipes_folder_loads() {
     let real = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
+        .join("../..")
         .join("recipes");
     let loaded = load_recipes(&real);
     assert!(loaded.is_ok(), "{loaded:?}");
@@ -143,9 +143,9 @@ fn the_repo_recipes_folder_loads() {
 
 #[test]
 fn the_readme_documents_the_format_and_the_code_map_says_present() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let readme = fs::read_to_string(root.join("recipes/README.md")).unwrap();
     assert!(readme.contains("<appid>-<slug>.recipe") && readme.contains("key: value"));
     let map = fs::read_to_string(root.join("docs/code-map.md")).unwrap();
-    assert!(map.contains("| `inject/src/recipes.rs` | present |"));
+    assert!(map.contains("| `crates/engine/src/recipes.rs` | present |"));
 }

@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+default-members = ["crates/engine", "crates/viewer", "crates/uevr-inject"]
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-only"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+iced = { version = "0.14.0", features = ["smol"] }
+flat3d-inject = { path = "crates/engine" }
+flat3d-viewer = { path = "crates/viewer", default-features = false }
+windows-sys = "=0.61.2"
+
+[workspace.lints.clippy]
+field_reassign_with_default = "allow"
+mod_module_files = "deny"

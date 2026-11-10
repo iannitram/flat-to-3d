@@ -1,4 +1,4 @@
-//! Inject a game by its recipe's stereo route. 1.0 has one route: the Spider-Man 2 port.
+//! Select and apply the stereo route named by a game's recipe.
 
 use crate::recipes::Recipe;
 use crate::steam::Game;

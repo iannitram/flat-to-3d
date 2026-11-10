@@ -1,21 +1,16 @@
-//! Flat to 3D's Inject engine (SPEC.md M9-M12): find installed games, read their recipes,
-//! inject the recipe's stereo route, and bring up the headset link. Rust, by the owner's
-//! 2026-10-26 ruling.
-//!
-//! Skeleton (2026-10-26): every function is a stub with its final signature that returns
-//! `Err(NotBuilt)`; each one is filled in by its own issue. GPL-3.0.
+//! Flat to 3D engine: installed games, recipes, stereo routes, the link service and launch wrapper.
 
 pub mod api;
 pub mod cli;
-pub mod cli_link;
-pub mod collection;
-pub mod headset_view;
+pub use cli::link as cli_link;
+pub use face::{collection, headset_view, link_view, toasts, view};
+pub mod face;
 pub mod health;
 pub mod injectors;
 pub mod install;
 pub mod launch_options;
 pub mod link;
-pub mod link_view;
+
 pub mod recipes;
 pub mod runs;
 pub mod setup;
@@ -25,9 +20,9 @@ pub mod status;
 pub mod steam;
 pub mod switches;
 pub mod tether;
-pub mod toasts;
+
 pub mod undo;
-pub mod view;
+
 pub mod watch;
 pub mod wrapper;
 
