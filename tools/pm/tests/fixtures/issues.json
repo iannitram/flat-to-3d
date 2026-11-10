@@ -1,0 +1,10 @@
+[
+  {"number": 1, "title": "Open refs", "body": "Blocked by: #130, #113", "labels": []},
+  {"number": 2, "title": "External step", "body": "**Blocked by:** Step 0 (SPEC M1) passing on 0.3.8", "labels": []},
+  {"number": 3, "title": "No blockers", "body": "Blocked by: none (ready)", "labels": []},
+  {"number": 4, "title": "Empty body", "body": "", "labels": []},
+  {"number": 5, "title": "Closed ref", "body": "Blocked by: #999", "labels": []},
+  {"number": 6, "title": "Multiple lines", "body": "Blocked by: #113\nBlocked by: none (still blocked)", "labels": [{"name": "needs-owner-device"}]},
+  {"number": 113, "title": "Blocker 113", "body": "", "labels": []},
+  {"number": 130, "title": "Blocker 130", "body": "", "labels": []}
+]
