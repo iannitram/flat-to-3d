@@ -139,7 +139,6 @@ pub fn render(command: &str, result: Result<Value, ApiError>, json: bool) -> Out
     }
 }
 
-/// The engine's data directory, from the environment (`XDG_DATA_HOME`, `HOME`).
 // The shared command model is expanded below; the locked parser/render functions above remain stable.
 
 pub struct Ctx<'a> {
