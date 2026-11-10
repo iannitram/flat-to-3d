@@ -1,11 +1,11 @@
 use std::cell::RefCell;
+#[cfg(test)]
+use std::fs;
 use std::io::Read;
 use std::process::{Child, Command, Stdio};
 use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::thread;
-#[cfg(test)]
-use std::{fs, path::Path};
 
 use super::files::{append_log, write_snapshot, Paths};
 use super::frames::{parse_track_frames, Device};
