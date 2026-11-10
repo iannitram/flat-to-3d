@@ -359,3 +359,4 @@ pub struct InstallReport {
     pub ran: Vec<String>,
     pub summary: String,
 }
+pub use crate::face::rows::GameRow;

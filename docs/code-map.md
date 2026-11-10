@@ -87,7 +87,23 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `crates/engine/src/collection.rs`, `toasts.rs` | present (`collection.rs`: `three_d_ready_appids`, `collection_diff`, `COLLECTION_NAME`; `toasts.rs`: `toasts_since`, `ToastBatch`) | the 3D Ready set and the collection diff, which toasts are new | M18, M26, M30 |
 | `crates/engine/src/view.rs` | present (`zone_colour`, `HealthView`, `health_view`, `throughput_text`, `uptime_text`; the faces' use of them still to come) | health, speed and uptime wording and zone colours, the one copy both faces read | M26, M27 |
 | `crates/engine/src/cli/view.rs` | planned | the `view` command grammar and dispatch | M11 |
-| `crates/engine/src/face/rows.rs` | planned | shared game rows shown by both faces | M11, M24, M26 |
+| `crates/engine/src/face/rows.rs` | stub | shared game rows shown by both faces; WP-03 fills the row builder | M11, M24, M26 |
+| `crates/engine/src/face/link_model.rs` | stub | shared link-view model; WP-28 fills the model | M11, M24, M26 |
+| `crates/engine/src/face/logs.rs` | stub | shared log parsing and filtering; WP-06 fills the helpers | M11, M24, M26 |
+| `crates/engine/src/link/wivrn.rs` | stub | WiVRn install and headset-app detection; WP-12 fills the probes | M10, M18 |
+| `crates/engine/src/watch/health_loop.rs` | stub | health, tunnel, healing and soak tick; WP-11 fills the loop | M10, M18 |
+| `crates/engine/src/injectors/geo11.rs` | stub | Geo-11 route implementation; WP-16 fills it | M9, M17, M20-M23 |
+| `crates/engine/src/injectors/port.rs` | stub | port route implementation; WP-27 fills it | M9, M14, M17 |
+| `crates/engine/src/injectors/fetch.rs` | stub | pinned downloads; WP-13 fills it | M9, M14, M17 |
+| `crates/app/src/engine.rs` | stub | engine calls for the app; WP-33 fills the adapter | M24 |
+| `crates/app/src/headset_page.rs` | stub | Headset page state and update; WP-04 fills the page logic | M24 |
+| `crates/app/src/games_page.rs` | stub | Games page state and update; WP-23 fills the page logic | M24 |
+| `crates/app/src/setup_page.rs` | stub | Setup page steps; WP-05 fills the steps and page logic | M24 |
+| `crates/app/src/logs_page.rs` | stub | Logs page state and filtering; WP-06 fills the page logic | M24 |
+| `crates/app/src/view_headset.rs` | stub | Headset page widgets; WP-33 fills the view | M24 |
+| `crates/app/src/view_games.rs` | stub | Games page widgets; WP-33 fills the view | M24 |
+| `crates/app/src/view_setup.rs` | stub | Setup page widgets; WP-33 fills the view | M24 |
+| `crates/app/src/view_logs.rs` | stub | Logs page widgets; WP-33 fills the view | M24 |
 | `crates/engine/src/status.rs`, `crates/engine/src/cli/link.rs`, `crates/engine/src/face/headset_view.rs`, `crates/engine/src/face/link_view.rs` | partly present | `status.rs`: status labels, colours, sorting and filtering; `headset_view.rs`: button state and log lines; `link_view.rs`: link labels, hints and flat reason | M11, M24, M26 |
 | `recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships five (#29, #36, #47-#49) | M12, M17, M20-M23 |
 | `games/zero-company/`, `games/ace-combat-7/` | planned | UEVR profile settings, launch notes, measured settings | M13-M16, M20 |
