@@ -73,7 +73,7 @@ def selected_files(root: Path, args: argparse.Namespace) -> list[Path]:
         if not p.is_file():
             continue
         name = rel(root, p)
-        if name.startswith(("docs/plans/", "third_party/")) or "tests" in Path(name).parts or name in ("Cargo.lock", "pnpm-lock.yaml"):
+        if name.startswith(("docs/plans/", "third_party/")) or "tests" in Path(name).parts or p.name in ("Cargo.lock", "pnpm-lock.yaml"):
             continue
         try:
             p.read_text(encoding="utf-8")
@@ -191,9 +191,10 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                         add(out, p, n, "links", f"dead link: {target}", "point the link at an existing file")
             if "paths" in rules and name in ("docs/ROADMAP.md", "docs/code-map.md") and not in_mv_map and not line.strip().startswith("<!-- mv-map -->") and not line.strip().startswith("<!-- /mv-map -->") and PATHS_RE.search(line):
                 add(out, p, n, "paths", "legacy path token", "write the crates/engine/ or crates/app/src path")
-            if "private" in rules:
-                if any(fnmatch.fnmatch(name, glob) and (sub is None or sub in line) for glob, sub in allow):
-                    continue
+            if "private" in rules and not any(
+                fnmatch.fnmatch(name, glob) and (sub is None or sub in line)
+                for glob, sub in allow
+            ):
                 for pat in PRIVATE:
                     if re.search(pat, line, re.IGNORECASE if pat in ("Hyp" + "erion", "qw" + "en", "sand" + "isk", "cra" + "ft-build") else 0):
                         add(out, p, n, "private", "private term", "remove the word, or add an allow line to tools/docs/private-allow.txt")

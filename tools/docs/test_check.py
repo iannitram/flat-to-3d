@@ -171,6 +171,17 @@ class CheckerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("docs/allowed.md:1: private:", result.stdout)
 
+    def test_private_allow_does_not_suppress_mermaid(self):
+        self.put("tools/docs/private-allow.txt", "docs/diagram.md\n")
+        self.put("docs/diagram.md", "```mermaid\nA --> B  C --> D\n```\n")
+        code, out = self.findings("private,mermaid", "docs/diagram.md")
+        self.assertEqual(code, 1)
+        self.assertIn("docs/diagram.md:2: mermaid:", out)
+
+    def test_nested_lockfile_is_exempt(self):
+        self.put("decky/pnpm-lock.yaml", "Hyp" + "erion\n")
+        self.assertEqual(self.findings("private", "decky/pnpm-lock.yaml"), (0, ""))
+
     def test_paths_changed_and_json(self):
         (self.root / ".git").mkdir()
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
