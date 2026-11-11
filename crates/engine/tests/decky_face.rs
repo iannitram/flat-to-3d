@@ -162,7 +162,16 @@ fn decky_error_codes_and_type_mirrors_match_rust() {
         ),
         (
             "GameRow",
-            json!({"appid":1,"name":"Game","status":"works-now","status_label":"Works now","status_colour":"#2e9e5b","switch_on":true,"plays_3d":true,"flat_reason":null}),
+            json!(flat3d_inject::face::rows::GameRow {
+                appid: 1,
+                name: "Game".into(),
+                status: "works-now".into(),
+                status_label: "Works now".into(),
+                status_colour: "#2e9e5b".into(),
+                switch_on: true,
+                plays_3d: true,
+                flat_reason: None,
+            }),
         ),
         (
             "LaunchText",
