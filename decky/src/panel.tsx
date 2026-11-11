@@ -5,7 +5,7 @@ import {
   PanelSectionRow,
   ToggleField,
 } from "@decky/ui";
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import {
   doctor,
   rows,
@@ -27,8 +27,15 @@ export function Content(): JSX.Element {
   const [pollErrors, setPollErrors] = useState<ApiError[]>([]);
   const [report, setReport] = useState<DoctorReport | null>(null);
 
-  const refresh = async () => {
+  const mounted = useRef(true);
+  const polling = useRef<Promise<void> | null>(null);
+
+  // One view+rows poll at a time: a slow engine call must not stack polls
+  // whose answers land out of order. An action's refresh waits for the poll
+  // that is out, then polls again so it sees the action's result.
+  const poll = async () => {
     const [viewResult, rowsResult] = await Promise.all([view(), rows()]);
+    if (!mounted.current) return;
     const nextErrors: ApiError[] = [];
     if (viewResult.ok) setView(viewResult.data);
     else nextErrors.push(viewResult.error);
@@ -37,49 +44,62 @@ export function Content(): JSX.Element {
     setPollErrors(nextErrors);
   };
 
+  const refresh = async (again = false) => {
+    if (polling.current) {
+      await polling.current;
+      if (!again) return;
+    }
+    if (!mounted.current || polling.current) return;
+    const p = poll().finally(() => {
+      polling.current = null;
+    });
+    polling.current = p;
+    await p;
+  };
+
   useEffect(() => {
+    mounted.current = true;
     void refresh();
     const timer = window.setInterval(() => void refresh(), 1000);
-    let mounted = true;
     void syncCollection()
       .then((plan) =>
         "code" in plan ? [plan] : syncLaunchOptions(plan),
       )
-      .catch((e): ApiError[] => [
-        {
-          code: "command-failed",
-          message: `Steam sync failed: ${e instanceof Error ? e.message : String(e)}`,
-        },
-      ])
+      // A Steam client call that throws: kept as "io", as engine.ts does.
+      .catch((e): ApiError[] => [{ code: "io", message: String(e) }])
       .then((syncErrors) => {
-        if (mounted) setErrors((current) => [...current, ...syncErrors]);
+        if (mounted.current) setErrors((current) => [...current, ...syncErrors]);
       });
     return () => {
-      mounted = false;
+      mounted.current = false;
       window.clearInterval(timer);
     };
   }, []);
 
   const runSetting = async (key: "tunnel" | "auto-3d", on: boolean) => {
     const result = await setSetting(key, on);
+    if (!mounted.current) return;
     if (!result.ok) setErrors((current) => [...current, result.error]);
-    await refresh();
+    await refresh(true);
   };
 
   const runSwitch = async (row: GameRow, on: boolean) => {
     const result = await setSwitch(row.appid, on);
+    if (!mounted.current) return;
     if (!result.ok) setErrors((current) => [...current, result.error]);
-    await refresh();
+    await refresh(true);
   };
 
   const runLinkAction = async (action: typeof start3d | typeof stop3d) => {
     const result = await action();
+    if (!mounted.current) return;
     if (!result.ok) setErrors((current) => [...current, result.error]);
-    await refresh();
+    await refresh(true);
   };
 
   const checkSetup = async () => {
     const result = await doctor();
+    if (!mounted.current) return;
     if (!result.ok) {
       setErrors((current) => [...current, result.error]);
       return;
