@@ -47,7 +47,7 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
 5. **Plug in and play:**
    - Steam launches the games. Plugging in the headset will start the `flat3d-link` service, which brings up the link.
    - The `flat3d-run` wrapper will check the link and each game's 3D switch, then apply that game's 3D route. If the link is not ready or the switch is off, the game runs flat.
-   - The engine will include Quest Tether's tether, ported to Rust.
+   - The headset's internet over the cable is Quest Tether's job, a separate app; Flat to 3D does not include or start it (ruling 42, 2026-11-10). Flat to 3D may show Quest Tether's state read-only.
 6. **Our own stereo for the remaining DX12 games:**
    - 007 First Light's dormant built-in stereo mode first.
    - Then Alan Wake 2.

@@ -101,10 +101,10 @@ Sections 0-7 and the WP files are the contract. The reviewer fixes, the Craft re
     - the `cli/*.rs` `run` signatures and the extra cli pub fns in §2 (the named WPs fill in the bodies only);
     - `crates/viewer/src/{frame,source,spec,gpu,xr}.rs`;
     - `Cargo.*` and `check.yml`.
-  - `crates/engine/src/exec.rs`: WP-10 may change only the body of `ProcessRunner::run` and add private helpers. The traits and pub names stay as WP-01 wrote them. `crates/engine/tests/architecture.rs` (WP-01b) allows `Command::new` only in exec.rs, plus a tagged allowlist of the sites still outside it. Today's sites are link.rs, watch.rs, tether/adb.rs and bin/flat3d-run.rs. WP-01b moves the link.rs and tether/adb.rs runners into exec.rs, so it lands the list with the watch sites (tagged `follow-up`: no WP in this pass moves them), bin/flat3d-run.rs (WP-31) and cli/link.rs (WP-08). The last two exec the game in place, so they are permanent entries.
+  - `crates/engine/src/exec.rs`: WP-10 is dropped (ruling 42); WP-36 later removes the relay methods. The traits and pub names stay as WP-01 wrote them until then. `crates/engine/tests/architecture.rs` (WP-01b) allows `Command::new` only in exec.rs, plus a tagged allowlist of the sites still outside it. Today's sites are link.rs, watch.rs, tether/adb.rs (becomes `link/adb.rs`, WP-35) and bin/flat3d-run.rs. WP-01b moves the link.rs and tether/adb.rs runners into exec.rs, so it lands the list with the watch sites (tagged `follow-up`: no WP in this pass moves them), bin/flat3d-run.rs (WP-31) and cli/link.rs (WP-08). The last two exec the game in place, so they are permanent entries.
   - `crates/engine/src/link.rs`: WP-12 owns the bodies. The WP-01 facade lines (`pub mod wivrn;` and the re-exports) stay.
   - `crates/app/src/lib.rs`: WP-33.
-  - `docs/code-map.md`: WP-25b (w2), then WP-34 (w5).
+  - `docs/code-map.md`: WP-25b (w2), then WP-34 (w6).
   - `docs/ROADMAP.md`: WP-25b, WP-34.
   - `docs/spiderman2/address-map.md`: WP-25b (w2), then WP-30 (w3, the generated block only).
   - `tools/ghidra/headless.sh`: WP-02 (w1, quoting only), then WP-25b (w2).
@@ -171,7 +171,7 @@ IDs are stable: they are never renumbered or reused. "planned" means a WP owns t
 | A1 | `cli_link::parse_link` (cli_link.rs:50) is never called | true | WP-01 pre-wires `parse_any`/dispatch + frozen `cli::<m>::run`; WP-08 bodies | — |
 | A2/A3/A4 | stale doc comments main.rs:1, lib.rs:5-6, injectors.rs:1 | true | WP-01 | — |
 | A5 | wrapper.rs:131 reads `{id}.recipe`, but recipes.rs:218-221 requires `<appid>-<slug>.recipe` (bug: every real recipe plays flat) | **bug** | WP-01 `catalog::find_recipe` + `run_with` | — |
-| A6 | snapshot `tunnel = tether!=Off`, `health/stats: None` (watch.rs:761-781) | true | WP-01 pre-wires `HealthLoop::tick`; WP-11 body | — |
+| A6 | snapshot `tunnel = tether!=Off`, `health/stats: None` (watch.rs:761-781) | void, tether removed (2026-11-10 ruling 42) | WP-01 pre-wires `HealthLoop::tick`; WP-11 body | — |
 | A7 | `uevr::apply` env is empty (uevr.rs:74-102); `prepare` passes `&[]` | true | WP-14, WP-27, WP-31 | — |
 | A8 | WiVRn start lacks `--early-active-runtime --no-publish-service`; Flatpak dir hard-coded (wrapper.rs:227-229) | true | WP-12 (`link/wivrn.rs`), WP-31 | — |
 | A9/A10 | code-map lists `cli_view.rs` and `rows.rs`, but neither exists | true | WP-01 rows → `planned`; WP-03, WP-28 | — |
@@ -196,14 +196,14 @@ IDs are stable: they are never renumbered or reused. "planned" means a WP owns t
 | K5 | `run_with` loses NotFound→flat (wrapper.rs:129-131) | planned | `switches::read_settings` NotFound→Default | — |
 | K6 | route env `Vec<(String,String)>` can't carry unset/sidecar | planned | `RouteEnv{env,unset,sidecar}`; `ExecSpec{argv,env,unset,sidecar}` | — |
 | K7 | self dev-dep `features=["testing"]` duplicates types | planned | `#[doc(hidden)] pub mod testing` always compiled | — |
-| K8 | heal reconnect has no call site | planned | WP-01 pre-wires `HealthTick.heal`; WP-09 executes the heal | — |
+| K8 | heal reconnect has no call site | void, tether removed (2026-11-10 ruling 42) | WP-01 pre-wires `HealthTick.heal`; WP-09 executes the heal | — |
 | K9 | `unittest discover -s tools` doesn't recurse without `__init__.py` | planned | per-folder loop (§2 CI); decky run from `decky/` | — |
 | K10 | shellcheck missing on host; old scripts never linted | planned | CI apt; WP-02 lints the 2 scripts; check.sh skips with notice | — |
 | K11 | check.py "commands == USAGE" contradicts locked USAGE | planned | one-way USAGE ⊆ table | — |
 | K12 | no node/pnpm in CI | planned | setup-node 22.23.4 + pnpm 10.34.9, per-step `hashFiles` guards | — |
 | K13 | doc contradictions C1-C19, C30 and private names (AGENTS.md:12) unowned | planned | WP-25b (C1/C3/C4 stay open: DECISIONS untouched) | — |
-| K14 | tether/mod.rs and the production callers of new link/tether fns unowned | planned | WP-10 owns `tether.rs`; WP-09 switches the callers | — |
-| K15 | watch.rs:915,922 tests fake "Tether command failed"/"Could not run tether command" | keep the prefixes | WP-10 appends `: exit N; <last 4 stderr lines>` | — |
+| K14 | tether/mod.rs and the production callers of new link/tether fns unowned | void, tether removed (2026-11-10 ruling 42) | WP-10 owns `tether.rs`; WP-09 switches the callers | — |
+| K15 | watch.rs:915,922 tests fake "Tether command failed"/"Could not run tether command" | void, tether removed (2026-11-10 ruling 42) | WP-10 appends `: exit N; <last 4 stderr lines>` | — |
 | K16 | tun0 read from host-side `/sys` is wrong (tun0 is on the headset) | planned | `adb shell ip addr show tun0` + `cat /proc/net/dev` | — |
 | K17 | `flatpak info --show-location` prints the deploy dir | planned | strip `/<arch>/<branch>/<commit>`; `--user` then `--system` | — |
 | K18 | locked link_stop.rs: "Access denied" stays an error | honour | WP-12 | — |

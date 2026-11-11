@@ -30,8 +30,11 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-23 | 2 | todo | - | - | |
 | WP-24 | 2 | todo | - | - | |
 | WP-25b | 2 | todo | - | - | |
+| WP-35 | 2b | todo | - | - | |
+| WP-36 | 2b | todo | - | - | |
+| WP-37 | 2b | todo | - | - | |
 | WP-08 | 3 | todo | - | - | |
-| WP-10 | 3 | todo | - | - | |
+| WP-10 | - | dropped (ruling 42) | - | - | |
 | WP-15 | 3 | todo | - | - | |
 | WP-19 | 3 | todo | - | - | |
 | WP-26 | 3 | todo | - | - | |
@@ -43,6 +46,7 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-31 | 4 | todo | - | - | |
 | WP-32 | 4 | todo | - | - | |
 | WP-33 | 4 | todo | - | - | |
-| WP-34 | 5 | todo | - | - | |
+| WP-38 | 5 | todo | - | - | |
+| WP-34 | 6 | todo | - | - | |
 
 Run log (one line per stop: time, reason, tip of `v2/integration`):

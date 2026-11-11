@@ -1,6 +1,8 @@
 <!-- split from roadmap-v2.md lines 138-476 at c0e6874 -->
 ## 2. New bones
 
+Shapes below that name the tether are removed by WP-35..37 (ruling 42, 2026-11-10); the built code still has them until then.
+
 ### Tree
 
 **Tree** (`*` new; `→` git mv). Facade-file form only: a module with children is `x.rs` + `x/`. No `mod.rs` anywhere, so there is no E0761. `mod_module_files` is off by default, so WP-01 turns it on as `deny` in the workspace lints below; `module_inception` stays clean too.
@@ -12,7 +14,7 @@ crates/engine/ (pkg flat3d-inject) ← inject/
       face.rs* face/{collection,headset_view,link_view,toasts,view}.rs ← src/*.rs, face/{rows*,link_model*,logs*}.rs
       injectors.rs injectors/{uevr,geo11*,port*,fetch*}.rs
       watch.rs(facade*) watch/{service←watch.rs,frames*,machine*,files*,run*,health_loop*}.rs
-      tether.rs←tether/mod.rs tether/{adb,heal,plan,relay,stepaside,wifi}.rs
+      link/adb.rs* (WP-35: the adb choice WiVRn wired mode needs; replaces `tether/`; the old tether tree `tether.rs←tether/mod.rs tether/{adb,heal,plan,relay,stepaside,wifi}.rs` is removed by WP-36)
       link.rs link/wivrn.rs*  wrapper.rs install.rs launch_options.rs undo.rs setup.rs state.rs switches.rs recipes.rs steam.rs
       health.rs stats.rs status.rs runs.rs
   tests/*.rs (55 moved: 49 locked by header + 6 unheadered: event_ring_wrap, launch_options_quotes, runs_extra_lines, tether_runtime, tether_tunnel_review, wrapper_run)
@@ -47,7 +49,7 @@ uevr-inject:
 - `inject/**`→`crates/engine/**` and `app/**`→`crates/app/**`;
 - `cli_link.rs`→`cli/link.rs`;
 - `{collection,headset_view,link_view,toasts,view}.rs`→`face/`;
-- `tether/mod.rs`→`tether.rs`;
+- `tether/mod.rs`→`tether.rs` (built by WP-01; removed by WP-36, ruling 42);
 - `watch.rs`→`watch/service.rs`, then frames/machine/files/run are split out; the new `watch.rs` is facade-only.
 
 `cli/undo.rs` is new. Today's working undo dispatch body moves into it, so it is not a git mv.
@@ -82,18 +84,18 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
 
 ### Glob-import guard
 
-**Glob-import guard:** locked tests glob `install::*` (install_plan.rs:3), `api::*` (api_snapshot.rs:3) and `tether::relay::*` (tether_tunnel.rs:3, tether_relay_cmds.rs:3, tether_tunnel_review.rs:3).
-- No new pub item in `api`, `install` or `tether::relay` may be named `json`, `c`, `p`, `H` or `full`. These are the local or explicit names those tests use: install_plan.rs:5-11, api_snapshot.rs:4,6.
+**Glob-import guard:** locked tests glob `install::*` (install_plan.rs:3) and `api::*` (api_snapshot.rs:3). (`tether::relay::*` is dropped from the guard: the relay is removed, ruling 42.)
+- No new pub item in `api` or `install` may be named `json`, `c`, `p`, `H` or `full`. These are the local or explicit names those tests use: install_plan.rs:5-11, api_snapshot.rs:4,6.
 - No new glob re-export goes into those three modules. The existing items stay as they are.
 
 ### Exec trait split
 
 **Exec trait split (`exec.rs`).** Two distinct traits stay re-exported under their locked names:
 - Link shape: `CommandRunner { fn run(&mut self, argv:&[String]) -> CommandOutput }`, plus `CommandOutput` and `SystemRunner`. Re-exported as `link::{CommandOutput, CommandRunner}` (tether_adb_runner.rs:3).
-- Relay shape: `RelayRunner { fn run(&mut self,&[String])->Result<String,String>; fn start_relay(&mut self,&[String],&str)->Result<(),String>; fn stop_relay(&mut self)->Result<(),String> }` (verbatim from adb.rs:64-68), plus `ProcessRunner`. Re-exported as `tether::adb::CommandRunner`. `tether_runtime.rs:2` imports it under that name; the file is unheadered, and the import is kept for compile, not because the file is locked.
-- `AdbRunner<R: link::CommandRunner>` keeps its bound and constructor (adb.rs:171-191) and still implements `link::CommandRunner`. The alias in `tether::adb` does not touch `AdbRunner`. `TetherAdb<R: RelayRunner>` (adb.rs:134) is unchanged too.
+- Adb runner shape: one `Result<String,String>` runner, `{ fn run(&mut self,&[String])->Result<String,String> }` (adb.rs:64), plus `ProcessRunner`. The relay methods `start_relay`/`stop_relay` and the name `RelayRunner` are removed (WP-36, ruling 42). Re-exported as `link::adb::CommandRunner` (WP-35). `tether_runtime.rs:2` imports it under that name; the file is unheadered, and the import is kept for compile, not because the file is locked.
+- `AdbRunner<R: link::CommandRunner>` keeps its bound and constructor (adb.rs:171-191) and still implements `link::CommandRunner`. The alias in `tether::adb` does not touch `AdbRunner`. `TetherAdb<R>` (adb.rs:134) is unchanged too, and moves to `link/adb.rs` in WP-35.
 - No blanket impl. `testing::FakeRunner` implements both traits; its API is frozen below.
-- Every new fn names its trait: `&mut dyn CommandRunner` (link/wivrn/doctor/fetch/setup/injectors) or `&mut dyn RelayRunner` (tether/health).
+- Every new fn names its trait: `&mut dyn CommandRunner` (link/wivrn/doctor/fetch/setup/injectors) or the one `Result<String,String>` adb runner (health).
 - WP-01's compile check includes `cargo test -p flat3d-inject --test tether_adb_runner --test tether_runtime`.
 - Only `exec.rs` spawns. WP-01's `crates/engine/tests/architecture.rs` fails on `Command::new` anywhere else in `crates/engine/src`, except a tagged allowlist. Each allowlist entry names a file and a tag. Today's sites are in four files: link.rs, watch.rs (two), tether/adb.rs and bin/flat3d-run.rs. The link.rs and tether/adb.rs sites are `SystemRunner` and `ProcessRunner`, which WP-01 moves into `exec.rs`. So the list it lands holds the watch sites after the split (tagged `follow-up`; no WP in this pass moves them), bin/flat3d-run.rs (WP-31) and cli/link.rs (WP-08's `exec_launch`). The last two exec the game in place of their own process, so they are permanent entries, not runner calls. A repo-wide rule with no allowlist would fail on day one.
 
@@ -163,19 +165,19 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
   - `detect_server(r:&mut dyn CommandRunner)->Result<WivrnDirs,String>` and `detect_quest_app(r:&mut dyn CommandRunner, serial:&str)->Option<QuestApp>`.
   - Callers:
     - WP-09: `detect_quest_app(r,&serial)`, then `.package`;
-    - WP-10: `Tether::set_wivrn(app,flags)`, see Wave-owned pub APIs;
+    - WP-10: dropped (ruling 42); there is no `Tether::set_wivrn`;
     - WP-29: `detect_server`, `.version`;
     - WP-31: `detect_server(r).map_err(|e| format!("wivrn: {e}"))`.
   - The retired names `WIVRN_SERVER_FLAGS`, `QUEST_APP_CANDIDATES`, `WivrnDirs{scope,root}` and `detect_dirs` are not used.
 - **`link.rs`**: `start_3d_commands_with(s:&WivrnStart)->Vec<Vec<String>>`, which has the same shape as the locked `start_3d_commands`. The stub delegates to `start_3d_commands()`; WP-12 writes the body.
 - **`watch/health_loop.rs`** (WP-11 body; WP-09 calls it):
   - `HealthLoop::new(start_unix:u64, mem_start_kb:u64, soak_file:Option<PathBuf>)->Self`;
-  - `tick(&mut self, now:u64, mode:TetherMode, playing:bool, r:&mut dyn RelayRunner)->HealthTick`;
-  - `pub struct HealthTick{pub health:Option<api::Health>, pub stats:Option<api::Stats>, pub tunnel:bool, pub heal:Option<tether::heal::Heal>, pub toast:Option<(api::EventKind,String)>}`.
+  - `tick(&mut self, now:u64, playing:bool, r:` the one `Result<String,String>` adb runner `)->HealthTick` (no `mode`, no `&mut dyn RelayRunner`; WP-36 names the runner type);
+  - `pub struct HealthTick{pub health:Option<api::Health>, pub toast:Option<(api::EventKind,String)>}` (no `stats`, `tunnel` or `heal`; the tunnel, heal, throughput and soak parts are cut by WP-36).
   - The loop appends its own soak lines to `soak_file`. Nobody else writes that file.
   - WP-11 may add `reconnects(&self)->u32` and `finish(self, now:u64, mem_end_kb:u64, orphans:u32)->SoakSummary` in its own file.
   - There is no `take_toast`, no `pub playing`, no `HealthAction` and no `WriteSoak`.
-  - WP-01's `publish()` (watch.rs:784) calls `tick(sys::unix_now(), …)`, pushes `toast` to the ring, and keeps `heal` for WP-09, which executes it. Service builds `HealthLoop::new(sys::unix_now(), 0, None)`.
+  - WP-01's `publish()` (watch.rs:784) calls `tick(sys::unix_now(), …)`, pushes `toast` to the ring, and no longer keeps a `heal` (removed, ruling 42). Service builds `HealthLoop::new(sys::unix_now(), 0, None)`.
   - Known interim, not a bug to fix early: `publish()` passes the raw runner to `tick`. WP-09 (wave 4) swaps in its adb adapter in `watch/service.rs`. So in waves 1 to 3 the tick's probes run a bare `adb` with no path and no serial. WP-11 lists this under `## Not verified` and does not change `publish()`; no other WP touches it before WP-09.
 - **`injectors.rs`** (WP-27 body):
   - `ensure_applied(game:&steam::Game, recipe:&Recipe, settings:&RouteSettings, p:&EnginePaths, r:&mut dyn CommandRunner)->Result<RouteEnv,String>` (stub Err);
@@ -219,7 +221,7 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
       | `geo11-convergence` | f32 > 0 |
       | `geo11-d3dx` | `k=v;k=v` |
       | `geo11-remove-first` | `;`-separated relative paths |
-- **`cli.rs`**: `pub struct Ctx<'a>{pub paths:&'a EnginePaths, pub runner:&'a mut dyn CommandRunner, pub relay:&'a mut dyn RelayRunner, pub json:bool}`. `now` is `sys::unix_now()` at the call site and is never a Ctx field. `main` builds a `SystemRunner` and a `ProcessRunner`.
+- **`cli.rs`**: `pub struct Ctx<'a>{pub paths:&'a EnginePaths, pub runner:&'a mut dyn CommandRunner, pub json:bool}`. `now` is `sys::unix_now()` at the call site and is never a Ctx field. `main` builds a `SystemRunner`.
   - `pub struct AnyCli{pub command:AnyCommand, pub json:bool}`; `pub enum AnyCommand{Engine(Command), Link(LinkCommand), View(ViewCommand), Setup(SetupCommand), Doctor(DoctorCommand)}`.
   - `pub fn parse_any(args:&[String])->Result<AnyCli,ApiError>`:
     - it splits at the first argv element exactly equal to `--` and removes `--json` from the head only;
@@ -258,7 +260,7 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
   - WP-07/08/27/28/29 implement only these bodies. Helpers stay private inside their own file.
 - **`api.rs`** DTOs:
   - Shapes:
-    - `LinkView{state:LinkState, label:String, hint:String, start:bool, stop:bool, health:HealthView, rx:String, tx:String, uptime:String, tether:TetherMode, tunnel:bool, auto_3d:bool, adb_source:AdbSource}`;
+    - `LinkView{state:LinkState, label:String, hint:String, start:bool, stop:bool, health:HealthView, rx:String, tx:String, uptime:String, auto_3d:bool, adb_source:AdbSource}`;
     - `LaunchText{options:String}`;
     - `CollectionPlan{name:String, wanted:Vec<u32>, add:Vec<u32>, remove:Vec<u32>}`;
     - `LogLines{lines:Vec<String>, text:String}`;
@@ -278,7 +280,7 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
   - Builders: `reply(self, prefix:&[&str], out:CommandOutput)->Self`, `ok(self, prefix:&[&str], stdout:&str)->Self` and `fail(self, prefix:&[&str], stderr:&str)->Self`.
   - Replies form a queue: the first unconsumed entry whose prefix matches the argv is consumed.
   - It implements link `CommandRunner`, which returns that `CommandOutput`.
-  - It implements `RelayRunner`: `Ok(stdout)` on success, else `Err(stderr)`. `start_relay` records `["relay", argv.., name]` and `stop_relay` records `["relay","stop"]`; both return Ok.
+  - It implements the one `Result<String,String>` runner: `Ok(stdout)` on success, else `Err(stderr)`. The relay methods are removed (ruling 42).
   - Every call pushes its argv to `ran`.
   - A WP may still use a local fake.
 - **`crates/viewer/src/frame.rs`** (full; WP-17/18/19 use it unchanged):
@@ -301,14 +303,7 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
 ### Wave-owned pub APIs
 
 **Wave-owned pub APIs.** The owning WP adds these inside its own file after wave 1. Later WPs call exactly these forms.
-- WP-10 (`tether.rs`, `tether/plan.rs`, `tether/wifi.rs`):
-  - `run_plan(steps:&[TetherStep], r:&mut dyn RelayRunner, sleep:&mut dyn FnMut(u64))->Result<(),String>`;
-  - `run_plan_in(steps, ctx:&PlanCtx, r, sleep, out:&mut PlanRun)->Result<(),String>`, with `PlanCtx{pub relay:Vec<String>}` and `PlanRun{pub ran:Vec<Vec<String>>, pub tun0:bool}`. `PlanCtx` has no `adb` field (questions.md 24); WP-10 puts a doc comment on `run_plan_in` instead: "Call it through `Tether`. A bare `ProcessRunner` would start the relay with `ADB` empty.";
-  - `Tether::set_sleep(&mut self, Box<dyn FnMut(u64)>)`;
-  - `Tether::set_wivrn(&mut self, app:String, flags:Vec<String>)`;
-  - `Tether::sync_wifi(&mut self)->wifi::SyncDecision` and `Tether::last_wifi(&self)->Option<&wifi::SyncDecision>`;
-  - `wifi::connect_argv(ssid, sec, psk)->Vec<String>`.
-  - WP-09 calls these.
+- WP-10 is dropped (ruling 42, 2026-11-10): `Tether::{set_sleep,set_wivrn,sync_wifi,last_wifi}` and `run_plan` are removed from this contract.
 - WP-12 (`link.rs`): `start_3d_with(runner:&mut dyn CommandRunner, s:&WivrnStart)->Result<LinkState,LinkError>`.
 - WP-13 (`injectors/fetch.rs`):
   - `pin(key:&str)->Result<Pin,FetchError>`;
