@@ -29,5 +29,7 @@ done < "$snap"
 awk '/^## Tests \(locked\)/{f=1} f&&/^```rust/{g=1;next} g&&/^```/{exit} g' "$snap" > "$tmp"
 actual=$(sha256sum "$tmp" | cut -d' ' -f1)
 [[ $actual == "${expected,,}" ]] || fail 4 sha-mismatch "rm \"\$SCRATCH/issues/$issue.md\" and rerun"
-chmod 644 "$tmp" && mv "$tmp" "$dest" || fail 4 dest-unwritable "make $dir writable, then rerun"
+if ! { chmod 644 "$tmp" && mv "$tmp" "$dest"; }; then
+  fail 4 dest-unwritable "make $dir writable, then rerun"
+fi
 printf 'locked-test: ok %s %s\n' "$dest" "$expected"
