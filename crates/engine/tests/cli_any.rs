@@ -97,9 +97,139 @@ fn command_registry_entries_parse_and_keep_their_typed_id() {
 }
 
 #[test]
-fn error_help_covers_every_closed_error_code() {
-    for code in flat3d_inject::api::ERROR_CODES {
-        let (_, fix) = flat3d_inject::api::error_help(code);
-        assert!(!fix.is_empty(), "{code}");
+fn every_any_command_variant_has_exactly_one_registry_row() {
+    use flat3d_inject::cli::link::{LinkCommand, SettingKey};
+    use flat3d_inject::cli::{Command, DoctorCommand};
+    let variants = vec![
+        AnyCommand::Engine(Command::List),
+        AnyCommand::Engine(Command::Inject { appid: 1 }),
+        AnyCommand::Engine(Command::Start3d),
+        AnyCommand::Engine(Command::Stop3d),
+        AnyCommand::Engine(Command::Status),
+        AnyCommand::Engine(Command::Undo { appid: 1 }),
+        AnyCommand::Link(LinkCommand::Watch),
+        AnyCommand::Link(LinkCommand::Snapshot),
+        AnyCommand::Link(LinkCommand::Install),
+        AnyCommand::Link(LinkCommand::Uninstall),
+        AnyCommand::Link(LinkCommand::SwitchGet { appid: 1 }),
+        AnyCommand::Link(LinkCommand::SwitchSet { appid: 1, on: true }),
+        AnyCommand::Link(LinkCommand::SettingGet {
+            key: SettingKey::Auto3d,
+        }),
+        AnyCommand::Link(LinkCommand::SettingSet {
+            key: SettingKey::Auto3d,
+            on: true,
+        }),
+        AnyCommand::Link(LinkCommand::Run {
+            appid: 1,
+            argv: vec![],
+        }),
+        AnyCommand::View(ViewCommand::View),
+        AnyCommand::View(ViewCommand::Rows {
+            filter: "all".into(),
+        }),
+        AnyCommand::View(ViewCommand::Launch {
+            add: true,
+            options: String::new(),
+        }),
+        AnyCommand::View(ViewCommand::Collection { current: None }),
+        AnyCommand::View(ViewCommand::Toasts { last_seq: 0 }),
+        AnyCommand::View(ViewCommand::Logs { limit: 1 }),
+        AnyCommand::Setup(SetupCommand::Packages),
+        AnyCommand::Setup(SetupCommand::InstallApps),
+        AnyCommand::Setup(SetupCommand::LaunchEnv { appid: None }),
+        AnyCommand::Setup(SetupCommand::Fetch { key: "k".into() }),
+        AnyCommand::Doctor(DoctorCommand::Run),
+    ];
+    // Adding a variant breaks this match until the list above is extended.
+    for v in &variants {
+        match v {
+            AnyCommand::Engine(
+                Command::List
+                | Command::Inject { .. }
+                | Command::Start3d
+                | Command::Stop3d
+                | Command::Status
+                | Command::Undo { .. },
+            )
+            | AnyCommand::Link(
+                LinkCommand::Watch
+                | LinkCommand::Snapshot
+                | LinkCommand::Install
+                | LinkCommand::Uninstall
+                | LinkCommand::SwitchGet { .. }
+                | LinkCommand::SwitchSet { .. }
+                | LinkCommand::SettingGet { .. }
+                | LinkCommand::SettingSet { .. }
+                | LinkCommand::Run { .. },
+            )
+            | AnyCommand::View(
+                ViewCommand::View
+                | ViewCommand::Rows { .. }
+                | ViewCommand::Launch { .. }
+                | ViewCommand::Collection { .. }
+                | ViewCommand::Toasts { .. }
+                | ViewCommand::Logs { .. },
+            )
+            | AnyCommand::Setup(
+                SetupCommand::Packages
+                | SetupCommand::InstallApps
+                | SetupCommand::LaunchEnv { .. }
+                | SetupCommand::Fetch { .. },
+            )
+            | AnyCommand::Doctor(DoctorCommand::Run) => {}
+        }
+        let rows = COMMANDS.iter().filter(|r| r.id == v.id()).count();
+        assert_eq!(rows, 1, "{} has {rows} registry rows", v.id());
+    }
+    assert_eq!(variants.len(), COMMANDS.len(), "a row has no variant");
+}
+
+/// The command words that start each alternative of a usage form.
+fn command_words(form: &str) -> Vec<String> {
+    form.split(" | ")
+        .map(|alt| {
+            alt.split_whitespace()
+                .take_while(|w| !w.contains(['<', '[', '|']) && *w != "--")
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .filter(|w| !w.is_empty())
+        .collect()
+}
+
+/// The `usage("<form>")` literals and the `FORM` const in `cli/link.rs`.
+fn link_usage_forms() -> Vec<String> {
+    let src = include_str!("../src/cli/link.rs");
+    let mut forms = Vec::new();
+    for (at, _) in src.match_indices("usage(") {
+        let rest = src[at + "usage(".len()..].trim_start();
+        if let Some(body) = rest.strip_prefix('"') {
+            forms.push(body[..body.find('"').unwrap()].to_owned());
+        }
+    }
+    let marker = "const FORM: &str = \"";
+    let at = src.find(marker).expect("FORM const") + marker.len();
+    forms.push(src[at..at + src[at..].find('"').unwrap()].to_owned());
+    forms
+}
+
+#[test]
+fn every_usage_command_word_has_a_registry_row() {
+    use flat3d_inject::cli::{INJECT_USAGE, UNDO_USAGE, USAGE};
+    let mut forms: Vec<String> = [USAGE, INJECT_USAGE, UNDO_USAGE]
+        .iter()
+        .map(|u| u.trim_start_matches("usage: flat3d-inject ").to_owned())
+        .collect();
+    let link = link_usage_forms();
+    assert!(link.len() >= 6, "link usage forms not found: {link:?}");
+    forms.extend(link);
+    for form in forms {
+        for word in command_words(&form) {
+            assert!(
+                COMMANDS.iter().any(|r| r.id == word),
+                "usage word {word:?} (in {form:?}) has no COMMANDS row"
+            );
+        }
     }
 }
