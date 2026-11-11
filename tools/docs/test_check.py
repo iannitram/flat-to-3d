@@ -44,13 +44,28 @@ class CheckerTests(unittest.TestCase):
         self.assertTrue(lines[1].startswith("docs/code-map.md:6: status: missing path: nope"), out)
 
     def test_status_root_paths_and_previous_dir(self):
-        self.put("docs/code-map.md", "## Parts\n| Path | Status |\n|---|---|\n| `recipes/` | present |\n| `cmake/clang.cmake` | present |\n| `.github/workflows/check.yml` | present |\n| `crates/engine/src/a.rs`, `crates/engine/src/b.rs` | present |\n| `c.rs` | present |\n")
+        self.put("docs/code-map.md", "## Parts\n| Path | Status |\n|---|---|\n| `recipes/` | present |\n| `decky/` | skeleton |\n| `cmake/clang.cmake` | present |\n| `.github/workflows/check.yml` | present |\n| `crates/engine/src/a.rs`, `crates/engine/src/b.rs` | present |\n| `c.rs` | present |\n")
         for name in ("cmake/clang.cmake", ".github/workflows/check.yml", "crates/engine/src/b.rs", "crates/engine/src/c.rs", "crates/engine/src/a.rs"):
             self.put(name, "")
         (self.root / "recipes").mkdir()
-        self.put("docs/code-map.md", (self.root / "docs/code-map.md").read_text() + "| `decky/` | skeleton |\n")
         (self.root / "decky").mkdir()
         self.assertEqual(self.findings("status", "docs/code-map.md"), (0, ""))
+
+    def test_status_relative_to_previous_path_dir(self):
+        self.put("docs/code-map.md", "## Parts\n| Path | Status |\n|---|---|\n| `crates/engine/src/cli.rs`, `cli/link.rs` | present |\n| `games/zero-company/`, `ace-combat-7/` | present |\n| `crates/engine/src/cli.rs`, `cli/nowhere.rs` | present |\n")
+        for name in ("crates/engine/src/cli.rs", "crates/engine/src/cli/link.rs"):
+            self.put(name, "")
+        (self.root / "games/zero-company").mkdir(parents=True)
+        (self.root / "games/ace-combat-7").mkdir()
+        code, out = self.findings("status", "docs/code-map.md")
+        self.assertEqual(code, 1)
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 1, out)
+        self.assertTrue(lines[0].startswith("docs/code-map.md:6: status: missing path: cli/nowhere.rs"), out)
+
+    def test_mermaid_header_lines_are_not_findings(self):
+        self.put("docs/x.md", "```mermaid\nflowchart TD\nsubgraph X\nclassDef a fill:#fff\nA --> B\nend\n```\n")
+        self.assertEqual(self.findings("mermaid", "docs/x.md"), (0, ""))
 
     def test_links_anchor_http_and_fence(self):
         self.put("docs/page.md", "[dead](missing.md) [anchor](#top) [web](https://example.com)\n```\n[ignored](also-missing.md)\n```\n")

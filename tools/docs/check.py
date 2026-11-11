@@ -140,15 +140,22 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                             if "*" in item:
                                 if not list(root.glob(item)):
                                     add(out, Path("docs/code-map.md"), n + 1, "status", f"path glob has no matches: {item}", "create the path, or mark the row planned")
+                                previous_dir = Path(item.rstrip("/")).parent
                                 continue
-                            rooted = "/" in item
+                            rooted = "/" in item.rstrip("/")
                             item = item.rstrip("/")
                             item_path = Path(item)
-                            target = root / item_path if rooted else root / previous_dir / item_path
-                            if not target.exists():
+                            if not rooted:
+                                resolved = previous_dir / item_path
+                            elif (root / item_path).exists():
+                                resolved = item_path
+                            else:
+                                resolved = previous_dir / item_path
+                                if not (root / resolved).exists():
+                                    resolved = item_path
+                            if not (root / resolved).exists():
                                 add(out, Path("docs/code-map.md"), n + 1, "status", f"missing path: {item}", "create the path, or mark the row planned")
-                    if paths:
-                        previous_dir = Path(paths[-1]).parent
+                            previous_dir = resolved.parent
 
     for name, lines in texts.items():
         p = Path(name)
@@ -194,7 +201,7 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                     probe = re.sub(r"\[[^\]]*\]|\([^)]*\)|\{[^}]*\}", "", probe)
                     probe = probe.replace(" & ", " ")
                     parts = re.split(r"-{2,}>|={2,}>|-\.+->|-{3,}", probe)
-                    if any(len(part.split()) > 1 for part in parts):
+                    if any(len(part.split()) > 1 for part in parts[1:-1]):
                         add(out, p, n, "mermaid", "2 statements on one line", "put one statement per line")
 
     if "usage" in rules and "docs/code-map.md" in names:
