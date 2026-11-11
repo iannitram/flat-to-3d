@@ -1,14 +1,14 @@
 # Code map
 
-The intended shape of the repo for 1.0 (SPEC.md, "Plug in and play", approved 2026-11-01): **one Rust engine, a link service, a launch wrapper, two faces**. Steam is the launcher. A systemd user unit runs the engine's `watch` command, which owns the headset link (internet tunnel, WiVRn, `adb reverse`, health). A wrapper, `flat3d-run %command%`, sits in the launch options of each 3D-ready game and plays it in 3D when the link is ready and the game's switch is on, flat otherwise. The desktop app (a native Rust window, iced, in Desktop Mode) and the Decky plugin (a thin TypeScript panel over the engine binary, in Game Mode) only show the link, the headset's health and the per-game switches; every word, colour, sort order and rule they show comes from the engine through `--json`. **Main on 2026-11-07 (`50c1e49`, after wave 1):** the engine's parts are built and tested (459 tests pass): Steam games, recipes, the JSON shapes, the wrapper, the watch state machine and its loop (`watch::run`), Start 3D and Stop 3D, the tether pieces and plan, health, stats, undo (`undo <appid>` works), the face rules with `link_view`, and the UEVR route's file half on a fake prefix. Still missing in the engine: the command bodies (`cli::dispatch` answers `NotBuilt` for all but `undo`, and `injectors::inject` is a stub, #27), wiring `watch` and the other link commands into `main.rs` (#120), the view commands (#121), the tether health loop (#125), `rows` (#76), the UEVR device half (#51), Geo-11 (#52) and port (#27). `crates/app/` is a skeleton with four placeholder tabs (4 tests, #78). Nothing exists yet in `decky/src/`, `packaging/`, `games/`, `viewer/` or `layer/`, and `recipes/` holds only its README. Everything marked *planned* does not exist yet.
+The repository plan is [docs/ROADMAP.md](ROADMAP.md). This map describes the current Rust engine, app, Decky panel, routes and packaging.
 
-The deep map of Spidy's stereo core is [spidy-stereo-core-map.md](spidy-stereo-core-map.md); the Spider-Man 2 address map is [spiderman2-address-map.md](spiderman2-address-map.md).
+The deep maps are [Spidy core](spiderman2/spidy-core-map.md) and the [Spider-Man 2 address map](spiderman2/address-map.md).
 
 **Platforms (R04).** The host is Linux only: SteamOS on the owner's Z13 (rulings 1, 2). Mac and Windows hosts don't apply. Windows binaries (the Spider-Man 2 port's DLLs, the SBS viewer if it runs inside Proton) are cross-built on Linux with clang-cl + xwin and run under Proton (ruling 21). The desktop app ships as an AppImage of the iced binary (no WebKitGTK). The Decky plugin bundles the engine binaries. The link service needs no root: Quest Tether's existing udev rule already grants USB access. CI is Linux only.
 
 ## How it fits together
 
-```mermaid
+~~~mermaid
 flowchart TD
     Steam["Steam: Play on a 3D Ready game"] --> Run["flat3d-run %command% (crates/engine/src/bin/flat3d-run.rs)"]
     Run -->|"reads"| State[("$XDG_RUNTIME_DIR/flat3d/link.json")]
@@ -18,7 +18,8 @@ flowchart TD
     Unit["systemd user unit flat3d-link"] --> Watch["crates/engine/src/watch.rs: flat3d-inject watch"]
     Watch -->|"adb track-devices"| Quest["Quest 2 over USB"]
     Watch --> Tether["crates/engine/src/tether/: adb choice, gnirehtet relay, Wi-Fi sync, heal"]
-    Watch --> Link["crates/engine/src/link.rs: WiVRn server + adb reverse + WiVRn app"]    Watch --> Health["health.rs, stats.rs: battery, temperature, throughput, soak"]
+    Watch --> Link["crates/engine/src/link.rs: WiVRn server + adb reverse + WiVRn app"]
+    Watch --> Health["health.rs, stats.rs: battery, temperature, throughput, soak"]
     Watch -->|"atomic write"| State
     Watch -->|"reads"| Cfg
     Watch -->|"reads"| Runs
@@ -43,7 +44,7 @@ flowchart TD
     Inj -.only if UEVR's 2D screen is flat.-> Layer["layer/ — fixed-screen OpenXR layer"]
     Link --> WiVRn[(WiVRn server + headset app)]
     Tools["tools/ — build-spidy, xmatch, ghidra, research"] --> Games
-```
+~~~
 
 <!-- mv-map -->
 - `inject/**` → `crates/engine/**`
@@ -84,8 +85,8 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `decky/` | skeleton (`plugin.json`; a placeholder `main.py` whose every method returns the missing-binary `io` error; no TypeScript yet) | the Game Mode plugin (`plugin.json`, Decky's TypeScript + Rollup template). No Python backend (ruling 40): the backend is the engine binary `bin/flat3d-inject`, called with `--json`; `main.py` goes when the binary backend works (#130) | M11, M18, M30 |
 | `decky/src/` | planned (#130 scaffold, #131 panel, #132 launch-option sync, #133 collection and toasts) | a thin QAM panel with no logic: it runs `flat3d-inject <command> --json` and draws the answer (link state with Start 3D / Stop 3D, headset health, tunnel and Auto 3D switches, then the 3D Ready games with a switch each); it calls Steam's own client only because only JavaScript can: `SteamClient.Apps.SetAppLaunchOptions` with the text from `launch add` / `launch remove`, `collectionStore` with the diff from `collection`, toasts from `toasts`; never touches cover art | M11, M18, M26, M30 |
 | `crates/engine/src/launch_options.rs` | present (`add_wrapper`, `remove_wrapper`, `has_wrapper`, E4b) | the rule the Decky plugin used to carry, now Rust: add and remove the `flat3d-run` word in a launch-option line (keeping `mangohud` and the rest) | M30 |
-| `crates/engine/src/collection.rs`, `toasts.rs` | present (`collection.rs`: `three_d_ready_appids`, `collection_diff`, `COLLECTION_NAME`; `toasts.rs`: `toasts_since`, `ToastBatch`) | the 3D Ready set and the collection diff, which toasts are new | M18, M26, M30 |
-| `crates/engine/src/view.rs` | present (`zone_colour`, `HealthView`, `health_view`, `throughput_text`, `uptime_text`; the faces' use of them still to come) | health, speed and uptime wording and zone colours, the one copy both faces read | M26, M27 |
+| `crates/engine/src/face/collection.rs`, `crates/engine/src/face/toasts.rs` | present (`collection.rs`: `three_d_ready_appids`, `collection_diff`, `COLLECTION_NAME`; `toasts.rs`: `toasts_since`, `ToastBatch`) | the 3D Ready set and the collection diff, which toasts are new | M18, M26, M30 |
+| `crates/engine/src/face/view.rs` | present (`zone_colour`, `HealthView`, `health_view`, `throughput_text`, `uptime_text`; the faces' use of them still to come) | health, speed and uptime wording and zone colours, the one copy both faces read | M26, M27 |
 | `crates/engine/src/cli/view.rs` | planned | the `view` command grammar and dispatch | M11 |
 | `crates/engine/src/face/rows.rs` | stub | shared game rows shown by both faces; WP-03 fills the row builder | M11, M24, M26 |
 | `crates/engine/src/face/link_model.rs` | stub | shared link-view model; WP-28 fills the model | M11, M24, M26 |
@@ -105,29 +106,76 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `crates/app/src/view_setup.rs` | stub | Setup page widgets; WP-33 fills the view | M24 |
 | `crates/app/src/view_logs.rs` | stub | Logs page widgets; WP-33 fills the view | M24 |
 | `crates/engine/src/status.rs`, `crates/engine/src/cli/link.rs`, `crates/engine/src/face/headset_view.rs`, `crates/engine/src/face/link_view.rs` | partly present | `status.rs`: status labels, colours, sorting and filtering; `headset_view.rs`: button state and log lines; `link_view.rs`: link labels, hints and flat reason | M11, M24, M26 |
-| `recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships five (#29, #36, #47-#49) | M12, M17, M20-M23 |
+| `../../../recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships five (#29, #36, #47-#49) | M12, M17, M20-M23 |
 | `games/zero-company/`, `games/ace-combat-7/` | planned | UEVR profile settings, launch notes, measured settings | M13-M16, M20 |
 | `games/planet-of-lana/`, `games/control/` | planned | where the Geo-11 fix comes from (fetched, never vendored unless its license allows), settings | M22, M23 |
 | `games/spiderman2/` | planned | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `viewer/` | planned | SBS screen viewer: Geo-11's side-by-side picture on the fixed screen over OpenXR. Likely a Windows binary run in the game's Proton session reading Geo-11's shared texture (FlatToDepth / VRScreenCap, MIT, are the references) | M21 |
 | `layer/` | planned, conditional | fixed-screen OpenXR layer, only if UEVR's 2D Screen Mode loses depth (#33, #9) | M15 |
-| `third_party/SpidyVR` | present (submodule, v0.3.8) | the baseline mod (GPL-3.0) | M1, M3-M8 |
-| `cmake/clang-cl-xwin.cmake`, `tools/build-spidy.sh` | present | cross-building Windows binaries on Linux in the `craft-build` distrobox | M3-M8, M21 |
+| `docs/../third_party/SpidyVR` | present (submodule, v0.3.8) | the baseline mod (GPL-3.0) | M1, M3-M8 |
+| `docs/../cmake/clang-cl-xwin.cmake`, `tools/build-spidy.sh` | present | cross-building Windows binaries on Linux in the distrobox build container (`$FLAT3D_BUILD_BOX`) | M3-M8, M21 |
 | `tools/research/`, `tools/xmatch/`, `tools/ghidra/` | present | Spider-Man 2 discovery: Spidy's tools without hash gates, the Remastered → SM2 matcher, headless Ghidra under a memory guard | M3-M6, M8 |
-| `crates/engine/tests/*.rs` | present (55 files) | the locked tests of the engine issues, one file per module or behaviour: `api_types`, `api_response`, `api_snapshot`, `cli_json`, `recipe_parse`, `recipe_check`, `recipe_load`, `injector_route`, `uevr_profile`, `launch_options`, `launch_options_quotes`, `collection`, `toasts`, `status`, `headset_view`, `view_health`, `health_parse`, `health_toast`, `stats_rate`, `stats_soak`, `state_paths`, `steam_installed_games`, `event_ring` (+ `_wrap`), `runs_record` (+ `_extra_lines`), `switches_settings`, `setup_packages`, `install_plan`, `undo_record`, `undo_actions`, `cli_link_parse`, `link_commands`, `link_start`, `link_stop`, `link_view`, `watch_frames`, `watch_plug`, `watch_grace`, `watch_manual`, `wrapper_plan`, `wrapper_exec`, `wrapper_run`, and `tether_*` (`adb_choice`, `adb_runner`, `plan`, `wifi_parse`, `wifi_cmds`, `wifi_sync`, `relay_cmds`, `tunnel`, `tunnel_review`, `stepaside`, `heal`, `runtime`) | all |
-| `.github/workflows/check.yml` | partly present (self-hosted Linux runner: the `engine` job's `cargo build`, `cargo test`, `py_compile` of `decky/main.py`, and the `app` job's `cargo test` and `cargo check` of `crates/app/` (#78); no `cargo fmt --check` or `clippy -D warnings` yet, and main fails both, #183; no decky typecheck or build yet) | CI on Linux: engine build + test; grows to the app (`cargo test` and `cargo check` of `crates/app/`) and a TypeScript typecheck and build of `decky/` (no tests: the panel has no logic) | all |
+| `crates/engine/tests/*.rs` | present | Engine behavior and locked contract tests; inspect the test directory for current coverage | all |
+| `docs/../.github/workflows/check.yml` | partly present (self-hosted Linux runner: the `engine` job's `cargo build`, `cargo test`, `py_compile` of `decky/main.py`, and the `app` job's `cargo test` and `cargo check` of `crates/app/` (#78); no `cargo fmt --check` or `clippy -D warnings` yet, and main fails both, #183; no decky typecheck or build yet) | CI on Linux: engine build + test; grows to the app (`cargo test` and `cargo check` of `crates/app/`) and a TypeScript typecheck and build of `decky/` (no tests: the panel has no logic) | all |
 | `docs/` | present | rulings (`notes/DECISIONS.md`), research, the port plan, Step 0 run sheet, maps | all |
 
+## Commands
+
+Entries follow `cli::COMMANDS` order.
+
+| Command | Group | Module | JSON (api.rs type) | WP |
+|---|---|---|---|---|
+| `list` | Engine | `crates/engine/src/cli/engine.rs` | `Game (array)` | — |
+| `inject` | Engine | `crates/engine/src/cli/inject.rs` | `InjectResult` | WP-27 |
+| `start-3d` | Engine | `crates/engine/src/cli/engine.rs` | `LinkReport` | WP-07 |
+| `stop-3d` | Engine | `crates/engine/src/cli/engine.rs` | `LinkReport` | WP-07 |
+| `status` | Engine | `crates/engine/src/cli/engine.rs` | `LinkReport` | WP-07 |
+| `undo` | Engine | `crates/engine/src/cli/undo.rs` | `UndoResult` | — |
+| `watch` | Link | `crates/engine/src/cli/link.rs` | — | WP-08 |
+| `snapshot` | Link | `crates/engine/src/cli/link.rs` | `LinkSnapshot` | WP-08 |
+| `install` | Link | `crates/engine/src/cli/link.rs` | `InstallReport` | WP-08 |
+| `uninstall` | Link | `crates/engine/src/cli/link.rs` | `InstallReport` | WP-08 |
+| `switch get` | Link | `crates/engine/src/cli/link.rs` | `SwitchState` | WP-08 |
+| `switch set` | Link | `crates/engine/src/cli/link.rs` | `SwitchState` | WP-08 |
+| `setting get` | Link | `crates/engine/src/cli/link.rs` | `SettingState` | WP-08 |
+| `setting set` | Link | `crates/engine/src/cli/link.rs` | `SettingState` | WP-08 |
+| `run` | Link | `crates/engine/src/cli/link.rs` | — | WP-08 |
+| `view` | View | `crates/engine/src/cli/view.rs` | `LinkView` | WP-28 |
+| `rows` | View | `crates/engine/src/cli/view.rs` | `GameRow (array)` | WP-28 |
+| `launch` | View | `crates/engine/src/cli/view.rs` | `LaunchText` | WP-28 |
+| `collection` | View | `crates/engine/src/cli/view.rs` | `CollectionPlan` | WP-28 |
+| `toasts` | View | `crates/engine/src/cli/view.rs` | `ToastBatch` | WP-28 |
+| `logs` | View | `crates/engine/src/cli/view.rs` | `LogLines` | WP-28 |
+| `setup packages` | Setup | `crates/engine/src/cli/setup.rs` | `{wivrn,gnirehtet,missing}` | WP-29 |
+| `setup install-apps` | Setup | `crates/engine/src/cli/setup.rs` | `SetupReport` | WP-29 |
+| `setup launch-env` | Setup | `crates/engine/src/cli/setup.rs` | `LaunchText` | WP-29 |
+| `setup fetch` | Setup | `crates/engine/src/cli/setup_fetch.rs` | `SetupReport` | WP-27 |
+| `doctor` | Doctor | `crates/engine/src/cli/doctor.rs` | `DoctorReport` | WP-29 |
+
 ## API shape (crates/engine/src/api.rs)
+
+`api.rs` owns the eight error codes and `error_help`; this table copies those values. Exit codes come from `cli::exit_code`.
+
+| Code | Exit | Retryable | Fix (`api::error_help`) |
+|---|---:|---|---|
+| `usage` | 2 | no | check the command against the usage line in the message |
+| `not-built` | 2 | no | the message names the work package that builds it |
+| `not-found` | 1 | no | check the name or path; `flat3d-inject list` shows installed games |
+| `bad-recipe` | 1 | no | fix the recipe file named in the message |
+| `refused` | 1 | no | do what the message names first, then run the command again |
+| `link-not-ready` | 1 | yes | `systemctl --user restart flat3d-link.service` |
+| `command-failed` | 1 | yes | check the command named in the message, then run it again |
+| `io` | 1 | yes | check the path in the message, then run the command again |
+
 
 Fixed 2026-10-31 when #50 was split (E1d #61 types, E1e #62 envelope, E1f #63 `--json`) and extended 2026-11-01 for "Plug in and play"; the locked tests in those issues hold the old names (kept as they are), and the app (by crate) and the Decky panel (by `--json`) read exactly this. Rust field name = JSON key.
 
 Every `flat3d-inject <command> --json` prints exactly one line holding one JSON object, the envelope `Response<T>`:
 
-```json
+~~~json
 {"ok": true,  "command": "list", "data": [ ... ]}
 {"ok": false, "command": "list", "error": {"code": "not-built", "message": "not built yet: ..."}}
-```
+~~~
 
 `data` is left out on failure and `error` on success. A bad command line gives `"command": ""` and code `usage`. Exit code: 0 ok; 2 for `usage` and `not-built`; 1 for every other error. Without `--json`, results go to stdout as text and errors to stderr as `error: <message>`. `watch` and `run` are not JSON commands: `watch` runs until stopped (the systemd unit), `run` ends by exec-ing the game and prints nothing.
 
@@ -176,9 +224,17 @@ Every `flat3d-inject <command> --json` prints exactly one line holding one JSON 
 | `LogLines` | `lines` (newest first, blank lines dropped), `text` (the same lines joined for copying) |
 | `ApiError` | `code`, `message`; `code` is one of `usage`, `not-built`, `not-found`, `bad-recipe`, `refused`, `link-not-ready`, `command-failed`, `io` |
 
-**Errors the Decky backend makes itself** (#67): a missing engine binary is `io`; a timeout, a non-zero exit with no JSON, or unparseable output is `command-failed`. Same envelope, so the panel handles them like engine errors.
+**Errors the Decky backend makes itself** (the `decky/main.py` shim): a missing engine binary is `io`; a timeout, a non-zero exit with no JSON, or unparseable output is `command-failed`. Same envelope, so the panel handles them like engine errors.
 
 **State, IPC and files.** There is no daemon socket; the link service and its clients talk through files, all written atomically (temp file, then rename):
+
+| Path | Use |
+|---|---|
+| `~/.local/share/flat3d` | installed binaries and cached tools |
+| `~/.local/state/flat3d` | logs, soak summaries and session records |
+| `~/.config/flat3d/settings` | settings and game switches |
+| `$XDG_RUNTIME_DIR` | link snapshot, requests and active run records |
+| `$FLAT3D_RE_HOME` | reverse-engineering tools and local game executables |
 
 | File | Writer | Readers | Holds |
 |---|---|---|---|
@@ -186,7 +242,7 @@ Every `flat3d-inject <command> --json` prints exactly one line holding one JSON 
 | `$XDG_RUNTIME_DIR/flat3d/request` | `start-3d`, `stop-3d` when a service is running | `watch`, which takes it on its next tick and deletes it | one line, `start-3d` or `stop-3d`. Keeps the service the only actor, so a hand-pressed button and the grace timer never fight. With no service running the commands run the steps themselves. |
 | `$XDG_RUNTIME_DIR/flat3d/runs/run-<pid>.txt` | `flat3d-run` | `watch` (a record whose pid is gone is ignored) | `appid`, `pid`, `mode` (`3d` or `flat`): which games are running and how |
 | `~/.config/flat3d/settings` | `setting set`, `switch set` | everyone | Auto 3D, tunnel, the games whose 3D switch is off |
-| `~/.local/state/flat3d/soak-<unix>.txt` | `watch` | the Headset page | one soak summary per link session |
+| `~/.local/state/flat3d/` | `watch` | the Headset page and Logs page | logs, soak summaries and session records |
 | `~/.local/state/flat3d/link.log` | `watch` | the Logs page (planned, #122) | the link events, one per line |
 
 **Start 3D and Stop 3D** (E2a #64, E2b #65, E2c #66). The WiVRn half, over WiVRn's wired mode. Start: `adb devices` (no headset or unauthorised stops here), `systemd-run --user --collect --unit=flat3d-wivrn flatpak run --command=wivrn-server io.github.wivrn.wivrn` (the server without its desktop window), `adb reverse tcp:9757 tcp:9757`, `adb shell am start -a android.intent.action.VIEW -d wivrn+tcp://localhost org.meumeu.wivrn.github`. Stop: `adb shell am force-stop org.meumeu.wivrn.github`, `adb reverse --remove tcp:9757`, `systemctl --user stop flat3d-wivrn.service` (the adb steps may fail with the headset unplugged; the server stop decides). They run behind `link::CommandRunner`, so tests fake them. The word `adb` in a command is replaced by the adb in use (`tether::adb::AdbRunner`). A replug heals with `watch::link_commands(Effect::Reattach)` (the last two start commands) because the server is already running.
@@ -218,7 +274,7 @@ Every `flat3d-inject <command> --json` prints exactly one line holding one JSON 
 ## Packaging
 
 - **Link service and wrapper:** `flat3d-inject install` copies `flat3d-inject` and `flat3d-run` to `~/.local/bin/`, the tools (`adb`, `gnirehtet`, `gnirehtet.apk`) to `~/.local/share/flat3d/bin/`, writes `~/.config/systemd/user/flat3d-link.service` and runs `systemctl --user enable --now flat3d-link.service`. `uninstall` reverses it. The Decky plugin and the app both call `install` from their Setup step.
-- **Tools, never in git:** `packaging/build-tools.sh` builds adb from Android's open source (Apache-2.0, a standalone build such as nmeum/android-tools at a pinned tag) and the gnirehtet relay from Genymobile's source (Apache-2.0, `cargo build --release` at a pinned tag), and fetches the gnirehtet client APK by pinned checksum, all into `dist/tools/` (git-ignored) in the `craft-build` distrobox.
+- **Tools, never in git:** `packaging/build-tools.sh` builds adb from Android's open source (Apache-2.0, a standalone build such as nmeum/android-tools at a pinned tag) and the gnirehtet relay from Genymobile's source (Apache-2.0, `cargo build --release` at a pinned tag), and fetches the gnirehtet client APK by pinned checksum, all into `dist/tools/` (git-ignored) in the distrobox build container (`$FLAT3D_BUILD_BOX`).
 - **App:** AppImage of the iced binary (no WebKitGTK), run in Desktop Mode; it carries the tools. It can add itself to Steam as a non-Steam game later (after 1.0).
 - **Decky plugin:** Decky's zip with the engine binaries at `bin/flat3d-inject` and `bin/flat3d-run` and the tools beside them, built on Linux.
 - All come from the same tagged commit, so the faces, the engine and the tools never mismatch.

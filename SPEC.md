@@ -4,12 +4,6 @@
 
 **Approved by the owner:** 2026-11-01, the owner, the Project Manager session's question tool: "Approve (Recommended)" for the spec with M12 and M17 reworded to the Plug in and play rulings (rulings 24-41 in `docs/notes/DECISIONS.md`).
 
-Previous approval (the Inject-button 1.0, superseded): 2026-10-31, the owner, question tool: "Approve (Recommended)" for the desktop app (M24), rulings "Desktop app + Decky plugin (Recommended)" and "Tauri (Rust + web UI) (Recommended)"). Previous approval, 2026-10-31: "Approve (Recommended)" (the five games, gamepad only, Start 3D and Stop 3D, M18-M23, #9's SBS viewer in 1.0); order "ZC, AC7, Geo-11 pair, SM2 (Recommended)". Wording fix 2026-10-31, question tool: M10 "Reword to WiVRn wired only (Recommended)". Rulings behind it, the Project Manager session's question tool, 2026-10-31: V1 scope "Add the 3 'likely' ones"; controller "A gamepad (Recommended)"; Stop 3D "Yes (Recommended)".
-
-Earlier approval, 2026-10-31, the owner, in the Project Manager session's question tool: "Approve (Recommended)" (1.0 = Zero Company first, UEVR then our own hook, 2D Screen Mode else the fixed-screen layer, offline after one EA link, plus Spider-Man 2, both from Start 3D and Inject in Game Mode). Rulings behind it, 2026-10-31: "Into 1.0"; route "UEVR first, port fallback (Recommended)"; 3D TV "Try 2D Screen Mode, else layer (Recommended)"; order "Zero Company first (Recommended)"; EA link "OK if it plays offline after (Recommended)".
-
-First approval, 2026-10-26: "Spider-Man 2 + Start 3D (Recommended)".
-
 A Must or a Won't changed after approval sends the line above back to "not yet".
 
 ## Musts
@@ -76,8 +70,8 @@ Run Zero Company and ACE COMBAT 7 in stereo through UEVR (our own hook if UEVR c
 - Controls: a gamepad through Steam Input for every game (ruling 2026-10-31).
 - Geo-11 games need an SBS screen viewer that puts Geo-11's side-by-side picture on the fixed screen. Likely route, unproven: a viewer running in the same Proton session (OpenXR through WiVRn) reading Geo-11's shared texture, as Blackskydk/FlatToDepth and artumino/VRScreenCap (MIT) do on Windows.
 - ACE COMBAT 7 is not installed today (its library drive isn't mounted).
-- Zero Company comes first (ruling 2026-10-31): offline check, UEVR nightly under Proton, the 3D TV, then its recipe; it proves the headset chain and Inject on a real game while the Spider-Man 2 address mapping goes on.
-- The Spider-Man 2 port follows `docs/PORT-SPIDERMAN2.md` Steps 0-8. Its code lives in `games/spiderman2/`, and the DLLs build on the Z13 with clang-cl + xwin (ruling 21).
+- Zero Company comes first (ruling 2026-10-31): offline check, UEVR nightly under Proton, the 3D TV, then its recipe; it proves the headset chain and wrapper route on a real game while the Spider-Man 2 address mapping goes on.
+- The Spider-Man 2 port follows `docs/spiderman2/plan.md` Steps 0-8. Its code lives in `games/spiderman2/`, and the DLLs build on the Z13 with clang-cl + xwin (ruling 21).
 - **Two faces, one engine** (rulings 2026-10-31, question tool: "Desktop app + Decky plugin (Recommended)"; the toolkit rulings of 2026-11-01, question tool: "Native Rust GUI" with "iced (Recommended)" and "Rust backend, thin TS panel (Recommended)", replace "Tauri (Rust + web UI) (Recommended)"): the iced app links the engine crate; the Decky plugin's backend is the engine binary called with `--json`, and its TypeScript panel has no logic. Every word, colour, sort order and rule the faces show is an engine function. Shape: `docs/code-map.md`.
 - **Plug in and play** (rulings 24-38, 2026-11-01): Steam is the launcher. A systemd user unit `flat3d-link` runs `flat3d-inject watch` (adb device tracking; no root, because Quest Tether's existing udev rule already grants USB access) and owns the link: tether, WiVRn, `adb reverse`, health. The launch wrapper `flat3d-run` asks it whether the link is ready and reads the game's 3D switch, then applies the recipe's route (UEVR, Geo-11 or the port) and execs `%command%`, or execs it unchanged. Quest Tether's Linux engine (Python) is the reference for the port; gnirehtet's relay (Apache-2.0) is bundled or linked, never vendored into git. Only `works-now` games get the wrapper in 1.0.
 - **The engine is Rust** (the owner's ruling, 2026-10-26, question tool: "Rust"): one binary, `flat3d-inject`, a std-only crate in `inject/`. The Decky plugin has no Python backend (2026-11-01: "Rust backend, thin TS panel (Recommended)"); the Spider-Man 2 port stays C++ on SpidyVR and the research tools stay Python (2026-11-01: "Leave them as is (Recommended)"). Rai Pal's game detection (Rust, GPL-3.0) is the reference for detection logic.
@@ -85,11 +79,13 @@ Run Zero Company and ACE COMBAT 7 in stereo through UEVR (our own hook if UEVR c
 
 ## Testing decisions
 
-The engine is tested without games or hardware, with `cargo test --manifest-path inject/Cargo.toml` (Rust `#[test]`s, sample files under `inject/tests/fixtures/` as they are added): Steam library parsing on sample `libraryfolders.vdf` and `appmanifest_*.acf` files, recipe loading, and the commands Start 3D would run (asserted, not executed). Every port step has its own on-device test, as in `docs/PORT-SPIDERMAN2.md`.
+The engine is tested without games or hardware, with `cargo test --workspace` (Rust `#[test]`s and inline fixtures in `crates/engine/tests/*.rs`): Steam library parsing on sample `libraryfolders.vdf` and `appmanifest_*.acf` files, recipe loading, and the commands Start 3D would run (asserted, not executed). Every port step has its own on-device test, as in `docs/spiderman2/plan.md`.
 
 ## Further notes
 
-Platforms (R04): Linux (SteamOS) as the host only. The game DLLs are Windows binaries cross-built on the Z13 and run under Proton. Mac and Windows hosts are out (rulings 1, 2).
+For a local readiness report, run `flat3d-inject doctor`.
+
+Platforms (R04): Linux (SteamOS) as the host only. The game DLLs are Windows binaries cross-built on Linux and run under Proton. Mac and Windows hosts are out (rulings 1, 2).
 
 ## Prior art
 

@@ -2,7 +2,7 @@
 
 Checked 2026-10-18 against Uncharted 3 from The Nathan Drake Collection (PS4, version 1.02), reading the
 executable statically. Nothing was run. The question was whether the PS3 game's stereoscopic 3D mode is
-still in the remaster's code and could feed Flat to 3D through Ian's own Uncharted PC port
+still in the remaster's code and could feed Flat to 3D through the owner's own Uncharted PC port
 (`uncharted_pc`, which runs the PS4 build natively on Linux through shadPS4's Vulkan backend, with no
 Proton, on the Legion Go and the Z13 under SteamOS).
 
@@ -15,9 +15,9 @@ Three private patch versions were tried through the port's new per-executable pa
 
 - **v1** (force stereo mode from boot): crashed at once. In the remaster, ~15 draw sites pass a null window context in multi-view modes (the text renderer asserts).
 - **v2** (v1 + a guard in the text renderer): ran at 60 FPS with no crash, but the remaster's renderer only ever draws window 0 (a fatal assert guards it), so the scene stayed single; only the UI doubled (top/bottom).
-- **v3, alternate-frame stereo** (normal mode; the game's own two-eye camera is built every frame and view 0 flips between the left and right eye each frame): **works.** Ian, watching the screen with the separation exaggerated ×5 for the test: "it looks like I'm crosseyed. Rapidly opening and closing my left and right eye." That is the expected look of frame-sequential stereo viewed flat: the game itself draws each eye from its own offset camera (true stereo, not depth reprojection), at 30 Hz per eye when the game runs at 60.
+- **v3, alternate-frame stereo** (normal mode; the game's own two-eye camera is built every frame and view 0 flips between the left and right eye each frame): **works.** the owner, watching the screen with the separation exaggerated ×5 for the test: "it looks like I'm crosseyed. Rapidly opening and closing my left and right eye." That is the expected look of frame-sequential stereo viewed flat: the game itself draws each eye from its own offset camera (true stereo, not depth reprojection), at 30 Hz per eye when the game runs at 60.
 
-**So the route changes:** not side-by-side halves from the game, but **frame-sequential eyes** at 60 Hz. Flat to 3D's presenter takes even/odd frames as left/right and shows them on the fixed 3D screen. Open: eye-order detection (a known parity, or a marker the port can read), TAA/motion-blur ghosting between eyes, the normal separation multiplier, and whether "alternate eyes from the game's own camera" counts as true stereo under the project's rules (recommended: yes; Ian to confirm).
+**So the route changes:** not side-by-side halves from the game, but **frame-sequential eyes** at 60 Hz. Flat to 3D's presenter takes even/odd frames as left/right and shows them on the fixed 3D screen. Open: eye-order detection (a known parity, or a marker the port can read), TAA/motion-blur ghosting between eyes, the normal separation multiplier, and whether "alternate eyes from the game's own camera" counts as true stereo under the project's rules (recommended: yes; the owner to confirm).
 
 ## Update 2026-10-19: tuning on the Z13 (3D tuning is the Z13's job)
 
@@ -105,7 +105,7 @@ candidate. Uncharted 1 was not checked.
 
 ## Proposed route through the Uncharted PC port
 
-Whether this fits Flat to 3D's "true stereo only" rule is pending Ian's ruling (the game draws each eye from its own camera, but in alternate frames rather than both per frame). Testing on the Legion Go was a works/doesn't-work check; 3D runs belong on the Z13 per the project's "Z13 and SteamOS only" rule.
+Whether this fits Flat to 3D's "true stereo only" rule is pending the owner's ruling (the game draws each eye from its own camera, but in alternate frames rather than both per frame). Testing on the Legion Go was a works/doesn't-work check; 3D runs belong on the Z13 per the project's "Z13 and SteamOS only" rule.
 
 **A. Native side-by-side.** Try this first.
 1. Force the render mode to 4 at boot from the port side. Use 4 rather than the `3d` switch's 5,
@@ -150,4 +150,4 @@ shifted half-width images mean route A is live.
 | Two-eye mode switch in scene-window view setup | 0x00971DC9 |
 | Stereo view builder (eye offset maths around +0x82B) | 0x015C0D30 |
 
-Detailed working notes stay private with Ian's local copies, not in this repo.
+Detailed working notes stay private with the owner's local copies, not in this repo.

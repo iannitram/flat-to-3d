@@ -1,3 +1,7 @@
+- 2026-11-10 Documentation scrub: consolidated the SPEC approval history here and aligned the roadmap, code map and workbench pages with the current tree.
+- 2026-11-01 SPEC approval: Plug in and play, with the current M12 and M17 route wording and the Rust desktop app plus thin TypeScript Decky panel (rulings 24-41).
+- 2026-10-31 SPEC approvals: the five Favorites and gamepad-only scope, including Start 3D/Stop 3D and the SBS viewer; Zero Company first with UEVR then our own hook if needed; WiVRn wired mode.
+- 2026-10-26 Initial SPEC approval: Spider-Man 2 plus Start 3D.
 # Changelog
 
 Newest first. One line per change of stage, release or decision that the next session needs.
