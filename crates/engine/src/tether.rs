@@ -9,6 +9,8 @@ pub mod wifi;
 
 use crate::{api::TetherMode, link};
 use adb::{CommandRunner, TetherAdb};
+use plan::{PlanCtx, PlanRun};
+use std::time::Duration;
 
 pub struct Tether<R> {
     pub adb: TetherAdb<R>,
@@ -17,6 +19,10 @@ pub struct Tether<R> {
     mode: TetherMode,
     added_reverses: Vec<String>,
     client_started: bool,
+    sleep: Box<dyn FnMut(u64)>,
+    wivrn: Option<Vec<Vec<String>>>,
+    wifi_attempts: u32,
+    last_wifi: Option<wifi::SyncDecision>,
 }
 
 impl<R: CommandRunner> Tether<R> {
@@ -28,7 +34,56 @@ impl<R: CommandRunner> Tether<R> {
             mode: TetherMode::Off,
             added_reverses: Vec::new(),
             client_started: false,
+            sleep: Box::new(|ms| std::thread::sleep(Duration::from_millis(ms))),
+            wivrn: None,
+            wifi_attempts: 0,
+            last_wifi: None,
         }
+    }
+
+    pub fn set_sleep(&mut self, sleep: Box<dyn FnMut(u64)>) {
+        self.sleep = sleep;
+    }
+
+    pub fn set_wivrn(&mut self, app: String, flags: Vec<String>) {
+        self.wivrn = Some(link::start_3d_commands_with(&link::WivrnStart {
+            scope: None,
+            app,
+            flags,
+        }));
+    }
+
+    pub fn sync_wifi(&mut self) -> wifi::SyncDecision {
+        let pc = self
+            .adb
+            .run(&wifi::active_ssid_command())
+            .ok()
+            .and_then(|out| wifi::parse_active_ssid(&out));
+        let quest = self
+            .adb
+            .run(&wifi::quest_ssid_command())
+            .ok()
+            .and_then(|out| wifi::parse_quest_ssid(&out));
+        let decision = wifi::sync_decision(pc.as_deref(), quest.as_deref(), self.wifi_attempts);
+        if decision == wifi::SyncDecision::Switch {
+            let credentials = pc
+                .as_deref()
+                .map(wifi::credentials_command)
+                .and_then(|command| self.adb.run(&command).ok())
+                .and_then(|out| wifi::parse_credentials(&out));
+            let joined = if let (Some(ssid), Some((sec, psk))) = (pc.as_deref(), credentials) {
+                self.adb.run(&wifi::connect_argv(ssid, sec, &psk)).is_ok()
+            } else {
+                false
+            };
+            self.wifi_attempts = wifi::next_attempts(self.wifi_attempts, joined);
+        }
+        self.last_wifi = Some(decision);
+        decision
+    }
+
+    pub fn last_wifi(&self) -> Option<&wifi::SyncDecision> {
+        self.last_wifi.as_ref()
     }
 
     pub fn mode(&self) -> TetherMode {
@@ -52,17 +107,22 @@ impl<R: CommandRunner> Tether<R> {
         }
         if !self.adb.has_adb() {
             return Err(format!(
-                "No adb is available: none is running, and the bundled adb is not at {}",
+                "No adb is available: none is running, and the bundled adb is not at {}; fix: flat3d-inject install",
                 adb::bundled_adb(&self.home)
             ));
         }
-        let result = self.connect_steps(foreign_relay, wivrn);
+
+        let mut spawned = false;
+        let result = self.connect_steps(foreign_relay, wivrn, &mut spawned);
         if let Err(mut error) = result {
             if self.client_started {
                 if self.adb.run(&relay::client_stop_command()).is_err() {
                     let _ = self.adb.run(&relay::force_stop_command());
                 }
                 self.client_started = false;
+            }
+            if spawned {
+                let _ = self.adb.stop_relay();
             }
             if let Err(cleanup) = self.cleanup_reverses() {
                 error.push_str(&format!("; cleanup failed: {cleanup}"));
@@ -73,9 +133,14 @@ impl<R: CommandRunner> Tether<R> {
         Ok(self.mode)
     }
 
-    fn connect_steps(&mut self, foreign_relay: bool, wivrn: bool) -> Result<(), String> {
+    fn connect_steps(
+        &mut self,
+        foreign_relay: bool,
+        wivrn: bool,
+        spawned: &mut bool,
+    ) -> Result<(), String> {
         let existing = self.adb.run(&adb::reverse_list_command())?;
-        let mut start = link::start_3d_commands();
+        let mut start = self.wivrn.clone().unwrap_or_else(link::start_3d_commands);
         if !wivrn {
             // Keep only the `adb devices` check.
             start.truncate(1);
@@ -84,18 +149,44 @@ impl<R: CommandRunner> Tether<R> {
             self.run_connect_command(&command, &existing)?;
         }
         if !foreign_relay {
-            let commands = relay::client_start_commands();
-            self.run_connect_command(&commands[0], &existing)?;
-            self.adb
-                .run(&adb::install_command(&relay::apk_path(&self.home)))?;
-            for command in &commands[1..] {
-                self.adb.run(command)?;
+            self.run_connect_command(&relay::client_start_commands()[0], &existing)?;
+            let package_list = self.adb.run(&[
+                "adb".into(),
+                "shell".into(),
+                "pm".into(),
+                "list".into(),
+                "packages".into(),
+                relay::CLIENT_PACKAGE.into(),
+            ])?;
+            if !package_list
+                .lines()
+                .any(|line| line.trim() == format!("package:{}", relay::CLIENT_PACKAGE))
+            {
+                self.adb
+                    .run(&adb::install_command(&relay::apk_path(&self.home)))?;
             }
-            self.client_started = true;
-            self.adb.start_relay(&relay::relay_command(
-                &relay::relay_path(&self.home),
-                &self.serial,
-            ))?;
+
+            let ctx = PlanCtx {
+                relay: relay::relay_command(&relay::relay_path(&self.home), &self.serial),
+            };
+            let mut out = PlanRun::default();
+            let result = {
+                let mut via = Via {
+                    adb: &mut self.adb,
+                    spawned: false,
+                };
+                let result = plan::run_plan_in(
+                    &plan::connect_plan(),
+                    &ctx,
+                    &mut via,
+                    &mut *self.sleep,
+                    &mut out,
+                );
+                *spawned = via.spawned;
+                result
+            };
+            self.client_started = out.ran.contains(&relay::client_start_commands()[1]);
+            result?;
         }
         Ok(())
     }
@@ -149,20 +240,39 @@ impl<R: CommandRunner> Tether<R> {
             self.added_reverses.clear();
             return Ok(());
         }
-        let mut error = self.adb.run(&relay::client_stop_command()).err();
-        if let Err(message) = self.adb.run(&relay::remove_reverse_command()) {
-            error.get_or_insert(message);
+        let ctx = PlanCtx {
+            relay: relay::relay_command(&relay::relay_path(&self.home), &self.serial),
+        };
+        let mut out = PlanRun::default();
+        let result = {
+            let mut via = Via {
+                adb: &mut self.adb,
+                spawned: false,
+            };
+            plan::run_plan_in(
+                &plan::disconnect_plan(),
+                &ctx,
+                &mut via,
+                &mut *self.sleep,
+                &mut out,
+            )
+        };
+        match result {
+            Ok(()) => {
+                self.mode = TetherMode::Off;
+                self.client_started = false;
+                self.added_reverses.clear();
+                Ok(())
+            }
+            Err(error) => {
+                let remove = relay::remove_reverse_command();
+                if !out.ran.contains(&remove) {
+                    let _ = self.adb.stop_relay();
+                    let _ = self.adb.run(&remove);
+                }
+                Err(error)
+            }
         }
-        if let Err(message) = self.adb.stop_relay() {
-            error.get_or_insert(message);
-        }
-        if let Some(error) = error {
-            return Err(error);
-        }
-        self.mode = TetherMode::Off;
-        self.client_started = false;
-        self.added_reverses.clear();
-        Ok(())
     }
 
     /// Tear the tether down on this machine only, for when the headset is already gone: stop our
@@ -177,5 +287,26 @@ impl<R: CommandRunner> Tether<R> {
         self.client_started = false;
         self.added_reverses.clear();
         result
+    }
+}
+
+struct Via<'a, R> {
+    adb: &'a mut TetherAdb<R>,
+    spawned: bool,
+}
+
+impl<R: CommandRunner> adb::RelayRunner for Via<'_, R> {
+    fn run(&mut self, command: &[String]) -> Result<String, String> {
+        self.adb.run(command)
+    }
+
+    fn start_relay(&mut self, command: &[String], _adb: &str) -> Result<(), String> {
+        self.adb.start_relay(command)?;
+        self.spawned = true;
+        Ok(())
+    }
+
+    fn stop_relay(&mut self) -> Result<(), String> {
+        self.adb.stop_relay()
     }
 }
