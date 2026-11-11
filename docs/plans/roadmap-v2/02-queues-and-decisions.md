@@ -21,7 +21,7 @@
 | T16 | view cmds `view rows launch collection toasts logs` (WP-28, `crates/engine/src/cli/view.rs`) + `crates/engine/tests/decky_face.rs` (WP-28) | #121; decky_face.rs runs each `decky/src/engine.ts` wrapper's sample argv, with the trailing `--json`, through `cli::parse_any`, and checks the TS ErrorCode union and the types.ts mirror keys | yes |
 | T17 | `list status inject undo` (WP-07, WP-27, `crates/engine/src/cli/{engine,inject,undo}.rs`) | #27a | fake prefix |
 | T18 | `packaging/build-tools.sh` (WP-22) | pins → `dist/tools/{adb,lib/,gnirehtet,gnirehtet.apk}` | dry-run |
-| T19 | `packaging/build-appimage.sh` + `.github/workflows/appimage.yml` (WP-22; `[self-hosted, linux]`, `rust-toolchain@1.95.0`) | → `dist/Flat_to_3D-x86_64.AppImage` | dispatch run |
+| T19 | `packaging/build-appimage.sh` + `.github/workflows/appimage.yml` (WP-22; `ubuntu-24.04`, `rust-toolchain@1.95.0`) | → `dist/Flat_to_3D-x86_64.AppImage` | dispatch run |
 | T20 | `packaging/build-decky.sh` (WP-22) | → `dist/flat-to-3d.zip` | zip listing |
 | T21 | `crates/engine/tests/recipes_repo.rs` + `crates/engine/tests/recipe_seeds.rs` (WP-26) | recipes lint + route keys ⇒ pin keys | yes |
 | T22 | `tools/build-win.sh` (WP-15) | xwin SDK at `~/.local/share/flat-to-3d/xwin` → `dist/tools/flat3d-uevr-inject.exe` | shellcheck; owner run |

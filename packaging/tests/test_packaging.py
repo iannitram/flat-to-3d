@@ -364,11 +364,11 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(apprun.stat().st_mode & stat.S_IXUSR)
         self.assertIn('FLAT3D_SRC_DIR="$APPDIR/usr"', apprun.read_text())
 
-    def test_workflow_is_pinned_manual_and_linux_self_hosted(self) -> None:
+    def test_workflow_is_pinned_manual_and_github_hosted(self) -> None:
         workflow = (ROOT / ".github/workflows/appimage.yml").read_text()
         self.assertIn("dtolnay/rust-toolchain@1.95.0", workflow)
-        self.assertIn("[self-hosted, linux]", workflow)
-        for forbidden in ("@stable", "@master", "ubuntu-24.04"):
+        self.assertIn("runs-on: ubuntu-24.04", workflow)
+        for forbidden in ("@stable", "@master", "self-hosted"):
             self.assertNotIn(forbidden, workflow)
 
     def test_decky_zip_exact_payload_modes_and_no_tools(self) -> None:
