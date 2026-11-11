@@ -421,6 +421,12 @@ impl AnyCommand {
     }
 }
 
+/// Whether `--json` stands before any `--` separator.
+fn json_before_separator(args: &[String]) -> bool {
+    let sep = args.iter().position(|x| x == "--").unwrap_or(args.len());
+    args[..sep].iter().any(|x| x == "--json")
+}
+
 pub fn parse_any(args: &[String]) -> Result<AnyCli, ApiError> {
     let sep = args.iter().position(|x| x == "--").unwrap_or(args.len());
     let mut head: Vec<String> = args[..sep]
@@ -428,7 +434,7 @@ pub fn parse_any(args: &[String]) -> Result<AnyCli, ApiError> {
         .filter(|x| x.as_str() != "--json")
         .cloned()
         .collect();
-    let json = args[..sep].iter().any(|x| x == "--json");
+    let json = json_before_separator(args);
     let mut full = head.clone();
     if sep < args.len() {
         full.push("--".into());
@@ -540,25 +546,24 @@ pub fn execute_with(args: &[String], ctx: &mut Ctx<'_>) -> Output {
                 _ => parsed.command.id().split_whitespace().next().unwrap_or(""),
             };
             let result = dispatch(&parsed.command, ctx);
+            let hook = result
+                .as_ref()
+                .ok()
+                .map(|data| ok_exit(&parsed.command, data));
             let mut out = render(name, result, parsed.json);
-            if out.stderr.is_empty() {
-                if let Ok(data) = serde_json::from_str::<serde_json::Value>(out.stdout.trim()) {
-                    if data.get("ok") == Some(&serde_json::Value::Bool(false)) {
-                        return out;
-                    }
-                    out.code = ok_exit(&parsed.command, &data);
-                }
+            if let Some(code) = hook {
+                out.code = code;
             }
             out
         }
-        Err(e) => render("", Err(e), args.iter().any(|x| x == "--json")),
+        Err(e) => render("", Err(e), json_before_separator(args)),
     }
 }
 
 pub fn execute(args: &[String]) -> Output {
     let parsed = match parse_any(args) {
         Ok(p) => p,
-        Err(e) => return render("", Err(e), args.iter().any(|x| x == "--json")),
+        Err(e) => return render("", Err(e), json_before_separator(args)),
     };
     let env: BTreeMap<String, String> = std::env::vars().collect();
     let paths = match EnginePaths::from_env(&env, crate::sys::current_uid()) {
@@ -612,17 +617,6 @@ mod tests {
     }
 
     #[test]
-    fn execute_human_not_built_goes_to_stderr() {
-        let out = execute(&["list".to_string()]);
-        assert_eq!(out.code, 2);
-        assert_eq!(out.stdout, "");
-        assert_eq!(
-            out.stderr,
-            "error: not built yet: cli::engine::run (WP-07)\n"
-        );
-    }
-
-    #[test]
     fn dispatch_routes_each_family() {
         let rows: &[&[&str]] = &[
             &["list"],
@@ -636,18 +630,14 @@ mod tests {
             &["setup", "packages"],
             &["doctor"],
         ];
+        let home = std::env::temp_dir().join(format!("flat3d-cli-dispatch-{}", std::process::id()));
+        std::fs::create_dir_all(&home).unwrap();
         for row in rows {
             let av: Vec<String> = row.iter().map(|s| (*s).to_owned()).collect();
             let cmd = parse_any(&av).unwrap().command;
             let mut env = BTreeMap::new();
-            env.insert(
-                "HOME".to_string(),
-                std::env::temp_dir().display().to_string(),
-            );
-            env.insert(
-                "XDG_RUNTIME_DIR".to_string(),
-                std::env::temp_dir().display().to_string(),
-            );
+            env.insert("HOME".to_string(), home.display().to_string());
+            env.insert("XDG_RUNTIME_DIR".to_string(), home.display().to_string());
             let paths = EnginePaths::from_env(&env, 1).unwrap();
             let mut runner = crate::testing::FakeRunner::new();
             let mut relay = ProcessRunner::default();
@@ -678,6 +668,7 @@ mod tests {
                 }
             }
         }
+        let _ = std::fs::remove_dir_all(&home);
         assert_eq!(
             ok_exit(
                 &AnyCommand::Doctor(DoctorCommand::Run),
