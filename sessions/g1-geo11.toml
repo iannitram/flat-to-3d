@@ -1,0 +1,49 @@
+schema = 1
+name = "g1-geo11"
+title = "G1 Geo11"
+q = "Q9"
+issues = [43, 52]
+device = ["z13"]
+needs = ["WP-16"]
+done_when = "an SBS capture with visible depth from Planet of Lana under Proton (`needs-owner-device`).; tests on a fake game folder assert the files, the env returned, viewer start and a clean undo; on the device it sets up Planet of Lana the way #43 found works (`needs-owner-device`)."
+after = ["q0"]
+
+[[step]]
+id = "pins"
+kind = "ask"
+who = "you"
+text = "Install Geo-11 0.7.12 and lana-fix."
+
+[[step]]
+id = "sbs-config"
+kind = "check"
+who = "you"
+text = "Set d3dxdm.ini direct_mode=sbs."
+gate = true
+
+[[step]]
+id = "route-exe"
+kind = "check"
+who = "you"
+text = "Confirm the works-now route names Planet of Lana.exe as the Geo-11 executable."
+gate = true
+
+[[step]]
+id = "disparity"
+kind = "measure"
+who = "you"
+text = "Measure disparity from SBS desktop screenshot."
+tool = "disparity"
+input = "{state}/captures/lana-*.png"
+args = ["--layout", "sbs"]
+optional = false
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record 30+ fps."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]
+optional = false

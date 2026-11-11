@@ -1,0 +1,34 @@
+schema = 1
+name = "sm2-offline"
+title = "Sm2 Offline"
+q = "Q13"
+issues = [7]
+device = ["z13"]
+done_when = "Before step 2 of the Spider-Man 2 port injects anything, check that the game plays offline (no PSN sign-in required, no online enforcement that a hook could trip)."
+
+[[step]]
+id = "exe"
+kind = "ask"
+who = "you"
+text = "Path to Spider-Man 2 executable pinned as sm2-2.810.0.0."
+
+[[step]]
+id = "hash"
+kind = "cmd"
+who = "script"
+text = "Verify executable SHA256."
+run = ["sha256sum", "{ans:exe"]
+expect = "c9b912eff96facb746a705ac8b0b83c29faa7bbe53d984a0c5eb45efd0b738c9"
+
+[[step]]
+id = "network-off"
+kind = "ask"
+who = "you"
+text = "Turn the network off."
+
+[[step]]
+id = "offline"
+kind = "check"
+who = "you"
+text = "Gameplay is reached without a PSN sign-in block."
+gate = true

@@ -1,3 +1,4 @@
+//! The Games page: state, messages, update. docs/code-map.md, Parts, crates/app/src.
 use flat3d_inject::rows::GameRow;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -7,6 +8,7 @@ pub struct GamesState {
     pub error: Option<String>,
     pub note: Option<String>,
 }
+
 impl Default for GamesState {
     fn default() -> Self {
         Self {
@@ -17,6 +19,7 @@ impl Default for GamesState {
         }
     }
 }
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Msg {
     Rows(Result<Vec<GameRow>, String>),
@@ -25,12 +28,49 @@ pub enum Msg {
     UndoPressed(u32),
     UndoDone(Result<String, String>),
 }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     LoadRows { filter: String },
     SetSwitch { appid: u32, on: bool },
     Undo(u32),
 }
-pub fn update(_state: &mut GamesState, _msg: Msg) -> Option<Action> {
-    None
+
+pub fn update(state: &mut GamesState, msg: Msg) -> Option<Action> {
+    match msg {
+        Msg::Rows(Ok(rows)) => {
+            state.rows = rows;
+            state.error = None;
+            None
+        }
+        Msg::Rows(Err(error)) => {
+            state.error = Some(error);
+            None
+        }
+        Msg::Filter(filter) => {
+            state.filter = filter.clone();
+            Some(Action::LoadRows { filter })
+        }
+        Msg::Switch { appid, on } => {
+            if let Some(row) = state.rows.iter_mut().find(|row| row.appid == appid) {
+                row.switch_on = on;
+            }
+            Some(Action::SetSwitch { appid, on })
+        }
+        Msg::UndoPressed(appid) => {
+            state.note = None;
+            state.error = None;
+            Some(Action::Undo(appid))
+        }
+        Msg::UndoDone(Ok(summary)) => {
+            state.note = Some(summary);
+            Some(Action::LoadRows {
+                filter: state.filter.clone(),
+            })
+        }
+        Msg::UndoDone(Err(error)) => {
+            state.error = Some(error);
+            None
+        }
+    }
 }

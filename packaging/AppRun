@@ -1,0 +1,4 @@
+#!/bin/sh
+HERE=$(dirname "$(readlink -f "$0")"); APPDIR=${APPDIR:-$HERE}
+export FLAT3D_SRC_DIR="$APPDIR/usr"; export PATH="$APPDIR/usr/bin:$PATH"
+exec "$APPDIR/usr/bin/flat3d-app" "$@"

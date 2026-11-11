@@ -1,0 +1,130 @@
+schema = 1
+name = "step0"
+title = "Step0"
+q = "Q13"
+issues = [5]
+spec = ["M1"]
+device = ["z13", "quest2"]
+done_when = "The game shows on the 3D screen at 30+ fps for a recorded session and the result is written to the run sheet."
+
+[vars]
+appid = "1817070"
+
+[[step]]
+id = "setup"
+kind = "ask"
+who = "you"
+text = "Install the pinned SpidyVR 0.3.8 and WiVRn 26.9 headset app; connect Quest 2 over USB."
+section = "setup"
+
+
+[[step]]
+id = "launch-options"
+kind = "ask"
+who = "you"
+text = "Set the Steam launch option exactly as follows (a system Flatpak uses /var/lib/flatpak/app/io.github.wivrn.wivrn): PRESSURE_VESSEL_IMPORT_OPENXR_1_RUNTIMES=1 PRESSURE_VESSEL_FILESYSTEMS_RW={home}/.local/share/flatpak/app/io.github.wivrn.wivrn STEAM_COMPAT_LAUNCHER_SERVICE=proton MANGOHUD=1 MANGOHUD_CONFIG=output_folder={state}/mangohud,autostart_log=30,log_duration=120 %command%"
+section = "setup"
+
+[[step]]
+id = "mangohud-dir"
+kind = "cmd"
+who = "script"
+text = "Create MangoHud output directory."
+run = ["mkdir", "-p", "{state}/mangohud"]
+
+[[step]]
+id = "wivrn"
+kind = "cmd"
+who = "script"
+text = "Start WiVRn server."
+run = ["flatpak", "run", "io.github.wivrn.wivrn", "--early-active-runtime", "--no-publish-service"]
+background = true
+
+[[step]]
+id = "adb-reverse"
+kind = "cmd"
+who = "script"
+text = "Reverse WiVRn TCP port."
+run = ["adb", "reverse", "tcp:9757", "tcp:9757"]
+
+[[step]]
+id = "launch-headset"
+kind = "cmd"
+who = "script"
+text = "Launch the WiVRn headset app."
+run = ["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "wivrn+tcp://localhost", "org.meumeu.wivrn.github"]
+
+[[step]]
+id = "spidy"
+kind = "cmd"
+who = "script"
+text = "Launch SpidyVR through the helper."
+run = ["env", "SPIDY_DIR={re_home}/spidy-0.3.8/Spidy-0.3.8", "bash", "{repo}/third_party/SpidyVR/tools/spidy-wivrn.sh"]
+
+[[step]]
+id = "game-settings"
+kind = "check"
+who = "you"
+text = "Frame generation and vsync are off; RT reflections are off; aspect is Auto."
+gate = true
+
+[[step]]
+id = "screen-mode"
+kind = "check"
+who = "you"
+text = "VR VIEW is GAME SCREEN and GAME SCREEN 3D is at maximum."
+gate = true
+
+[[step]]
+id = "screen-depth"
+kind = "check"
+who = "you"
+text = "In the headset the screen shows depth."
+gate = true
+
+[[step]]
+id = "camera-fixed"
+kind = "check"
+who = "you"
+text = "Turning the head does not steer the game camera."
+gate = true
+
+[[step]]
+id = "controller"
+kind = "check"
+who = "you"
+text = "Menus and gameplay respond to the controller."
+gate = true
+
+[[step]]
+id = "stable-eyes"
+kind = "check"
+who = "you"
+text = "Both eyes stay present without drops or crashes."
+gate = true
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record a session at 30+ fps."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]
+optional = false
+
+[[trouble]]
+symptom = "Steam reports -51"
+cause = "Check Proton and the WiVRn launch environment."
+
+[[trouble]]
+symptom = "Proton session was not found"
+cause = "Launch the game from Steam with the required Proton service environment."
+
+[[trouble]]
+symptom = "version is not supported"
+cause = "SpidyVR requires the supported game version 4.630.0.0."
+
+[[trouble]]
+symptom = "Menus ignore controllers or one eye drops"
+cause = "Recheck controller focus and headset link stability."
