@@ -52,8 +52,11 @@ pub fn ensure_applied(
             keys.extend(settings.get("uevr-profile").cloned());
             keys
         }
-        // geo11::apply (WP-16) is not on main yet; fail before anything is fetched or written.
-        Route::Geo11 => return Err("not-built: geo-11 route needs geo11::apply (WP-16)".into()),
+        Route::Geo11 => {
+            let mut keys = vec!["geo11".to_string()];
+            keys.extend(settings.get("geo11-fix").cloned());
+            keys
+        }
         Route::Port => return Err("not-built: port route: #27b (WP-27)".into()),
         Route::NoRoute => {
             let why = check_injectable(recipe)
@@ -66,8 +69,23 @@ pub fn ensure_applied(
         let pin = fetch::pin(&key).map_err(fetch_error_string)?;
         fetch::fetch(&pin, p, r).map_err(fetch_error_string)?;
     }
-    let (applied, env) = uevr::apply_with(game, settings, p)?;
-    let record = applied.record;
+    let (record, env) = match route {
+        Route::Uevr => {
+            let (applied, env) = uevr::apply_with(game, settings, p)?;
+            (applied.record, env)
+        }
+        Route::Geo11 => {
+            let (applied, env) = geo11::apply(
+                &p.cache(),
+                &game.install_dir,
+                game.appid,
+                settings,
+                &p.viewer_bin(),
+            )?;
+            (applied.record, env)
+        }
+        Route::Port | Route::NoRoute => unreachable!("returned above"),
+    };
 
     let rec_path = match undo::save_record(&p.data, &record) {
         Ok(path) => path,
