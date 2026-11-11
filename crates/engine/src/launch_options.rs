@@ -92,6 +92,10 @@ pub fn add_wrapper(options: &str) -> String {
     words.join(" ")
 }
 
+pub fn add_wrapper_at(options: &str, _wrapper_abs: &str) -> String {
+    add_wrapper(options)
+}
+
 pub fn remove_wrapper(options: &str) -> String {
     if !has_wrapper(options) {
         return options.to_string();

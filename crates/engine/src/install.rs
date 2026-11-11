@@ -2,6 +2,34 @@
 
 pub const UNIT_NAME: &str = "flat3d-link.service";
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnitSpec {
+    pub description: String,
+    pub exec_start: String,
+    pub restart_sec: u32,
+    pub start_limit_interval_sec: u32,
+    pub start_limit_burst: u32,
+    pub wanted_by: String,
+}
+
+pub fn unit_text_with(spec: &UnitSpec) -> String {
+    unit_text(&spec.exec_start)
+}
+
+pub fn execute(
+    _plan: &InstallPlan,
+    _r: &mut dyn crate::link::CommandRunner,
+) -> Result<crate::api::InstallReport, crate::api::ApiError> {
+    Err(crate::NotBuilt("install::execute (WP-20)").into())
+}
+
+pub fn execute_uninstall(
+    _plan: &UninstallPlan,
+    _r: &mut dyn crate::link::CommandRunner,
+) -> Result<crate::api::InstallReport, crate::api::ApiError> {
+    Err(crate::NotBuilt("install::execute_uninstall (WP-20)").into())
+}
+
 pub fn unit_text(exec_start: &str) -> String {
     format!(
         "[Unit]\nDescription=Flat to 3D headset link\n\n[Service]\nType=simple\nExecStart={exec_start}\nRestart=on-failure\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n"

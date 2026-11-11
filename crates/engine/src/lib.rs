@@ -10,7 +10,7 @@ pub mod sys;
 #[doc(hidden)]
 pub mod testing;
 pub use cli::link as cli_link;
-pub use face::{collection, headset_view, link_view, toasts, view};
+pub use face::{collection, headset_view, link_view, rows, toasts, view};
 pub mod face;
 pub mod health;
 pub mod injectors;
@@ -32,6 +32,7 @@ pub mod undo;
 
 pub mod watch;
 pub mod wrapper;
+pub use link::wivrn;
 
 use std::fmt;
 

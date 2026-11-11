@@ -9,13 +9,12 @@ use std::thread;
 
 use super::files::{append_log, write_snapshot, Paths};
 use super::frames::{parse_track_frames, Device};
+use super::health_loop::{HealthLoop, HealthTick};
 use super::machine::{
     link_commands, note_event, note_text, step, Effect, Event, Inputs, Phase, Watch,
 };
 #[cfg(test)]
 use super::machine::{note_kind, Note};
-#[cfg(test)]
-use crate::api::EventKind;
 use crate::api::{LinkEvent, LinkSnapshot, LinkState, TetherMode};
 use crate::link;
 use crate::link::Headset;
@@ -181,6 +180,9 @@ pub struct Service<R: CommandRunner, F: Feed> {
     tether: Option<Tether<Shared<R>>>,
     tether_serial: String,
     ring: EventRing,
+    health: HealthLoop,
+    #[allow(dead_code)]
+    heal: Option<crate::tether::heal::Heal>,
 }
 
 impl<R: CommandRunner, F: Feed> Service<R, F> {
@@ -204,6 +206,8 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             tether: None,
             tether_serial: String::new(),
             ring: EventRing::new(),
+            health: HealthLoop::new(crate::sys::unix_now(), 0, None),
+            heal: None,
         }
     }
 
@@ -449,7 +453,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
 
     /// The snapshot as it stands. Health and stats wait for the health loop (#125); `tunnel`
     /// is the tether being up until that loop checks tun0.
-    fn current(&self, now: u64) -> LinkSnapshot {
+    fn current(&self, now: u64, tick: &HealthTick) -> LinkSnapshot {
         let (state, message) = self.state_text();
         let tether = self
             .tether
@@ -459,19 +463,32 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             state,
             message,
             tether,
-            tunnel: tether != TetherMode::Off,
+            tunnel: tick.tunnel,
             auto_3d: self.inputs.auto_3d,
             adb: self.adb.path.clone(),
             adb_source: self.adb.source,
-            health: None,
-            stats: None,
+            health: tick.health.clone(),
+            stats: tick.stats.clone(),
             events: self.ring.events().to_vec(),
             updated: now,
         }
     }
 
     fn publish(&mut self, now: u64) -> LinkSnapshot {
-        let snapshot = self.current(now);
+        let mode = self
+            .tether
+            .as_ref()
+            .map_or(TetherMode::Off, |tether| tether.mode());
+        let playing = self.inputs.game_3d_running;
+        let mut shared = Shared(Rc::clone(&self.runner));
+        let tick = self.health.tick(now, mode, playing, &mut shared);
+        if let Some((kind, text)) = tick.toast.clone() {
+            self.ring.push(kind, &text);
+        }
+        if tick.heal.is_some() {
+            self.heal = tick.heal;
+        }
+        let snapshot = self.current(now, &tick);
         if let Err(message) = write_snapshot(&self.paths.snapshot(), &snapshot) {
             self.log(now, &format!("state file: {message}"));
         }
@@ -487,7 +504,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
 #[cfg(test)]
 mod service_tests {
     use super::*;
-    use crate::api::AdbSource;
+    use crate::api::{AdbSource, EventKind};
     use std::collections::VecDeque;
 
     /// Records every command as one line; reports the headset as ready to adb. With `gone`,
@@ -498,6 +515,7 @@ mod service_tests {
         ran: Vec<String>,
         gone: bool,
         fail: Option<String>,
+        relay_up: bool,
     }
 
     impl CommandRunner for Fake {
@@ -517,16 +535,24 @@ mod service_tests {
             if command.iter().any(|word| word == "devices") {
                 return Ok("List of devices attached\nSER\tdevice\n".to_string());
             }
+            if line == "ps -eo pid=,args=" && self.relay_up {
+                return Ok("7 /x/gnirehtet run SER".to_string());
+            }
+            if line.ends_with("ip addr show tun0") {
+                return Ok("    inet 10.0.0.2/30 scope global tun0".to_string());
+            }
             Ok(String::new())
         }
 
         fn start_relay(&mut self, command: &[String], _adb: &str) -> Result<(), String> {
             self.ran.push(format!("relay {}", command.join(" ")));
+            self.relay_up = true;
             Ok(())
         }
 
         fn stop_relay(&mut self) -> Result<(), String> {
             self.ran.push("relay stop".to_string());
+            self.relay_up = false;
             Ok(())
         }
     }
@@ -591,7 +617,11 @@ mod service_tests {
         let first = service.tick(100, &s, None, (false, false));
         assert_eq!(first.state, LinkState::Unauthorised);
         assert!(first.events.is_empty());
-        assert!(fake.borrow().ran.is_empty());
+        assert!(fake
+            .borrow()
+            .ran
+            .iter()
+            .all(|c| c == "adb shell dumpsys battery"));
 
         let second = service.tick(101, &s, None, (false, false));
         assert_eq!(second.state, LinkState::Ready);
@@ -713,7 +743,8 @@ mod service_tests {
         assert!(fake.borrow().ran.iter().any(|line| line == "relay stop"));
 
         fake.borrow_mut().gone = false;
-        let back = service.tick(402, &s, None, (false, false));
+        // Past the health loop's 5s tun0 cadence, so the re-plug tick probes tun0 again.
+        let back = service.tick(410, &s, None, (false, false));
         assert_eq!(back.tether, TetherMode::Own);
         assert!(back.tunnel);
     }

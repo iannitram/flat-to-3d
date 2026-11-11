@@ -2,6 +2,16 @@
 //! that change them and the pure `update`. No iced here, so the tests run without a window;
 //! the widgets live in `main.rs`.
 
+pub mod engine;
+pub mod games_page;
+pub mod headset_page;
+pub mod logs_page;
+pub mod setup_page;
+pub mod view_games;
+pub mod view_headset;
+pub mod view_logs;
+pub mod view_setup;
+
 /// The four page tabs, in the order the window shows them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Tab {
