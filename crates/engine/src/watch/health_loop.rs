@@ -72,6 +72,11 @@ impl HealthLoop {
         let mut rates = self.rates;
 
         if mode == TetherMode::Own && due(now, self.last_tun0, TUN0_EVERY_SECS) {
+            if self.last_tun0.is_some_and(|last| now < last) {
+                // The meter's last reading is stamped in the future now; rating the next
+                // counters against it would credit the whole step's bytes to a few seconds.
+                self.meter = RateMeter::new();
+            }
             self.last_tun0 = Some(now);
             let ps = r.run(&["ps", "-eo", "pid=,args="].map(str::to_owned));
             let relay_alive = ps

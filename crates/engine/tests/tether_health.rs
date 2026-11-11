@@ -67,6 +67,10 @@ fn netdev(bytes: u64) -> String {
     format!("Inter-| Receive | Transmit\n face |bytes packets errs drop fifo frame compressed multicast|bytes packets errs drop fifo frame compressed multicast\n tun0: {bytes} 0 0 0 0 0 0 0 {bytes} 0 0 0 0 0 0 0\n")
 }
 
+fn netdev_rx_tx(rx: u64, tx: u64) -> String {
+    format!(" tun0: {rx} 0 0 0 0 0 0 0 {tx} 0 0 0 0 0 0 0\n")
+}
+
 fn temp_dir() -> PathBuf {
     std::env::var_os("CARGO_TARGET_TMPDIR")
         .map(PathBuf::from)
@@ -283,15 +287,30 @@ fn soak_lines_are_written() {
 
 #[test]
 fn adb_failure_is_a_miss_not_a_panic() {
-    let mut fake = Fake::default();
-    fake.put("ps -eo pid=,args=", "");
-    fake.set("adb shell ip addr show tun0", [Err("offline".into())]);
-    fake.put("adb shell dumpsys battery", "level: 80\ntemperature: 300\n");
-    let mut loop_ = HealthLoop::new(0, 0, None);
-    for t in [0, 5, 10] {
-        let _ = tick(&mut loop_, t, &mut fake);
+    // A failed ip probe with a live relay, then a failed ps probe with tun0 up: each is a miss.
+    for (ps, ip) in [
+        (
+            Ok("7 /x/gnirehtet run SER".to_string()),
+            Err("offline".to_string()),
+        ),
+        (
+            Err("no ps".to_string()),
+            Ok("    inet 10.0.0.2/30 scope global tun0".to_string()),
+        ),
+    ] {
+        let mut fake = Fake::default();
+        fake.set("ps -eo pid=,args=", [ps]);
+        fake.set("adb shell ip addr show tun0", [ip]);
+        fake.put("adb shell cat /proc/net/dev", &netdev(1000));
+        fake.put("adb shell dumpsys battery", "level: 80\ntemperature: 300\n");
+        let mut loop_ = HealthLoop::new(0, 0, None);
+        let heals: Vec<_> = [0, 5, 10]
+            .into_iter()
+            .map(|t| tick(&mut loop_, t, &mut fake).heal)
+            .collect();
+        assert_eq!(heals, [None, None, Some(Heal::RestartClient)]);
+        assert!(!loop_.tick(15, TetherMode::Own, true, &mut fake).tunnel);
     }
-    assert_eq!(loop_.tick(15, TetherMode::Own, true, &mut fake).heal, None);
 }
 
 #[test]
@@ -334,31 +353,32 @@ fn heal_words_and_soak_fields_are_locked() {
             "give-up"
         ]
     );
+    // Distinct values in every field, so a swapped pair fails: relay down, tun0 up, rx != tx.
     let path = temp_dir().join("flat3d-soak-fields.txt");
+    let _ = std::fs::remove_file(&path);
     let mut fake = Fake::default();
     good(&mut fake);
-    fake.put("adb shell cat /proc/net/dev", &netdev(1000));
+    fake.put("ps -eo pid=,args=", "");
+    fake.set(
+        "adb shell cat /proc/net/dev",
+        [
+            Ok(netdev_rx_tx(1_000, 1_000)),
+            Ok(netdev_rx_tx(2_000, 6_000)),
+        ],
+    );
     let mut loop_ = HealthLoop::new(0, 0, Some(path.clone()));
     tick(&mut loop_, 0, &mut fake);
-    let lines = std::fs::read_to_string(path).unwrap();
-    let sample: Vec<_> = lines
-        .lines()
-        .find(|line| line.starts_with("sample\t"))
-        .unwrap()
-        .split('\t')
-        .collect();
-    let health: Vec<_> = lines
-        .lines()
-        .find(|line| line.starts_with("health\t"))
-        .unwrap()
-        .split('\t')
-        .collect();
-    assert_eq!(sample.len(), 7);
-    assert_eq!(&sample[0..2], &["sample", "0"]);
-    assert_eq!(sample[6], "none");
-    assert_eq!(health.len(), 5);
-    assert_eq!(&health[0..3], &["health", "0", "80"]);
-    assert_eq!(health[4], "green");
+    tick(&mut loop_, 5, &mut fake);
+    let text = std::fs::read_to_string(path).unwrap();
+    let lines: Vec<_> = text.lines().collect();
+    assert_eq!(
+        lines,
+        [
+            "sample\t0\t0\t0\t1\t0\tnone",
+            "health\t0\t80\t30.0\tgreen",
+            "sample\t5\t200\t1000\t1\t0\tnone",
+        ]
+    );
 }
 
 #[test]
@@ -372,4 +392,26 @@ fn a_clock_step_backwards_does_not_stall_the_probes() {
     let before = fake.ran.len();
     tick(&mut loop_, 100, &mut fake);
     assert_eq!(fake.ran.len() - before, 3);
+}
+
+#[test]
+fn a_clock_step_backwards_does_not_fake_a_throughput_peak() {
+    // 1000 B/s real traffic; the wall clock steps back 60 s after t=1005.
+    let mut fake = Fake::default();
+    good(&mut fake);
+    let times: Vec<u64> = [1_000, 1_005]
+        .into_iter()
+        .chain((950..=1_020).step_by(5))
+        .collect();
+    fake.set(
+        "adb shell cat /proc/net/dev",
+        (0..times.len() as u64).map(|i| Ok(netdev(i * 5_000))),
+    );
+    let mut loop_ = HealthLoop::new(0, 0, None);
+    for &t in &times {
+        let tick = tick(&mut loop_, t, &mut fake);
+        let stats = tick.stats.unwrap();
+        assert!(stats.rx_bytes_s <= 1_000, "t={t}: {}", stats.rx_bytes_s);
+    }
+    assert_eq!(loop_.finish(1_020, 0, 0).peak_bytes_s, 2_000);
 }
