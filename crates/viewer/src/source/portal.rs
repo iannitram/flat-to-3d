@@ -66,7 +66,8 @@ pub fn open(token_path: &Path, offer: &Offer) -> Result<PortalSource, String> {
                             .ok_or_else(|| "portal returned no streams".to_owned())?
                             .pipe_wire_node_id();
                         if let Some(value) = streams.restore_token() {
-                            write_token(&token_path, value).map_err(|e| e.to_string())?;
+                            // The stream is already granted; a failed token save only costs the next prompt.
+                            let _ = write_token(&token_path, value);
                         }
                         let fd = proxy
                             .open_pipe_wire_remote(&session, Default::default())
@@ -110,17 +111,22 @@ fn write_token(path: &Path, token: &str) -> io::Result<()> {
             .unwrap_or("portal-token"),
         std::process::id()
     ));
-    let mut file = fs::OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .mode(0o600)
-        .open(&tmp)?;
-    use std::io::Write;
-    file.write_all(token.as_bytes())?;
-    file.sync_all()?;
-    fs::rename(&tmp, path)?;
-    Ok(())
+    let result = (|| {
+        let mut file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .mode(0o600)
+            .open(&tmp)?;
+        use std::io::Write;
+        file.write_all(token.as_bytes())?;
+        file.sync_all()?;
+        fs::rename(&tmp, path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&tmp);
+    }
+    result
 }
 
 impl FrameSource for PortalSource {

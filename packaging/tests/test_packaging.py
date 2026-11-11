@@ -278,6 +278,7 @@ class PackagingTests(unittest.TestCase):
             result = call("build-appimage.sh", "--dry-run", "--pins", str(pins))
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("--runtime-file", result.stdout)
+            self.assertIn(f"--manifest-path {ROOT.as_posix()}/Cargo.toml", result.stdout)
             self.assertIn(APPIMAGETOOL_URL, result.stdout)
             self.assertIn(APPIMAGETOOL_SHA, result.stdout)
             self.assertIn(RUNTIME_URL, result.stdout)
@@ -287,6 +288,17 @@ class PackagingTests(unittest.TestCase):
             self.assertNotIn("libwayland", result.stdout)
             self.assertNotIn("libvulkan", result.stdout)
             self.assertNotIn("libGL", result.stdout)
+
+    def test_decky_root_controls_build_and_default_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "custom root"
+            result = call(
+                "build-decky.sh", "--root", str(root), "--dry-run", env={"CARGO_TARGET_DIR": ""}
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(f"--manifest-path {root}/Cargo.toml", result.stdout)
+            self.assertIn(f"{root}/target/release/flat3d-inject", result.stdout)
+            self.assertIn("$stage/flat-to-3d/dist", result.stdout)
 
     def test_payload_parity(self) -> None:
         output = subprocess.run(
