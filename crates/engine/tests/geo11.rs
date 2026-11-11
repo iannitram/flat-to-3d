@@ -120,6 +120,7 @@ fn route_defaults_and_invalid_values() {
         ("geo11-layout", "interlaced"),
         ("geo11-separation", "101"),
         ("geo11-convergence", "0"),
+        ("geo11-convergence", "inf"),
         ("geo11-d3dx", "nokey"),
         ("geo11-remove-first", "../x"),
     ] {
@@ -366,5 +367,68 @@ fn rollback_after_backup_failure_restores_snapshot() {
     let before = snapshot(&r);
     let err = geo11::apply(&cache, &game, 6, &m, &viewer).unwrap_err();
     assert!(err.starts_with("io: "));
+    assert_eq!(snapshot(&r), before);
+}
+
+fn viewer_exe(r: &Path) -> PathBuf {
+    let viewer = r.join("viewer");
+    put(&viewer, "");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&viewer, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    viewer
+}
+
+#[test]
+fn nested_remove_and_copy_do_not_touch_top_level_namesakes() {
+    let r = root("nested");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    geo11_overlay(&cache);
+    put(cache.join("nest-fix/d3d11.dll"), "fix");
+    put(cache.join("nest-fix/d3dx.ini"), "[Stereo]\nx = 0\n");
+    put(cache.join("nest-fix/bin/dxgi.dll"), "new nested");
+    put(cache.join("nest-fix/bin/d3dx.ini"), "[Stereo]\nx = 1\n");
+    put(game.join("Game.exe"), "exe");
+    put(game.join("dxgi.dll"), "top dxgi");
+    put(game.join("bin/dxgi.dll"), "nested dxgi");
+    let m = settings(&[
+        ("geo11-fix", "nest-fix"),
+        ("geo11-exe", "Game.exe"),
+        ("geo11-remove-first", "bin/dxgi.dll"),
+    ]);
+    let steps = geo11::plan_files(&cache, &game, &m).unwrap();
+    assert!(steps.contains(&FileStep::Remove(game.join("bin/dxgi.dll"))));
+    assert!(!steps.contains(&FileStep::Remove(game.join("dxgi.dll"))));
+    assert!(steps.contains(&FileStep::Copy {
+        from: cache.join("nest-fix/bin/dxgi.dll"),
+        to: game.join("bin/dxgi.dll"),
+    }));
+    // A nested d3dx.ini is copied verbatim, not patched.
+    assert!(steps.contains(&FileStep::Copy {
+        from: cache.join("nest-fix/bin/d3dx.ini"),
+        to: game.join("bin/d3dx.ini"),
+    }));
+    geo11::apply(&cache, &game, 7, &m, &viewer_exe(&r)).unwrap();
+    assert_eq!(fs::read(game.join("dxgi.dll")).unwrap(), b"top dxgi");
+    assert_eq!(fs::read(game.join("bin/dxgi.dll")).unwrap(), b"new nested");
+}
+
+#[test]
+fn rollback_restores_original_of_removed_and_recreated_path() {
+    let r = root("rollback-recreate");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    let m = control(&cache, &game);
+    put(cache.join("control-fix/dxgi.dll"), "new dxgi");
+    put(cache.join("control-fix/zzz.dll"), "late");
+    fs::create_dir_all(game.join("zzz.dll")).unwrap();
+    let viewer = viewer_exe(&r);
+    let before = snapshot(&r);
+    let err = geo11::apply(&cache, &game, 8, &m, &viewer).unwrap_err();
+    assert!(err.starts_with("io: "));
+    assert_eq!(fs::read(game.join("dxgi.dll")).unwrap(), b"old dxgi");
     assert_eq!(snapshot(&r), before);
 }
