@@ -203,7 +203,8 @@ impl HealthLoop {
 }
 
 fn due(now: u64, last: Option<u64>, every_secs: u64) -> bool {
-    last.is_none_or(|last| now.saturating_sub(last) >= every_secs)
+    // A clock that steps backwards must not stall the probes until it catches up.
+    last.is_none_or(|last| now < last || now - last >= every_secs)
 }
 
 fn append_best_effort(path: Option<&PathBuf>, text: &str) {

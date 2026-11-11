@@ -360,3 +360,16 @@ fn heal_words_and_soak_fields_are_locked() {
     assert_eq!(&health[0..3], &["health", "0", "80"]);
     assert_eq!(health[4], "green");
 }
+
+#[test]
+fn a_clock_step_backwards_does_not_stall_the_probes() {
+    let mut fake = Fake::default();
+    fake.put("ps -eo pid=,args=", "");
+    fake.put("adb shell ip addr show tun0", "absent");
+    fake.put("adb shell dumpsys battery", "level: 80\ntemperature: 300\n");
+    let mut loop_ = HealthLoop::new(0, 0, None);
+    tick(&mut loop_, 10_000, &mut fake);
+    let before = fake.ran.len();
+    tick(&mut loop_, 100, &mut fake);
+    assert_eq!(fake.ran.len() - before, 3);
+}
