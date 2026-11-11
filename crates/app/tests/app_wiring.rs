@@ -329,6 +329,45 @@ fn effect_argv_matches_the_registered_cli_grammar() {
             parsed.command.id()
         );
     }
+    // Parsing alone accepts a swapped on/off or a wrong id, so pin the exact words too.
+    let argv = |effect: Effect| engine::effect_args(&effect).unwrap();
+    assert_eq!(
+        argv(Effect::SetSetting {
+            key: "tunnel",
+            on: false
+        }),
+        ["setting", "set", "tunnel", "off"]
+    );
+    assert_eq!(
+        argv(Effect::SetSetting {
+            key: "auto-3d",
+            on: true
+        }),
+        ["setting", "set", "auto-3d", "on"]
+    );
+    assert_eq!(
+        argv(Effect::SetSwitch {
+            appid: 42,
+            on: false
+        }),
+        ["switch", "set", "42", "off"]
+    );
+    assert_eq!(
+        argv(Effect::LoadRows {
+            filter: "works-now".into()
+        }),
+        ["rows", "--filter", "works-now"]
+    );
+    assert_eq!(argv(Effect::Undo(9)), ["undo", "9"]);
+    assert_eq!(argv(Effect::ReadPackages), ["setup", "packages"]);
+    assert_eq!(
+        argv(Effect::RunSetup(setup_page::SetupKind::InstallApps)),
+        ["setup", "install-apps"]
+    );
+    assert_eq!(
+        argv(Effect::RunSetup(setup_page::SetupKind::Doctor)),
+        ["doctor"]
+    );
 }
 
 /// Names of forbidden `std` modules imported through a `std::{..}` group, including nested
