@@ -2,6 +2,8 @@
 //! an optional `--json` that prints exactly one `Response` object on one line. Human text is the
 //! default. The Decky backend (decky/main.py) calls these same commands with `--json`.
 
+pub mod link;
+
 use crate::api::{ApiError, Response};
 use crate::undo;
 use crate::NotBuilt;
