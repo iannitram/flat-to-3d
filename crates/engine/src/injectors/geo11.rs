@@ -69,28 +69,22 @@ impl Geo11Settings {
                         let Some((k, v)) = part.split_once('=') else {
                             return Err(bad_recipe(format!("invalid geo11-d3dx pair: {part}")));
                         };
-                        if k.is_empty() {
-                            return Err(bad_recipe("invalid geo11-d3dx pair: empty key"));
+                        // Same rule as recipes::check_route_settings, plus no line breaks,
+                        // which would inject extra lines into d3dx.ini.
+                        let (k, v) = (k.trim(), v.trim());
+                        if k.is_empty()
+                            || v.is_empty()
+                            || v.contains('=')
+                            || part.contains(['\r', '\n'])
+                        {
+                            return Err(bad_recipe(format!("invalid geo11-d3dx pair: {part}")));
                         }
                         s.d3dx.push((k.to_owned(), v.to_owned()));
                     }
                 }
-                "geo11-remove-first" if !value.is_empty() => {
+                "geo11-remove-first" => {
                     for item in value.split(';') {
-                        let p = Path::new(item);
-                        if item.is_empty()
-                            || p.is_absolute()
-                            || item.starts_with(['/', '\\'])
-                            || item.as_bytes().get(1) == Some(&b':')
-                            || p.components().any(|c| {
-                                matches!(
-                                    c,
-                                    Component::ParentDir
-                                        | Component::RootDir
-                                        | Component::Prefix(_)
-                                )
-                            })
-                        {
+                        if !is_inside_relative(item) {
                             return Err(bad_recipe(format!(
                                 "invalid geo11-remove-first path: {item}"
                             )));
@@ -104,6 +98,29 @@ impl Geo11Settings {
         }
         Ok(s)
     }
+}
+
+/// A relative path made only of normal components (no `..`, `.`, root or drive prefix),
+/// the rule `recipes::check_route_settings` uses for `geo11-remove-first`.
+fn is_inside_relative(item: &str) -> bool {
+    let p = Path::new(item);
+    !item.is_empty()
+        && !p.is_absolute()
+        && !item.starts_with(['/', '\\'])
+        && item.as_bytes().get(1) != Some(&b':')
+        && p.components().all(|c| matches!(c, Component::Normal(_)))
+}
+
+fn is_pin_key(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
+
+/// True for a real directory; a symlink to a directory is not walked (no loops).
+fn is_real_dir(p: &Path) -> bool {
+    fs::symlink_metadata(p).is_ok_and(|m| m.is_dir())
 }
 
 pub fn direct_mode(l: Layout) -> &'static str {
@@ -276,7 +293,7 @@ fn find_dir(root: &Path, max_depth: usize, name: &str) -> io::Result<Option<Path
         let mut next = Vec::new();
         for dir in level {
             for path in sorted_entries(&dir)? {
-                if path.is_dir() {
+                if is_real_dir(&path) {
                     next.push(path);
                 }
             }
@@ -308,7 +325,7 @@ fn find_file_parent(root: &Path, max_depth: usize, name: &str) -> io::Result<Opt
         let mut next = Vec::new();
         for dir in level {
             for path in sorted_entries(&dir)? {
-                if path.is_dir() {
+                if is_real_dir(&path) {
                     next.push(path);
                 }
             }
@@ -324,7 +341,7 @@ fn regular_files(root: &Path) -> io::Result<Vec<PathBuf>> {
     while let Some(dir) = dirs.pop() {
         let entries = sorted_entries(&dir)?;
         for path in entries.into_iter().rev() {
-            if path.is_dir() {
+            if is_real_dir(&path) {
                 dirs.push(path);
             } else if path.is_file() {
                 out.push(path);
@@ -343,20 +360,34 @@ fn root_ignored(name: &str) -> bool {
         || n == ".flat3d-fetch"
 }
 
-fn existing_case_path(wanted: &Path) -> PathBuf {
-    let (Some(dir), Some(name)) = (wanted.parent(), wanted.file_name().and_then(|n| n.to_str()))
-    else {
-        return wanted.to_path_buf();
-    };
-    if let Ok(entries) = sorted_entries(dir) {
-        if let Some(found) = entries.into_iter().find(|p| {
-            p.file_name()
-                .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(name))
-        }) {
-            return found;
+/// `base/rel`, with each component that already exists under another ASCII case (for
+/// example `shaderfixes/` for `ShaderFixes/`) spelled the way it is on disk. An exact
+/// match wins over a case-insensitive one; sorted order breaks ties.
+fn existing_case_path(base: &Path, rel: &Path) -> PathBuf {
+    let mut out = base.to_path_buf();
+    let mut on_disk = true;
+    for comp in rel.components() {
+        let name = comp.as_os_str();
+        if on_disk && !out.join(name).exists() {
+            let found = sorted_entries(&out).ok().and_then(|entries| {
+                entries.into_iter().find(|p| {
+                    p.file_name().is_some_and(|n| {
+                        n.to_string_lossy()
+                            .eq_ignore_ascii_case(&name.to_string_lossy())
+                    })
+                })
+            });
+            match found {
+                Some(found) => {
+                    out = found;
+                    continue;
+                }
+                None => on_disk = false,
+            }
         }
+        out.push(name);
     }
-    wanted.to_path_buf()
+    out
 }
 
 pub fn plan_files(
@@ -368,6 +399,11 @@ pub fn plan_files(
     let exe = m
         .get("geo11-exe")
         .ok_or_else(|| bad_recipe("geo11-exe is missing"))?;
+    if !is_inside_relative(exe) {
+        return Err(bad_recipe(format!(
+            "geo11-exe must be a relative path inside the game folder: {exe}"
+        )));
+    }
     let exe_path = game_dir.join(exe);
     if !exe_path.is_file() {
         return Err(not_found(format!(
@@ -383,14 +419,19 @@ pub fn plan_files(
         .unwrap_or("");
     let mut steps = Vec::new();
     for rel in remove_paths.split(';').filter(|s| !s.is_empty()) {
-        let wanted = game_root.join(rel);
-        if wanted.exists() {
-            steps.push(FileStep::Remove(existing_case_path(&wanted)));
+        let found = existing_case_path(game_root, Path::new(rel));
+        if fs::symlink_metadata(&found).is_ok() {
+            steps.push(FileStep::Remove(found));
         }
     }
 
     let fix_name = m.get("geo11-fix");
     let fix_root = if let Some(name) = fix_name {
+        if !is_pin_key(name) {
+            return Err(bad_recipe(format!(
+                "geo11-fix must be a pin key ([a-z0-9-]+): {name}"
+            )));
+        }
         let pin_root = cache_dir.join(name);
         if !pin_root.is_dir() {
             return Err(not_found(format!(
@@ -439,15 +480,14 @@ pub fn plan_files(
             {
                 continue;
             }
-            let target = game_root.join(rel);
-            copies.push((from, target, false));
+            copies.push((from.clone(), rel.to_path_buf(), false));
         }
     }
     if let Some(root) = &overlay {
         for name in ["d3d11.dll", "nvapi64.dll", "d3dxdm.ini"] {
             let from = root.join(name);
             if from.is_file() {
-                copies.push((from, game_root.join(name), true));
+                copies.push((from, PathBuf::from(name), true));
             }
         }
         if fix_root
@@ -456,7 +496,7 @@ pub fn plan_files(
         {
             let from = root.join("d3dx.ini");
             if from.is_file() {
-                copies.push((from, game_root.join("d3dx.ini"), true));
+                copies.push((from, PathBuf::from("d3dx.ini"), true));
             }
         }
     }
@@ -478,7 +518,7 @@ pub fn plan_files(
         }
     }
     for (from, to, _) in resolved {
-        let to = existing_case_path(&to);
+        let to = existing_case_path(game_root, &to);
         let lower = to
             .file_name()
             .unwrap_or_default()
@@ -567,7 +607,14 @@ pub fn apply(
         .unwrap_or(game_dir)
         .to_path_buf();
     let marker = e.join(MARKER_FILE);
-    if marker.exists()
+    // A backup left in a subfolder would be overwritten by this apply's backup of the same
+    // file, so it counts as "already set up" just like one in E.
+    let stale_backup = steps.iter().any(|step| {
+        let (FileStep::Remove(to) | FileStep::Copy { to, .. } | FileStep::Write { to, .. }) = step;
+        Path::new(&format!("{}.flat3d-backup", to.to_string_lossy())).exists()
+    });
+    if stale_backup
+        || marker.exists()
         || fs::read_dir(&e)
             .map_err(|err| io_error("read", &e, &err))?
             .filter_map(Result::ok)
@@ -596,7 +643,7 @@ pub fn apply(
         for step in &steps {
             match step {
                 FileStep::Remove(path) => {
-                    if path.exists() {
+                    if fs::symlink_metadata(path).is_ok() {
                         let backup =
                             PathBuf::from(format!("{}.flat3d-backup", path.to_string_lossy()));
                         fs::rename(path, &backup).map_err(|err| io_error("back up", path, &err))?;

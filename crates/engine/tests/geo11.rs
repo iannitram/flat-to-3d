@@ -432,3 +432,79 @@ fn rollback_restores_original_of_removed_and_recreated_path() {
     assert_eq!(fs::read(game.join("dxgi.dll")).unwrap(), b"old dxgi");
     assert_eq!(snapshot(&r), before);
 }
+
+#[test]
+fn route_paths_and_pin_keys_cannot_leave_their_folders() {
+    let r = root("traversal");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    let mut m = control(&cache, &game);
+    put(r.join("outside.exe"), "exe");
+    put(cache.join("evil/d3dx.ini"), "[Stereo]\n");
+    for (key, value) in [
+        ("geo11-exe", "../outside.exe"),
+        ("geo11-exe", "/etc/hostname"),
+        ("geo11-fix", "../cache/evil"),
+        ("geo11-fix", "Control-Fix"),
+        ("geo11-remove-first", "./dxgi.dll"),
+        ("geo11-remove-first", ""),
+        ("geo11-d3dx", "force_stereo=a=b"),
+        ("geo11-d3dx", "force_stereo="),
+        ("geo11-d3dx", "force_stereo=2\n[Evil]"),
+    ] {
+        let saved = m
+            .insert(key.to_owned(), value.to_owned())
+            .unwrap_or_default();
+        let err = geo11::plan_files(&cache, &game, &m).unwrap_err();
+        assert!(err.starts_with("bad-recipe: "), "{key}={value}: {err}");
+        if saved.is_empty() {
+            m.remove(key);
+        } else {
+            m.insert(key.to_owned(), saved);
+        }
+    }
+    // Spaces around a d3dx key are trimmed, so patching stays idempotent.
+    let s = Geo11Settings::from_route(&settings(&[("geo11-d3dx", " force_stereo = 3")])).unwrap();
+    let once = geo11::d3dx_patch("[Stereo]\nforce_stereo=0\n", &s).unwrap();
+    assert_eq!(once, "[Stereo]\nforce_stereo=3\n");
+    assert_eq!(geo11::d3dx_patch(&once, &s).unwrap(), once);
+}
+
+#[test]
+fn existing_names_keep_their_case_in_nested_folders() {
+    let r = root("case");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    let m = control(&cache, &game);
+    put(game.join("shaderfixes/old.txt"), "old");
+    put(game.join("D3D11.DLL"), "game dll");
+    let steps = geo11::plan_files(&cache, &game, &m).unwrap();
+    assert!(steps.iter().any(
+        |s| matches!(s, FileStep::Copy { to, .. } if *to == game.join("shaderfixes/a-ps.txt"))
+    ));
+    assert!(steps
+        .iter()
+        .any(|s| matches!(s, FileStep::Copy { to, .. } if *to == game.join("D3D11.DLL"))));
+    assert!(!steps.iter().any(
+        |s| matches!(s, FileStep::Copy { to, .. } if to.starts_with(game.join("ShaderFixes")))
+    ));
+}
+
+#[test]
+fn stale_nested_backup_refuses_and_symlink_loops_end() {
+    let r = root("stale");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    let m = control(&cache, &game);
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("..", cache.join("control-fix/ShaderFixes/loop")).unwrap();
+    put(game.join("ShaderFixes/a-ps.txt"), "old shader");
+    put(
+        game.join("ShaderFixes/a-ps.txt.flat3d-backup"),
+        "older shader",
+    );
+    let before = snapshot(&game);
+    let err = geo11::apply(&cache, &game, 9, &m, &viewer_exe(&r)).unwrap_err();
+    assert!(err.starts_with("refused: "), "{err}");
+    assert_eq!(snapshot(&game), before);
+}
