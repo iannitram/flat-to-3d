@@ -1,6 +1,6 @@
 # Flat to 3D (GPL-3.0). Item list and checked bytes derived from SpidyVR v0.3.8 (aed5c0c) by Ilya Mezerowsky (GPL-3.0).
 """Every game-specific Remastered (4.630.0.0) item on Spidy's stereo-screen path,
-from docs/spidy-stereo-core-map.md and the SpidyVR v0.3.8 sources it cites.
+from docs/spiderman2/spidy-core-map.md and the SpidyVR v0.3.8 sources it cites.
 kind: hook = hooked function, call = called-only function, check = check-only code
 signature, site = call site / return address, data = global, vtable = vtable,
 gate = removable gate extra. prio: 1 = plan steps 1-3 (camera, render entry,
