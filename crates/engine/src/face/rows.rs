@@ -1,5 +1,7 @@
+use super::link_view::flat_reason;
 use crate::api::Game;
 use crate::api::LinkState;
+use crate::status::{filter_by_status, sort_games, status_colour, status_label};
 use crate::switches::Settings;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -15,10 +17,26 @@ pub struct GameRow {
 }
 
 pub fn game_rows(
-    _games: &[Game],
-    _filter: &str,
-    _settings: &Settings,
-    _link: LinkState,
+    games: &[Game],
+    filter: &str,
+    settings: &Settings,
+    link: LinkState,
 ) -> Vec<GameRow> {
-    Vec::new()
+    sort_games(&filter_by_status(games, filter))
+        .into_iter()
+        .map(|game| {
+            let switch_on = settings.game_on(game.appid);
+            let flat_reason = flat_reason(link, switch_on, game.has_recipe, &game.status);
+            GameRow {
+                appid: game.appid,
+                name: game.name.clone(),
+                status_label: status_label(&game.status).to_string(),
+                status_colour: status_colour(&game.status).to_string(),
+                status: game.status.clone(),
+                switch_on,
+                plays_3d: flat_reason.is_none(),
+                flat_reason,
+            }
+        })
+        .collect()
 }
