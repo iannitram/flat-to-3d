@@ -44,7 +44,7 @@ class CheckerTests(unittest.TestCase):
         self.assertTrue(lines[1].startswith("docs/code-map.md:6: status: missing path: nope"), out)
 
     def test_status_root_paths_and_previous_dir(self):
-        self.put("docs/code-map.md", "## Parts\n| Path | Status |\n|---|---|\n| `recipes/` | present |\n| `decky/` | skeleton |\n| `cmake/clang.cmake` | present |\n| `.github/workflows/check.yml` | present |\n| `crates/engine/src/a.rs`, `crates/engine/src/b.rs` | present |\n| `c.rs` | present |\n")
+        self.put("docs/code-map.md", "## Parts\n| Path | Status |\n|---|---|\n| `recipes/` | present |\n| `cmake/clang.cmake` | present |\n| `.github/workflows/check.yml` | present |\n| `crates/engine/src/a.rs`, `crates/engine/src/b.rs` | present |\n| `c.rs` | present |\n| `decky/` | skeleton |\n")
         for name in ("cmake/clang.cmake", ".github/workflows/check.yml", "crates/engine/src/b.rs", "crates/engine/src/c.rs", "crates/engine/src/a.rs"):
             self.put(name, "")
         (self.root / "recipes").mkdir()
@@ -62,6 +62,16 @@ class CheckerTests(unittest.TestCase):
         lines = out.splitlines()
         self.assertEqual(len(lines), 1, out)
         self.assertTrue(lines[0].startswith("docs/code-map.md:6: status: missing path: cli/nowhere.rs"), out)
+
+    def test_status_double_miss_keeps_previous_dir(self):
+        self.put("docs/code-map.md", "## Parts\n| Path | Status |\n|---|---|\n| `crates/engine/src/cli.rs`, `cli/view.rs`, `link.rs` | present |\n")
+        for name in ("crates/engine/src/cli.rs", "crates/engine/src/cli/link.rs"):
+            self.put(name, "")
+        code, out = self.findings("status", "docs/code-map.md")
+        self.assertEqual(code, 1)
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 1, out)
+        self.assertTrue(lines[0].startswith("docs/code-map.md:4: status: missing path: cli/view.rs"), out)
 
     def test_mermaid_header_lines_are_not_findings(self):
         self.put("docs/x.md", "```mermaid\nflowchart TD\nsubgraph X\nclassDef a fill:#fff\nA --> B\nend\n```\n")

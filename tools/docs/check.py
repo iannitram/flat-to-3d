@@ -142,7 +142,7 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                                     add(out, Path("docs/code-map.md"), n + 1, "status", f"path glob has no matches: {item}", "create the path, or mark the row planned")
                                 previous_dir = Path(item.rstrip("/")).parent
                                 continue
-                            rooted = "/" in item.rstrip("/")
+                            rooted = "/" in item
                             item = item.rstrip("/")
                             item_path = Path(item)
                             if not rooted:
@@ -152,7 +152,11 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                             else:
                                 resolved = previous_dir / item_path
                                 if not (root / resolved).exists():
-                                    resolved = item_path
+                                    resolved = None
+                            if resolved is None:
+                                add(out, Path("docs/code-map.md"), n + 1, "status", f"missing path: {item}", "create the path, or mark the row planned")
+                                previous_dir = (previous_dir / item_path).parent
+                                continue
                             if not (root / resolved).exists():
                                 add(out, Path("docs/code-map.md"), n + 1, "status", f"missing path: {item}", "create the path, or mark the row planned")
                             previous_dir = resolved.parent
