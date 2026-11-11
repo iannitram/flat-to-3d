@@ -97,7 +97,7 @@ fn missing_profile_pin_and_download_failure_leave_prefix_untouched() {
 
 #[test]
 fn env_write_failure_rolls_back_and_bad_or_missing_recipe_is_clean() {
-    let (_root, p) = setup("inject-env-fail", true, None, "yes");
+    let (root, p) = setup("inject-env-fail", true, None, "yes");
     fs::create_dir_all(&p.data).unwrap();
     fs::write(p.data.join("env"), "file blocks directory").unwrap();
     let mut runner = FakeRunner::new();
