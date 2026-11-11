@@ -1,0 +1,25 @@
+schema = 1
+name = "z4-mission"
+title = "Z4 Mission"
+q = "Q7"
+issues = [35]
+device = ["z13", "quest2"]
+done_when = "the session runs at 30+ fps with no dropped eyes or crashes (`needs-owner-device`)."
+after = ["z3-screen"]
+
+[[step]]
+id = "mission"
+kind = "check"
+who = "you"
+text = "Mission runs without dropped eyes or crash."
+gate = true
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record 30+ fps."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]
+optional = false

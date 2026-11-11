@@ -1,0 +1,35 @@
+schema = 1
+name = "a2-uevr"
+title = "A2 Uevr"
+q = "Q8"
+issues = [41]
+device = ["z13", "quest2"]
+done_when = "both eyes captured apart and the picture on the fixed screen with depth (`needs-owner-device`)."
+after = ["q0", "a1-install"]
+
+[[step]]
+id = "mods"
+kind = "ask"
+who = "you"
+text = "Install Nexus mods 2179 and 2274, Konan's VR Planes and AC7_VR_Patch_P.pak; beat the campaign once, do not install kosnag's UEVR_Compatibility_Mod_P.pak, and disable decoupled pitch."
+
+[[step]]
+id = "inject"
+kind = "cmd"
+who = "script"
+text = "Inject UEVR route."
+run = ["flat3d-inject", "inject", "502500", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "eye-capture"
+kind = "ask"
+who = "you"
+text = "Capture both eyes and record whether they are apart."
+
+[[step]]
+id = "depth"
+kind = "check"
+who = "you"
+text = "Both eyes are apart and the picture on the fixed screen has depth."
+gate = true

@@ -1,0 +1,24 @@
+schema = 1
+name = "q0"
+title = "Q0"
+q = "Q0"
+issues = []
+device = []
+needs = ["WP-02"]
+done_when = "Record the TBD shas (downloads): no TBD-at-pin is left in packaging/pins."
+
+[[step]]
+id = "pin"
+kind = "cmd"
+who = "you"
+text = "Run the owner-only pin downloads."
+run = ["bash", "{repo}/packaging/pin.sh", "--all-tbd"]
+
+[[step]]
+id = "no-tbd"
+kind = "cmd"
+who = "script"
+text = "Confirm no release pin remains TBD."
+section = "check"
+run = ["grep", "-qE", "\\.sha256: TBD-at-pin$", "{repo}/packaging/pins"]
+ok_rc = [1]
