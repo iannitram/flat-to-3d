@@ -1,10 +1,10 @@
-import "@decky/ui";
 import { launch, type ApiError } from "./engine";
 import type { CollectionPlan } from "./types";
 
 export async function syncLaunchOptions(
   plan: CollectionPlan,
 ): Promise<ApiError[]> {
+  const { appDetailsStore, SteamClient } = window;
   const errors: ApiError[] = [];
 
   for (const id of plan.wanted) {

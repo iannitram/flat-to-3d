@@ -1,10 +1,10 @@
-import "@decky/ui";
 import { collection, type ApiError } from "./engine";
 import type { CollectionPlan } from "./types";
 
 let name = "3D Ready";
 
 export async function syncCollection(): Promise<CollectionPlan | ApiError> {
+  const { collectionStore, appStore } = window;
   const id = collectionStore.GetCollectionIDByUserTag(name);
   const c =
     (id ? collectionStore.GetCollection(id) : null) ??
