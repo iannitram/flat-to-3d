@@ -1,43 +1,23 @@
 import { definePlugin } from "@decky/api";
-import { Field, staticClasses } from "@decky/ui";
+import { staticClasses } from "@decky/ui";
 import { FaVrCardboard } from "react-icons/fa";
-import { useEffect, useState } from "react";
-import { view } from "./engine";
-import type { LinkView } from "./types";
+import { Content } from "./panel";
+import { startToasts } from "./toasts";
+import { syncCollection } from "./collection";
+import { syncLaunchOptions } from "./launch";
 
-function Content() {
-  const [value, setValue] = useState<LinkView | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default definePlugin(() => {
+  const stop = startToasts();
+  void syncCollection().then((plan) =>
+    "code" in plan ? [plan] : syncLaunchOptions(plan),
+  );
+  const titleView = <div className={staticClasses.Title}>Flat to 3D</div>;
 
-  useEffect(() => {
-    let mounted = true;
-    const poll = async () => {
-      const response = await view();
-      if (!mounted) return;
-      if (response.ok) {
-        setValue(response.data);
-        setError(null);
-      } else {
-        setValue(null);
-        setError(response.error.message);
-      }
-    };
-    void poll();
-    const timer = window.setInterval(() => void poll(), 1000);
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  if (error !== null) return <Field label="Flat to 3D" description={error} />;
-  if (value === null) return <Field label="Flat to 3D" description="Loading…" />;
-  return <Field label={value.label} description={value.hint} />;
-}
-
-export default definePlugin(() => ({
-  name: "Flat to 3D",
-  titleView: <div className={staticClasses.Title}>Flat to 3D</div>,
-  content: <Content />,
-  icon: <FaVrCardboard />,
-}));
+  return {
+    name: "Flat to 3D",
+    titleView,
+    content: <Content />,
+    icon: <FaVrCardboard />,
+    onDismount: stop,
+  };
+});
