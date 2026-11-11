@@ -5,7 +5,7 @@ import {
   PanelSectionRow,
   ToggleField,
 } from "@decky/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type JSX } from "react";
 import {
   doctor,
   rows,

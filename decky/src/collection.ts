@@ -1,3 +1,4 @@
+import "@decky/ui";
 import { collection, type ApiError } from "./engine";
 import type { CollectionPlan } from "./types";
 
