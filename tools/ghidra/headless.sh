@@ -12,7 +12,7 @@ LOCK=$HOME/.local/share/craft-build/qwen.lock
 [ -e "$LOCK" ] && { echo "headless: $LOCK exists, the Qwen homework is running; not now" >&2; exit 75; }
 pgrep -f ghidra.app.util.headless.AnalyzeHeadless >/dev/null && { echo "headless: another headless Ghidra is running" >&2; exit 75; }
 "$GHIDRA/support/analyzeHeadless" "$@" & P=$!
-while kill -0 $P 2>/dev/null; do
+while kill -0 "$P" 2>/dev/null; do
   a=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
   if [ "$a" -lt 2048 ]; then
     echo "headless: MemAvailable ${a} MiB < 2048, stopping Ghidra $(date +%T)" >&2
@@ -21,4 +21,4 @@ while kill -0 $P 2>/dev/null; do
   fi
   sleep 2
 done
-wait $P
+wait "$P"

@@ -1,0 +1,83 @@
+# Trust-on-first-use pins for user-fetched release assets.
+# Each key.field line records metadata; TBD-at-pin sha256 values are filled by pin.sh.
+uevr.fetch: auto
+uevr.version: nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d
+uevr.url: https://github.com/praydog/UEVR-nightly/releases/download/nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d/uevr.zip
+uevr.size: 38974809
+uevr.sha256: 4cd6932d1d01168178aef70499d40b101ea6f19868cf76099d8e0087ef8dc6d8
+uevr.license: MIT
+
+android-tools.fetch: auto
+android-tools.version: 37.0.0p1
+android-tools.url: https://github.com/nmeum/android-tools/releases/download/37.0.0p1/android-tools-37.0.0p1.tar.xz
+android-tools.size: 19376140
+android-tools.sha256: 2c6de1abe16b211c7d9f59276217e14fd9e0e18b20e331d3c84358f5dffd576e
+android-tools.license: Apache-2.0
+
+gnirehtet.fetch: auto
+gnirehtet.version: 2.5.1
+gnirehtet.url: https://github.com/Genymobile/gnirehtet/releases/download/v2.5.1/gnirehtet-rust-linux64-v2.5.1.zip
+gnirehtet.size: 329080
+gnirehtet.sha256: dee55499ca4fef00ce2559c767d2d8130163736d43fdbce753e923e75309c275
+gnirehtet.license: Apache-2.0
+
+appimagetool.fetch: auto
+appimagetool.version: 1.9.1
+appimagetool.url: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+appimagetool.size: 15092216
+appimagetool.sha256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+appimagetool.license: NOASSERTION
+
+appimage-runtime.fetch: auto
+appimage-runtime.version: 20251108
+appimage-runtime.url: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+appimage-runtime.size: 944632
+appimage-runtime.sha256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+appimage-runtime.license: NOASSERTION
+
+geo11.fetch: auto
+geo11.version: 0.7.12
+geo11.url: TBD-at-pin
+geo11.size: TBD-at-pin
+geo11.sha256: TBD-at-pin
+geo11.license: unstated
+geo11.page: TBD-at-pin
+
+lana-fix.fetch: auto
+lana-fix.version: TBD-at-pin
+lana-fix.url: TBD-at-pin
+lana-fix.size: TBD-at-pin
+lana-fix.sha256: TBD-at-pin
+lana-fix.license: unstated
+lana-fix.page: https://helixmod.blogspot.com/2025/12/planet-of-lana-geo-11-fix.html
+
+control-fix.fetch: auto
+control-fix.version: TBD-at-pin
+control-fix.url: TBD-at-pin
+control-fix.size: TBD-at-pin
+control-fix.sha256: TBD-at-pin
+control-fix.license: unstated
+control-fix.page: https://helixmod.blogspot.com/2019/10/control-3d-vision-ready-fix-losti-v100.html
+
+ac7-profile.fetch: auto
+ac7-profile.version: TBD-at-pin
+ac7-profile.url: TBD-at-pin
+ac7-profile.size: TBD-at-pin
+ac7-profile.sha256: TBD-at-pin
+ac7-profile.license: unstated
+ac7-profile.page: https://github.com/keton/ace-combat-uevr
+
+wivrn-apk.fetch: auto
+wivrn-apk.version: v26.9
+wivrn-apk.url: https://github.com/WiVRn/WiVRn/releases/download/v26.9/WiVRn-release.apk
+wivrn-apk.size: 24295140
+wivrn-apk.sha256: 1df6649ec77224fcc821af0ab4897222bdf3d7eb6ce6ad636461336724111331
+wivrn-apk.license: GPL-3.0
+
+ac7-prereqs.fetch: manual
+ac7-prereqs.page: TBD-at-pin
+ac7-prereqs.license: unstated
+ac7-prereqs.note: Nexus 2179/2274 files and the Flat2VR pak (OD8)
+
+crate.ashpd: 0.13.13
+crate.openxr: 0.22

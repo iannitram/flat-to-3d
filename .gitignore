@@ -4,6 +4,9 @@ dist/
 __pycache__/
 .venv/
 node_modules/
+decky/node_modules/
+decky/dist/
 
 # Rust build output
 target/
+crates/*/Cargo.lock
