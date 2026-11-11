@@ -2,7 +2,7 @@
 
 ## Latest local checkpoint
 
-Verified integration tip **2bdf6db8461367535d1dfa9ef065214975de58ed**. Runbook stop. Every package is settled (26 done, 4 blocked, 9 skipped). Independent work exhausted. See [progress.md](progress.md) for the PRs, exact blockers, unverified device work and final gate results. The historical handoff below documents the original published checkpoint. For a restore from this local checkpoint, use its verified integration tip and progress snapshot.
+Verified integration tip **c9c46b7b45a633b20b55953cecdc369bca461f2d**. Runbook stop. Every package is settled (31 done, 3 blocked, 5 skipped). Independent work exhausted. See [progress.md](progress.md) for the PRs, exact blockers, unverified device work and final gate results. The historical handoff below documents the original published checkpoint. For a restore from this local checkpoint, use its verified integration tip and progress snapshot.
 
 The 2026-11-10 run stopped after the owner asked the two active builders to finish. Of 39 runnable work packages, 17 passed integration, two passed their branch checks and await integration, three are blocked, nine are skipped on dependencies, and eight are queued. [Progress and PRs](progress.md)
 
