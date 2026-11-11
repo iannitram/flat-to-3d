@@ -1,0 +1,18 @@
+schema = 1
+name = "z5-recipe"
+title = "Z5 Recipe"
+q = "Q7"
+issues = [36]
+device = ["z13"]
+done_when = "`flat3d-inject list` shows Zero Company as works-now, and the locked test loads the file."
+after = ["z4-mission"]
+evidence_only = [36]
+
+[vars]
+appid = "2075800"
+
+[[step]]
+id = "recipe-evidence"
+kind = "ask"
+who = "you"
+text = "Record fps and depth results plus proposed recipe text."

@@ -1,0 +1,29 @@
+schema = 1
+name = "appimage"
+title = "Appimage"
+q = "Q16"
+issues = [129]
+device = ["ci"]
+done_when = "CI builds the AppImage and uploads it; it starts on the owner's Deck (needs-owner-device)."
+
+[[step]]
+id = "chmod"
+kind = "cmd"
+who = "script"
+text = "Make AppImage executable."
+run = ["chmod", "+x", "{repo}/dist/Flat_to_3D-x86_64.AppImage"]
+
+[[step]]
+id = "launch"
+kind = "cmd"
+who = "script"
+text = "Launch AppImage."
+run = ["{repo}/dist/Flat_to_3D-x86_64.AppImage"]
+background = true
+
+[[step]]
+id = "window"
+kind = "check"
+who = "you"
+text = "AppImage window starts."
+gate = true

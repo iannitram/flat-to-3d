@@ -1,0 +1,190 @@
+schema = 1
+name = "link-smoke"
+title = "Link Smoke"
+q = "Q3"
+issues = [26, 39, 125, 128]
+device = ["z13", "quest2"]
+done_when = "tests assert the command list and the state reported for a missing headset, an unauthorised headset and a ready link (the command runner behind a small trait so tests fake it); on the device, one call leaves WiVRn ready over the cable (needs-owner-device).; tests assert the stop command list and the reported state, using #26's fake runner; on the device Start 3D, Stop 3D, Start 3D in a row all report ready/done (`needs-owner-device`).; a fake-runner test with scripted misses sees 3 misses then one reconnect, at most 10 reconnects, and soak lines written; needs-owner-device for the real headset.; tests on a temp HOME show install then uninstall leaves nothing behind; the systemd step is a device check (needs-owner-device)."
+
+[[trouble]]
+symptom = "link never becomes ready"
+cause = "Check service logs and headset connection."
+
+[[step]]
+id = "install"
+kind = "cmd"
+who = "script"
+text = "Install the link service."
+run = ["flat3d-inject", "install", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "active"
+kind = "cmd"
+who = "script"
+text = "Check service active."
+run = ["systemctl", "--user", "is-active", "flat3d-link"]
+expect = "active"
+
+[[step]]
+id = "ready"
+kind = "cmd"
+who = "script"
+text = "Check link ready."
+run = ["flat3d-inject", "status", "--json"]
+expect_json = { "/data/state" = "ready" }
+
+[[step]]
+id = "start"
+kind = "cmd"
+who = "script"
+text = "Start 3D."
+run = ["flat3d-inject", "start-3d", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "stop"
+kind = "cmd"
+who = "script"
+text = "Stop 3D."
+run = ["flat3d-inject", "stop-3d", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "start-again"
+kind = "cmd"
+who = "script"
+text = "Start 3D again immediately after stop; the cycle must work without reboot."
+run = ["flat3d-inject", "start-3d", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "list"
+kind = "cmd"
+who = "script"
+text = "List games."
+run = ["flat3d-inject", "list", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "soak"
+kind = "ask"
+who = "you"
+text = "Run the 30-minute link soak and record the resulting log."
+
+[[step]]
+id = "soak-file"
+kind = "cmd"
+who = "script"
+text = "Confirm soak result exists."
+run = ["find", "{state}", "-maxdepth", "1", "-name", "soak-*.txt"]
+expect = "soak-"
+
+[[step]]
+id = "doctor"
+kind = "cmd"
+who = "script"
+text = "Run doctor report."
+run = ["flat3d-inject", "doctor", "--json"]
+expect_json = { "/data/ok" = true }
+
+[[step]]
+id = "headset"
+kind = "check"
+who = "you"
+text = "Doctor quest-app line shows a version, not no headset."
+gate = true
+
+[[step]]
+id = "unplug-replug-heals"
+kind = "check"
+who = "you"
+text = "Unplug and reconnect the headset; link heals."
+gate = true
+
+[[step]]
+id = "sleep-wake-heals"
+kind = "check"
+who = "you"
+text = "Suspend and resume; link heals."
+gate = true
+
+
+[[step]]
+id = "wifi-tunnel"
+kind = "cmd"
+who = "script"
+text = "Confirm Wi-Fi tunnel interface when testing tunnel mode."
+run = ["adb", "shell", "ip", "addr", "show", "tun0"]
+expect = "inet "
+
+[[step]]
+id = "gnirehtet-package"
+kind = "cmd"
+who = "script"
+text = "Confirm the tunnel helper package is installed."
+run = ["adb", "shell", "pm", "list", "packages", "com.genymobile.gnirehtet"]
+expect = "^package:com\\.genymobile\\.gnirehtet$"
+
+[[step]]
+id = "wifi-back-after-disconnect"
+kind = "check"
+who = "you"
+text = "Wi-Fi link returns after disconnecting the wired link."
+gate = true
+
+[[step]]
+id = "stop-once"
+kind = "cmd"
+who = "script"
+text = "Stop 3D once after the tunnel checks."
+run = ["flat3d-inject", "stop-3d", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "stop-twice"
+kind = "cmd"
+who = "script"
+text = "Stop 3D a second time; stopping is idempotent."
+run = ["flat3d-inject", "stop-3d", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "stopped"
+kind = "cmd"
+who = "script"
+text = "Confirm the link state is stopped."
+run = ["flat3d-inject", "status", "--json"]
+expect_json = { "/data/state" = "stopped" }
+
+[[step]]
+id = "wivrn-version"
+kind = "cmd"
+who = "script"
+text = "Confirm the WiVRn headset app version."
+run = ["adb", "shell", "dumpsys", "package", "org.meumeu.wivrn.github"]
+expect = "versionName=26\\.9"
+
+[[step]]
+id = "uninstall"
+kind = "cmd"
+who = "script"
+text = "Uninstall service."
+run = ["flat3d-inject", "uninstall", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "cleanup-files"
+kind = "cmd"
+who = "script"
+text = "Confirm uninstall left no link service files behind."
+run = ["python3", "-c", "from pathlib import Path; import sys; sys.exit(any(p.exists() for p in map(Path, sys.argv[1:])));", "{home}/.config/systemd/user/flat3d-link.service", "{data}/systemd/user/flat3d-link.service"]
+
+[[step]]
+id = "service-inactive"
+kind = "cmd"
+who = "script"
+text = "Confirm the user service is no longer active."
+run = ["systemctl", "--user", "is-active", "flat3d-link"]
+expect = "inactive|unknown"
+ok_rc = [3, 4]

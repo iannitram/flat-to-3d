@@ -1,0 +1,20 @@
+schema = 1
+name = "z1-offline"
+title = "Z1 Offline"
+q = "Q5"
+issues = [31]
+device = ["z13"]
+done_when = "the game starts and plays a mission with the network off after the one-time link (`needs-owner-device`)."
+
+[[step]]
+id = "ea-link"
+kind = "ask"
+who = "you"
+text = "Complete the one-time EA account link."
+
+[[step]]
+id = "offline-mission"
+kind = "check"
+who = "you"
+text = "A mission starts and plays with the network off."
+gate = true

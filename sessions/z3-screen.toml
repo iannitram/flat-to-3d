@@ -1,0 +1,21 @@
+schema = 1
+name = "z3-screen"
+title = "Z3 Screen"
+q = "Q7"
+issues = [33]
+device = ["z13", "quest2"]
+done_when = "in the headset, turning my head doesn't move the game camera and the screen shows depth (`needs-owner-device`), or the finding that 2D Screen Mode is flat, with #9 moved into 1.0."
+after = ["z2-uevr"]
+
+[[step]]
+id = "screen-outcome"
+kind = "ask"
+who = "you"
+text = "Record whether Zero Company Screen Mode has depth, or whether the flat-mode finding moves issue #9 into 1.0."
+
+[[step]]
+id = "fixed-screen"
+kind = "check"
+who = "you"
+text = "Head turn does not move the camera and depth is visible, or record the flat-mode finding and issue #9 move."
+gate = true

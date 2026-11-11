@@ -1,0 +1,43 @@
+schema = 1
+name = "q12"
+title = "Q12"
+q = "Q12"
+issues = [19]
+device = ["build-box"]
+needs = ["WP-30"]
+done_when = "RE overnight: both Ghidra scripts compile, tools/re/analyze.sh all exits 0, and tools/re/fill_map.py --check exits 0."
+
+[[step]]
+id = "src-exe"
+kind = "ask"
+who = "you"
+text = "Path to the Spider-Man Remastered executable."
+
+[[step]]
+id = "dst-exe"
+kind = "ask"
+who = "you"
+text = "Path to the Spider-Man 2 executable."
+
+[[step]]
+id = "compile-scripts"
+kind = "cmd"
+who = "script"
+text = "Compile both Ghidra scripts before the long analysis."
+run = ["bash", "-c", "out=$(mktemp -d) && cp=$(find \"$1/ghidra/Ghidra\" -regex \".+[.]jar\" -printf \"%p:\") && \"$1/jdk/current/bin/javac\" -proc:none -nowarn -d \"$out\" -cp \"$cp\" \"$2/tools/ghidra/Flat3dVtOptions.java\" \"$2/tools/ghidra/ExportVtMatches.java\"", "q12-compile", "{re_home}", "{repo}"]
+timeout = 300
+
+[[step]]
+id = "analyze"
+kind = "cmd"
+who = "script"
+text = "Run full Ghidra analysis."
+run = ["bash", "{repo}/tools/re/analyze.sh", "all", "{state}/re/proj", "{ans:src-exe}", "{ans:dst-exe}", "{state}/re/vt-matches.csv"]
+timeout = 43200
+
+[[step]]
+id = "fill-map"
+kind = "cmd"
+who = "script"
+text = "Check generated address map."
+run = ["python3", "{repo}/tools/re/fill_map.py", "--map", "{repo}/games/spiderman2/map.toml", "--vt", "{state}/re/vt-matches.csv", "--targets", "{repo}/tools/xmatch/targets.py", "--doc", "{repo}/docs/spiderman2/address-map.md", "--check"]
