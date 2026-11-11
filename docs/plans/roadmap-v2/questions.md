@@ -44,7 +44,7 @@ WP-01 is built as four parts (`WP-01a.md` to `WP-01d.md`), and all four read thi
    **Folded** into the allowlist in WP-01b.md, §2 "Only `exec.rs` spawns", §0 and WP-08.
 14. **Who moves the `watch/` spawns into `exec.rs`?** The allowlist tags the `adb track-devices` and `ss -tlnp` sites with WP-09. But WP-09's Files do not include `exec.rs`, and only WP-10 may touch it (body only). **Rec:** retag both entries "follow-up" instead of WP-09, and file a follow-up issue. No WP in this pass owns the move.
    **Folded** into the allowlist in WP-01b.md, §2, §0 and WP-09. The follow-up issue is still for the owner or PM to file.
-15. **Glob-import guard scope.** It covers `api`, `install` and `tether::relay`. Should `tether::wifi` or `cli` join it? **Rec:** no. Keep the three.
+15. **Glob-import guard scope.** *(void, 2026-11-10 ruling 42: `tether::relay` is removed from the guard.)* It covers `api`, `install` and `tether::relay`. Should `tether::wifi` or `cli` join it? **Rec:** no. Keep the three.
 
 ## WP-02
 
@@ -62,17 +62,17 @@ WP-01 is built as four parts (`WP-01a.md` to `WP-01d.md`), and all four read thi
 
 ## WP-09 and WP-10
 
-23. **`Tether::set_wivrn` signature.** §2 freezes `set_wivrn(app:String, flags:Vec<String>)`. A WP-10 proposal wanted `&WivrnStart`. **Rec:** keep the §2 form.
-24. **`PlanCtx` adb field.** §2 freezes `PlanCtx{pub relay}`, so `SpawnRelay` calls `start_relay(&ctx.relay, "")`. A caller that runs `run_plan_in` on a bare `ProcessRunner` would start gnirehtet with `ADB=""`. **Rec:** add `pub adb:String` to §2 and WP-01 before wave 1 starts, while it is still cheap. If that is too late, add a doc line saying only `Tether` may call `run_plan_in`.
+23. **`Tether::set_wivrn` signature.** *(void, 2026-11-10 ruling 42: WP-10 is superseded and WP-36 removes its code.)* §2 freezes `set_wivrn(app:String, flags:Vec<String>)`. A WP-10 proposal wanted `&WivrnStart`. **Rec:** keep the §2 form.
+24. **`PlanCtx` adb field.** *(void, 2026-11-10 ruling 42: WP-10 is superseded and WP-36 removes its code.)* §2 freezes `PlanCtx{pub relay}`, so `SpawnRelay` calls `start_relay(&ctx.relay, "")`. A caller that runs `run_plan_in` on a bare `ProcessRunner` would start gnirehtet with `ADB=""`. **Rec:** add `pub adb:String` to §2 and WP-01 before wave 1 starts, while it is still cheap. If that is too late, add a doc line saying only `Tether` may call `run_plan_in`.
    **Settled:** §2 keeps `PlanCtx{pub relay}` with no `adb` field. WP-10 adds the doc comment that only `Tether` may call `run_plan_in`.
 25. **"No adb is available" refusal.** Should it name a fix (Craft A4)? **Rec:** yes: `fix: flat3d-inject install`, the command that copies the bundled adb into tools_dir.
    **Folded** into WP-10 (`; fix: flat3d-inject install`).
 
 ## WP-11
 
-26. **Raw runner in `publish()`.** From the WP-11 merge (wave 2) until WP-09 adds its `TetherAdb` adapter (wave 4), the tick's adb probes run bare `adb`. **Rec:** accept the gap and list it under WP-11's `## Not verified`. Nothing ships between those waves.
+26. **Raw runner in `publish()`.** *(void, 2026-11-10 ruling 42: the tether adapter is removed.)* From the WP-11 merge (wave 2) until WP-09 adds its `TetherAdb` adapter (wave 4), the tick's adb probes run bare `adb`. **Rec:** accept the gap and list it under WP-11's `## Not verified`. Nothing ships between those waves.
    **Folded** into WP-11's `## Not verified` list and a known-interim note in §2.
-27. **`tunnel` meaning.** The filled tick reports `tunnel: false` in QuestTether mode, and in Own mode until tun0 is probed Connected. Today it is `tether != Off`. **Rec:** intended. `tunnel` now means "our tun0 is up".
+27. **`tunnel` meaning.** *(void, 2026-11-10 ruling 42: `tunnel` is removed.)* The filled tick reports `tunnel: false` in QuestTether mode, and in Own mode until tun0 is probed Connected. Today it is `tether != Off`. **Rec:** intended. `tunnel` now means "our tun0 is up".
    **Folded** into WP-11 (tick step 1).
 
 ## WP-13
@@ -150,7 +150,7 @@ WP-01 is built as four parts (`WP-01a.md` to `WP-01d.md`), and all four read thi
 
 52. **The doctor's `pins` check source.** **Rec:** no `p.pins()` seam. Read the compiled table that `fetch::pin` uses, and test through a `pins_in(&BTreeMap)` form, as `fetch::pin_in` does.
    **Folded** into WP-29 ("Pins source for the `pins` check").
-53. **One gnirehtet APK path.** The doctor checks `relay::apk_path`. **Rec:** install-apps uses `apk_path` too, so there is one path.
+53. **One gnirehtet APK path.** *(void, 2026-11-10 ruling 42: gnirehtet leaves the app.)* The doctor checks `relay::apk_path`. **Rec:** install-apps uses `apk_path` too, so there is one path.
    **Folded** into WP-29 (check 4 and `setup install-apps`).
 54. **Quest-app version mismatch fix.** No command fixes it. **Rec:** the fix text says to update the headset app to the server's version, and a follow-up adds a command. The detail keeps both versions.
    **Folded** into WP-29 check 2.
@@ -217,7 +217,7 @@ WP-01 is built as four parts (`WP-01a.md` to `WP-01d.md`), and all four read thi
 - WP-24, WP-25a and WP-34 all use the long STEP0-RUNSHEET header (`<!-- generated by tools/session/session.py render … -->`).
 - WP-01 writes every COMMANDS row, `list` and `status` included. WP-07 does not edit `cli.rs`.
 - WP-29's Effects match WP-01's COMMANDS rows (`doctor`, `setup packages` and `setup launch-env` Probes; `setup install-apps` WritesFiles, RunsCommands). Checked in the final check, 2026-11-10.
-- WP-09 calls `Tether::sync_wifi` once after an Own connect, and WP-10's connect does not. Both files agree.
+- *(void, 2026-11-10 ruling 42: WP-10 is superseded and WP-36 removes `sync_wifi`.)* WP-09 calls `Tether::sync_wifi` once after an Own connect, and WP-10's connect does not. Both files agree.
 - WP-07 writes `Refs #27`. WP-04, WP-05 and WP-23 write `Closes`. The index matches every WP's Refs/Closes line (question 2 asks whether that rule should be written down).
 - WP-16 cache paths: `cache_dir` is always the cache root `p.cache()` (WP-27 passes it), and WP-16's depth ≤ 3 searches allow for the `<version>` folder.
 - check.py on the whole repo: WP-25a always skips `docs/plans/`, and WP-25b's notes say so.
@@ -237,7 +237,7 @@ Each line gives the default the builders use until the owner says otherwise.
 - **WP-15:** `--dll` is strict Windows-only, and `--dry-run` may exit 3 when the SDK is missing. Default: as written.
 - **WP-21:** `jsx: react-jsx` with the pinned rollup is unverified, and so are the node and pnpm versions. Default: if `pnpm run build` fails for that reason, record `blocked`.
 - **WP-26:** `geo11-exe: Planet of Lana.exe` is unconfirmed. Default: write it as given; session `g1-geo11` checks it.
-- **WP-29:** the AppImage ships `--no-tools`, so `setup install-apps` cannot install gnirehtet there. The doctor stays red on pins until the Q0 pins are filled, which is correct under ruling D4. Default: as written.
+- **WP-29:** *(void, 2026-11-10 ruling 42: gnirehtet leaves the app.)* the AppImage ships `--no-tools`, so `setup install-apps` cannot install gnirehtet there. The doctor stays red on pins until the Q0 pins are filled, which is correct under ruling D4. Default: as written.
 - **WP-30:** the HEROVR items H1-H11 are not listed in the plan; the `conf` and `how` texts are defaults; the SM2 seed header is question 47. Default: as written.
 - **WP-31:** the Geo-11 `d3d11.dll` on a flat fallback. Default: leave as is; decide after Q9.
 - **WP-02 pins:** `geo11` and `wivrn-apk` have no source page. Default: `page: TBD-at-pin`, filled before Q0.

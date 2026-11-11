@@ -7,11 +7,11 @@ Where the project stands and what comes next. This is the plan. The SM2 track is
 
 ## The 1.0 play round trip
 
-1. **Plug in.** Z13 in Game Mode; Quest 2 on the USB-C cable, headset on, seated boundary. First time only: allow USB debugging. A user service (`flat3d-link`) sees the cable: it brings up the tunnel (internet from the PC over USB, the Quest Tether link ported to Rust), WiVRn and the headset app, and a toast says 3D is ready (M10, M25).
+1. **Plug in.** Z13 in Game Mode; Quest 2 on the USB-C cable, headset on, seated boundary. First time only: allow USB debugging. A user service (`flat3d-link`) sees the cable: it brings up WiVRn and the headset app, and a toast says 3D is ready (M10). The headset's internet over the cable is Quest Tether's job, a separate app (ruling 42, 2026-11-10).
 2. **Press Play** on a game with the `3D Ready` collection badge. The launch wrapper `flat3d-run` sees the link is ready and the game's switch is on, applies the game's route and starts it with the OpenXR environment. With no headset, or the switch off, it starts the game unchanged (M9, M30).
 3. **Play** on the giant fixed screen with depth, gamepad in hand (M19). Head movement looks around the room, not the game. Pause goes flat.
 4. **Unplug** any time: the service keeps the link for 2 minutes in case of a replug, then stops it and says "restart the game for flat" (M18). A headset plugged in while a game is already running flat gets a toast to restart it in 3D.
-5. **Watch** the headset from Quick Access: battery, temperature (toast at 38 C and 42 C), throughput, uptime, reconnects (M26, M27).
+5. **Watch** the headset from Quick Access: battery and temperature (toast at 38 C and 42 C) (M26); when Quest Tether is installed, its state as a read-only line (M29).
 
 Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)).
 
@@ -36,8 +36,8 @@ The game tracks below need the owner's devices; the engine, app and packaging st
 | E3 Injectors | the routes: `uevr.rs`, `geo11.rs`, `port.rs`; each returns the environment for the wrapper; dispatch and `inject <appid>` | #83 (UEVR profile text), #51's fake-prefix half (`uevr::apply` with undo, PR #196) | #27 dispatch + port (blocked by #120), #51 device half (fetch UEVR and .NET, the real env; waits on Z2 #32), #52 Geo-11 (blocked by #43 and #44, both owner-device) |
 | E4 Undo and launch options | `route_of`, the `flat3d-run` word in launch options, the undo record and its steps, `undo <appid>` | **Done:** #79-#82, #84 | |
 | E5 Link service | `flat3d-inject watch`: track-devices, plug/unplug/grace state machine, state file, event ring, run records, settings, link command parsing | #85-#94, #119 (`watch::run`) | #120 link commands (ready: makes `watch` a command) |
-| E6 Tether | gnirehtet reverse tether ported from Quest Tether: one adb, tun0 honesty, Wi-Fi-first disconnect, NetworkManager sync, heal ladder, step-aside | #95-#104, #124 | #125 health loop (ready) |
-| E7 Health and stats | battery and temperature zones, toast gate, throughput, soak summary | **Done:** #105-#108 | (run by #119, #125) |
+| E6 Tether | **To be removed (ruling 42, 2026-11-10; WP-35..37).** Was: gnirehtet reverse tether ported from Quest Tether: one adb, tun0 honesty, Wi-Fi-first disconnect, NetworkManager sync, heal ladder, step-aside. Only the adb choice stays (WP-35, `link/adb.rs`). The closed issues are history | #95-#104, #124 (history) | #125's tunnel, heal, throughput and soak parts are not planned (WP-11 built them; WP-36 removes them) |
+| E7 Health and stats | battery and temperature zones, toast gate (kept); throughput and soak summary (to be removed with the tunnel, ruling 42) | **Done:** #105-#108 | (run by #119 and the WP-11 health loop, which WP-36 cuts back) |
 | E8 Wrapper | `flat3d-run`: plan, exec spec, run | **Done:** #109, #110, #126 | |
 | E9 Face data | 3D Ready collection diff, new toasts, health/speed/uptime wording, the view commands | #113, #114, #115 | #121 view commands (blocked by #76 and #120) |
 | E10 Face rules | status labels and colours, link wording, game rows, headset buttons and logs | #74, #75, #77 | #76 `rows` (ready) |

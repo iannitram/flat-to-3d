@@ -1,5 +1,6 @@
 <!-- split from WP-01.md (roadmap-v2.md lines 755-1385 at c0e6874), part a of four -->
 ### WP-01a: Workspace reshape: moves, manifests, CI
+> Note (2026-11-10, ruling 42): the tether parts of this WP are removed by WP-35..37; this file stays as history.
 
 **Closes:** A2-A4, A9, A10, A22, C9, K1, K3. It does the workspace part of the reshape: every file move, every `Cargo.*` file, the two new crates as compiling skeletons, the path rewrite of `docs/code-map.md` and the final `check.yml`. It lands the `mod_module_files` layering lint (rulings 2026-11-09; Craft review A2, A6). No new behaviour: code only moves. WP-01b to WP-01d add the new modules, the CLI and the stubs.
 

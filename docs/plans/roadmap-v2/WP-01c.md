@@ -1,5 +1,6 @@
 <!-- split from WP-01.md (roadmap-v2.md lines 755-1385 at c0e6874), part c of four -->
 ### WP-01c: CLI bones: parse_any, command registry, exit hook, error_help
+> Note (2026-11-10, ruling 42): the tether parts of this WP are removed by WP-35..37; this file stays as history.
 
 **Closes:** A1, A23. It writes `cli.rs` in its frozen form (`parse_any`, the shared dispatch, `Ctx`), the `cli/*.rs` entry points, and the owner's D2 additions (`cli::COMMANDS`, `cli::ok_exit`, `api::error_help`) with the D4 red-doctor exit code (through `ok_exit`) and the stub tags of the CLI stubs (rulings 2026-11-09; Craft review A10). It also adds the new `api.rs` DTOs.
 

@@ -2,9 +2,11 @@
 
 The repository plan is [docs/ROADMAP.md](ROADMAP.md). This map describes the current Rust engine, app, Decky panel, routes and packaging.
 
+**Ruling 42 (2026-11-10):** Flat to 3D and Quest Tether stay separate apps. The tether pieces this map describes (`crates/engine/src/tether/`, the tunnel switch, `TetherMode`, the snapshot's `tether` and `tunnel` fields, step-aside, the throughput and soak parts of health, gnirehtet in Setup, install and packaging) are on main but **to be removed, WP-35..37** (`docs/plans/roadmap-v2/`); only the adb choice stays, moved to `link/adb.rs`. The internet tunnel is not part of 1.0.
+
 The deep maps are [Spidy core](spiderman2/spidy-core-map.md) and the [Spider-Man 2 address map](spiderman2/address-map.md).
 
-**Platforms (R04).** The host is Linux only: SteamOS on the owner's Z13 (rulings 1, 2). Mac and Windows hosts don't apply. Windows binaries (the Spider-Man 2 port's DLLs, the SBS viewer if it runs inside Proton) are cross-built on Linux with clang-cl + xwin and run under Proton (ruling 21). The desktop app ships as an AppImage of the iced binary (no WebKitGTK). The Decky plugin bundles the engine binaries. The link service needs no root: Quest Tether's existing udev rule already grants USB access. CI is Linux only.
+**Platforms (R04).** The host is Linux only: SteamOS on the owner's Z13 (rulings 1, 2). Mac and Windows hosts don't apply. Windows binaries (the Spider-Man 2 port's DLLs, the SBS viewer if it runs inside Proton) are cross-built on Linux with clang-cl + xwin and run under Proton (ruling 21). The desktop app ships as an AppImage of the iced binary (no WebKitGTK). The Decky plugin bundles the engine binaries. The link service needs no root: Quest Tether's existing udev rule already grants USB access today; under ruling 42 Flat to 3D installs its own udev rule (WP-37). CI is Linux only.
 
 ## How it fits together
 

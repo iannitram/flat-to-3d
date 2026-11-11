@@ -1,5 +1,6 @@
 <!-- split from WP-01.md (roadmap-v2.md lines 755-1385 at c0e6874), part d of four -->
 ### WP-01d: Frozen stubs later WPs fill, and the wiring to them
+> Note (2026-11-10, ruling 42): the tether parts of this WP are removed by WP-35..37; this file stays as history.
 
 **Closes:** A5 (the bug, new issue), K4, K5, K6, K8. It writes every remaining frozen signature as a compiling stub (wivrn, health_loop, injectors, wrapper, install, launch_options, face, the app pages) with its stub tag (rulings 2026-11-09; Craft review A10), makes `wrapper::run_with` real (the A5 fix), and wires the watch service and `flat3d-run` to the new forms. Most bodies stay stubs, and later WPs fill them in. It is the last WP-01 part: after it, nothing in §0 "Frozen after wave 1" changes except through its named WP.
 
@@ -26,7 +27,7 @@
   - `docs/code-map.md` (stub rows only).
 - **Not edited:** `Cargo.*`, `check.yml`, `cli.rs`, any moved test file. **There is no `mod.rs` anywhere and no `x/x.rs`.**
 - **Ownership after this WP:**
-  - `exec.rs`: WP-01 owns it because it holds the trait split. WP-10 may change only the body of `ProcessRunner::run` and add private helpers.
+  - `exec.rs`: WP-01 owns it because it holds the trait split. WP-36 later folds the relay methods out of it (WP-10, merged #253, is superseded by ruling 42).
   - `link.rs`: WP-12 owns the bodies, and the WP-01 facade lines stay.
   - `crates/app/src/lib.rs`: WP-33 owns it from wave 4.
   - Everything else in §0 "Frozen after wave 1" (`00-run-the-pass.md`) is frozen.
