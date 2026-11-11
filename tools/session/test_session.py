@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 import time
+from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/session"))
@@ -35,12 +36,29 @@ class SessionTests(unittest.TestCase):
         d={"schema":1,"name":"bad","q":"Q0","issues":[],"step":[{"id":"x","kind":"cmd","who":"script","run":["echo","{unknown}"]}]}
         e="\n".join(session.validate(d,"bad.toml"));self.assertIn("unknown placeholder",e)
 
+    def test_answer_placeholders_require_earlier_answers_and_escaped_braces_stay_literal(self):
+        earlier={"schema":1,"name":"timeline","q":"Q0","issues":[],"step":[
+            {"id":"exe","kind":"ask","who":"you","text":"Executable path"},
+            {"id":"use-exe","kind":"cmd","who":"script","run":["echo","{ans:exe}","{{home}}","{{unknown}}"]}]}
+        self.assertEqual(session.validate(earlier,"timeline.toml"),[])
+        self.assertEqual(
+            session._fill("{{home}} / {ans:exe}",{}, {"exe":"game.exe"}),
+            "{home} / game.exe",
+        )
+        future={"schema":1,"name":"future","q":"Q0","issues":[],"step":[
+            {"id":"use","kind":"cmd","who":"script","run":["echo","{ans:later}"]},
+            {"id":"later","kind":"ask","who":"you","text":"Value"}]}
+        self.assertIn("earlier answer", "\n".join(session.validate(future,"future.toml")))
+        unknown={"schema":1,"name":"unknown","q":"Q0","issues":[],"step":[
+            {"id":"use","kind":"cmd","who":"script","run":["echo","{ans:no-such-answer}"]}]}
+        self.assertIn("earlier answer", "\n".join(session.validate(unknown,"unknown.toml")))
+
     def test_run_script_verdicts_and_reports(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td); csv=root/"fps.csv";csv.write_text("os,cpu\nLinux,0\nfps,frametime\n60,16\n60,16\n")
             doc={"name":"trial","q":"Q0","issues":[],"step":[
                 {"id":"ok","kind":"cmd","who":"script","run":[sys.executable,"-c","print('ok')"],"expect":"ok"},
-                {"id":"bad-json","kind":"cmd","who":"script","run":[sys.executable,"-c","print('{\"ok\":true,\"data\":{\"ok\":false}}')"],"expect_json":{"/data/ok":True},"optional":True},
+                {"id":"bad-json","kind":"cmd","who":"script","run":[sys.executable,"-c","print('{{\"ok\":true,\"data\":{{\"ok\":false}}}}')"],"expect_json":{"/data/ok":True},"optional":True},
                 {"id":"optional","kind":"cmd","who":"script","run":["false"],"optional":True},
                 {"id":"gate","kind":"check","who":"you"}]}
             r=session.run(doc,{"gate":"s"},root,123);self.assertEqual(r["verdict"],"INCOMPLETE");self.assertEqual(r["steps"][0]["status"],"ok");self.assertEqual(r["steps"][1]["status"],"fail")
@@ -53,10 +71,11 @@ class SessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);csv=root/"m.csv";csv.write_text("os,cpu\nLinux,0\nfps,frametime\n60,12\n60,20\n")
             doc={"name":"measures","q":"Q0","issues":[],"done_when":"measure fixture","step":[
-                {"id":"code","kind":"cmd","who":"script","run":[sys.executable,"-c","print('{\"ok\":false,\"error\":{\"code\":\"link-not-ready\"}}')"],"expect_code":"link-not-ready"},
-                {"id":"fps","kind":"measure","who":"you","tool":"fps","input":str(csv),"args":["--min","30"]},
+                {"id":"threshold","kind":"ask","who":"you","text":"FPS threshold"},
+                {"id":"code","kind":"cmd","who":"script","run":[sys.executable,"-c","print('{{\"ok\":false,\"error\":{{\"code\":\"link-not-ready\"}}}}')"],"expect_code":"link-not-ready"},
+                {"id":"fps","kind":"measure","who":"you","tool":"fps","input":str(csv),"args":["--min","{ans:threshold}"]},
                 {"id":"optional","kind":"measure","who":"you","tool":"disparity","input":str(root/"missing-*.png"),"optional":True}]}
-            result=session.run(doc,{},root,2);self.assertEqual(result["verdict"],"PASS");self.assertEqual(result["steps"][0]["code"],"link-not-ready");self.assertEqual(result["steps"][1]["metrics"]["p50"],60);self.assertEqual(result["steps"][2]["status"],"skip")
+            result=session.run(doc,{"threshold":"30"},root,2);self.assertEqual(result["verdict"],"PASS");self.assertEqual(result["steps"][1]["code"],"link-not-ready");self.assertEqual(result["steps"][2]["metrics"]["p50"],60);self.assertEqual(result["steps"][3]["status"],"skip")
 
     def test_command_table_words_if_available(self):
         path=ROOT/"docs/code-map.md"
@@ -76,10 +95,10 @@ class SessionTests(unittest.TestCase):
     def test_interactive_cli_prompts_and_does_not_run_owner_command(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);toml=root/"interactive.toml";state=root/"state"
-            toml.write_text('''schema = 1\nname = "interactive"\nq = "Q0"\nissues = []\ndone_when = "fixture acceptance"\n[[step]]\nid = "owner-action"\nkind = "cmd"\nwho = "you"\ntext = "Confirm this owner command."\nrun = ["false"]\n[[step]]\nid = "ask"\nkind = "ask"\nwho = "you"\ntext = "Enter a fixture value."\n[[step]]\nid = "gate"\nkind = "check"\nwho = "you"\ntext = "Approve fixture gate."\n''')
+            toml.write_text('''schema = 1\nname = "interactive"\nq = "Q0"\nissues = []\ndone_when = "fixture acceptance"\n[[step]]\nid = "owner-action"\nkind = "cmd"\nwho = "you"\ntext = "Confirm this owner command."\nrun = ["false"]\n[[step]]\nid = "ask"\nkind = "ask"\nwho = "you"\ntext = "Enter a fixture value."\n[[step]]\nid = "echo-answer"\nkind = "cmd"\nwho = "script"\ntext = "Echo the collected answer."\nrun = ["python3", "-c", "import sys; print(sys.argv[1])", "{ans:ask}"]\nexpect = "fixture-value"\n[[step]]\nid = "gate"\nkind = "check"\nwho = "you"\ntext = "Approve fixture gate."\n''')
             cp=subprocess.run([sys.executable,str(ROOT/"tools/session/session.py"),"run",str(toml),"--state-dir",str(state),"--now","123"],input="y\nfixture-value\ny\n",capture_output=True,text=True)
-            self.assertEqual(cp.returncode,0,cp.stderr+cp.stdout);self.assertIn("Confirm this owner command",cp.stdout);self.assertIn("false",cp.stdout)
-            result=json.loads((state/"interactive-123.json").read_text());self.assertEqual(result["steps"][0]["status"],"ok");self.assertIsNone(result["steps"][0]["rc"]);self.assertEqual(result["steps"][1]["answer"],"fixture-value");self.assertIn("fixture acceptance",(state/"interactive-123.md").read_text())
+            self.assertEqual(cp.returncode,0,cp.stderr+cp.stdout);self.assertIn("Confirm this owner command",cp.stdout);self.assertIn("false",cp.stdout);self.assertIn("fixture-value",cp.stdout)
+            result=json.loads((state/"interactive-123.json").read_text());self.assertEqual(result["steps"][0]["status"],"ok");self.assertIsNone(result["steps"][0]["rc"]);self.assertEqual(result["steps"][1]["answer"],"fixture-value");self.assertIn("fixture acceptance",(state/"interactive-123.md").read_text());self.assertIn("fixture-value",result["steps"][2]["tail"])
 
     @unittest.skipIf(os.name=="nt","process group teardown is Unix-specific")
     def test_background_is_cleaned_when_script_answer_is_missing(self):
@@ -89,6 +108,27 @@ class SessionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"missing answer"):session.run(doc,{},root,1)
             pid=int(marker.read_text())
             with self.assertRaises(ProcessLookupError):os.kill(pid,0)
+
+    def test_background_large_output_does_not_block_and_interrupt_cleans_up(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            command="import time; print('\\n'.join('line' for _ in range(20000))); print('tail-end',flush=True); time.sleep(30)"
+            doc={"name":"large-output","q":"Q0","issues":[],"step":[
+                {"id":"bg","kind":"cmd","who":"script","run":[sys.executable,"-c",command],"background":True},
+                {"id":"continue","kind":"ask","who":"you","text":"Continue"}]}
+            result=session.run(doc,{"continue":"y"},root,1)
+            self.assertIn("tail-end",result["steps"][0]["tail"])
+
+            original_popen=session.subprocess.Popen
+            spawned=[]
+            def track_popen(*args,**kwargs):
+                process=original_popen(*args,**kwargs)
+                spawned.append(process)
+                return process
+            with patch.object(session.subprocess,"Popen",side_effect=track_popen),patch.object(session,"_wait_for_background_startup",side_effect=KeyboardInterrupt):
+                with self.assertRaises(KeyboardInterrupt):session.run(doc,{"continue":"y"},root,2)
+            self.assertTrue(spawned)
+            self.assertIsNotNone(spawned[0].poll())
 
     def test_evidence_never_says_close_and_pending_order(self):
         m=session.to_markdown({"session":"z5","verdict":"PASS","steps":[],"evidence_only":[36]})
