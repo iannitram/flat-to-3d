@@ -1,0 +1,19 @@
+# Sample pins for parser and validation tests.
+ok.url: https://example.invalid/d/ok.zip?x=1
+ok.size: 5
+ok.sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+ok.version: 1
+ok.license: MIT
+ok.fetch: auto
+tbd.url: https://example.invalid/tbd
+tbd.size: 1
+tbd.sha256: TBD-at-pin
+tbd.fetch: auto
+hand.fetch: manual
+hand.page: https://example.invalid/p
+hand.note: n
+nourl.sha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+nourl.fetch: auto
+ok.pinned: 2026-11-08 tofu size+md5
+crate.ashpd: 0.13.13   # c
+npm.@decky/api: 1.1.3
