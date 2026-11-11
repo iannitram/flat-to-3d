@@ -5,7 +5,8 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0,
+    CloseHandle, GetLastError, ERROR_GEN_FAILURE, ERROR_TIMEOUT, HANDLE, INVALID_HANDLE_VALUE,
+    WAIT_FAILED, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows_sys::Win32::System::Diagnostics::Debug::WriteProcessMemory;
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
@@ -227,8 +228,17 @@ fn inject_one(pid: u32, dll: &str) -> Result<(), u32> {
     })
     .ok_or_else(|| unsafe { GetLastError() })?;
     // SAFETY: thread is a valid handle owned by this scope.
-    if unsafe { WaitForSingleObject(thread.get(), 60_000) } != WAIT_OBJECT_0 {
-        return Err(unsafe { GetLastError() });
+    let wait = unsafe { WaitForSingleObject(thread.get(), 60_000) };
+    if wait != WAIT_OBJECT_0 {
+        let error = match wait {
+            WAIT_TIMEOUT => ERROR_TIMEOUT,
+            WAIT_FAILED => unsafe { GetLastError() },
+            _ => ERROR_GEN_FAILURE,
+        };
+        // The remote thread may still read its path. Let the target process
+        // reclaim the allocation when it exits.
+        std::mem::forget(remote_memory);
+        return Err(error);
     }
     drop(remote_memory);
     Ok(())

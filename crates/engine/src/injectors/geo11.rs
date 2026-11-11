@@ -61,7 +61,7 @@ impl Geo11Settings {
                             })?;
                 }
                 "geo11-convergence" => {
-                    s.convergence = value.parse::<f32>().ok().filter(|n| *n > 0.0)
+                    s.convergence = value.parse::<f32>().ok().filter(|n| n.is_finite() && *n > 0.0)
                         .ok_or_else(|| bad_recipe(format!("invalid geo11-convergence: {value}; expected a number greater than 0")))?;
                 }
                 "geo11-d3dx" => {
@@ -343,8 +343,9 @@ fn root_ignored(name: &str) -> bool {
         || n == ".flat3d-fetch"
 }
 
-fn existing_case_path(dir: &Path, wanted: &Path) -> PathBuf {
-    let Some(name) = wanted.file_name().and_then(|n| n.to_str()) else {
+fn existing_case_path(wanted: &Path) -> PathBuf {
+    let (Some(dir), Some(name)) = (wanted.parent(), wanted.file_name().and_then(|n| n.to_str()))
+    else {
         return wanted.to_path_buf();
     };
     if let Ok(entries) = sorted_entries(dir) {
@@ -384,10 +385,7 @@ pub fn plan_files(
     for rel in remove_paths.split(';').filter(|s| !s.is_empty()) {
         let wanted = game_root.join(rel);
         if wanted.exists() {
-            steps.push(FileStep::Remove(existing_case_path(
-                game_root,
-                Path::new(rel),
-            )));
+            steps.push(FileStep::Remove(existing_case_path(&wanted)));
         }
     }
 
@@ -480,20 +478,21 @@ pub fn plan_files(
         }
     }
     for (from, to, _) in resolved {
-        let to = existing_case_path(game_root, &to);
+        let to = existing_case_path(&to);
         let lower = to
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .to_ascii_lowercase();
-        if lower == "d3dx.ini" {
+        let at_root = to.parent() == Some(game_root);
+        if at_root && lower == "d3dx.ini" {
             let text = fs::read_to_string(&from)
                 .map_err(|e| format!("{}: cannot read {}: {e}", "io", from.display()))?;
             steps.push(FileStep::Write {
                 to,
                 text: d3dx_patch(&text, &settings)?,
             });
-        } else if lower == "d3dxdm.ini" {
+        } else if at_root && lower == "d3dxdm.ini" {
             let text = fs::read_to_string(&from)
                 .map_err(|e| format!("io: cannot read {}: {e}", from.display()))?;
             steps.push(FileStep::Write {
@@ -540,11 +539,11 @@ pub fn viewer_check(viewer_exe: &Path) -> Result<(), ApiError> {
 }
 
 fn rollback(record: &UndoRecord) {
-    for r in record.replaced.iter().rev() {
-        let _ = fs::rename(&r.backup, &r.path);
-    }
     for p in record.created.iter().rev() {
         let _ = fs::remove_file(p);
+    }
+    for r in record.replaced.iter().rev() {
+        let _ = fs::rename(&r.backup, &r.path);
     }
 }
 
