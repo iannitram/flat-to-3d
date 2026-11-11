@@ -1,0 +1,14 @@
+# Seed (OD6): untested until sessions/z5-recipe.toml passes; real recipe lands in recipes/ at works-now.
+name: STAR WARS Zero Company
+stereo-status: untested
+stereo-route: uevr 2d screen mode
+stereo-engine: unreal 5.6
+stereo-api: dx12
+stereo-mod: https://github.com/praydog/UEVR-nightly
+stereo-free: yes
+stereo-safe: yes
+stereo-checked: 2026-11-08
+uevr-exe: SWZeroCompany
+uevr-rendering: native
+uevr-2d-screen: yes
+uevr-delay: 15
