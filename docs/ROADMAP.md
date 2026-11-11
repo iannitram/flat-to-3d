@@ -1,9 +1,9 @@
-# Roadmap: five Favorites in 3D
+# Roadmap: six Favorites in 3D
 
 Where the project stands and what comes next. This is the plan. The SM2 track is [spiderman2/plan.md](spiderman2/plan.md), with technical maps for [Spidy](spiderman2/spidy-core-map.md) and [addresses](spiderman2/address-map.md). This page is the short version.
 
 
-**1.0 scope (2026-10-26, widened 2026-10-31, reworked and approved 2026-11-01, [SPEC.md](../SPEC.md)):** "Plug in and play". Steam is the launcher: Play a game as usual. With the headset on the cable the game plays in 3D; without it the same Play button plays flat. Five Favorites, in order: STAR WARS Zero Company (UEVR, our own hook as fallback), ACE COMBAT 7 (UEVR), Control and Planet of Lana (Geo-11 and the SBS viewer), then Spider-Man 2 (Step 0 on Remastered, port Steps 1-8). Out of 1.0: the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #11, #12, #13). Code map: [code-map.md](code-map.md).
+**1.0 scope (2026-10-26, widened 2026-10-31, reworked and approved 2026-11-01, games list changed and re-approved 2026-11-11, [SPEC.md](../SPEC.md)):** "Plug in and play". Steam is the launcher: Play a game as usual. With the headset on the cable the game plays in 3D; without it the same Play button plays flat. Six Favorites (the owner, 2026-11-11: "This is the 1.0 list.", ruling 43; Forza Horizon 6 out by ruling 45), in order by readiness (ruling 46): STAR WARS Zero Company (UEVR, our own hook as fallback), ACE COMBAT 7 (UEVR), Control (Geo-11 and the SBS viewer), 007 First Light (its dormant stereo mode through our proxy DLL, into the SBS viewer), Spider-Man 2 (Step 0 on Remastered, port Steps 1-8), Alan Wake 2 (our own alternate-eye hook, into the SBS viewer). Out of 1.0: Planet of Lana and Forza Horizon 6 (both moved out 2026-11-11), the big-bucket tests (except UEVR on Zero Company), the generic 3D-screen pieces (unless Zero Company needs the fixed-screen layer), other games and Steam Frame (#8, #9, #12, #13; #11 except its 007 First Light and Alan Wake 2 parts). Code map: [code-map.md](code-map.md).
 
 ## The 1.0 play round trip
 
@@ -15,7 +15,7 @@ Where the project stands and what comes next. This is the plan. The SM2 track is
 
 Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-RUNSHEET.md)).
 
-**Order (ruling 2026-10-31):** Zero Company -> ACE COMBAT 7 (same UEVR route) -> Geo-11 and the SBS viewer -> Control and Planet of Lana -> Spider-Man 2.
+**Order (ruling 46, 2026-11-11, "By readiness (Recommended)"):** Zero Company -> ACE COMBAT 7 (same UEVR route) -> Geo-11 and the SBS viewer -> Control -> 007 First Light -> Spider-Man 2 -> Alan Wake 2.
 
 ## The app: one engine, two faces (rulings 2026-10-31, 2026-11-01)
 
@@ -23,7 +23,7 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 ## Where it stands
 
-The 1.0 path is the five Favorites in SPEC.md. The Rust engine, shared API, link state machine, route planning, app shell and core CI are in place; implementation proceeds through the roadmap packages and device sessions. Spider-Man 2 Step 1 is done except for the full-hash manifest; see [the workbench](workbench.md). Device results belong in `sessions/*.toml`. Run `flat3d-inject doctor` for a local readiness report.
+The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (they still need the `after-1.0` label); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue. The Rust engine, shared API, link state machine, route planning, app shell and core CI are in place; implementation proceeds through the roadmap packages and device sessions. Spider-Man 2 Step 1 is done except for the full-hash manifest; see [the workbench](workbench.md). Device results belong in `sessions/*.toml`. Run `flat3d-inject doctor` for a local readiness report.
 
 ## Development stages
 
@@ -45,7 +45,7 @@ The game tracks below need the owner's devices; the engine, app and packaging st
 | A App (iced) | crate and CI, the four pages' state, views, main wiring | #78's crate, tabs and CI job (PR #197) | #78 stays open for opening the window on the owner's device and the CI job's first run on the runner; #116 and #118 (ready), #117 (by #76), #122 (by #116-#118, #121, #76), #123 (by #122) |
 | D Decky (thin TS) | the engine binary as the backend, the panel, launch-option sync, 3D Ready collection, toasts | | #130 (blocked by #121; owner device for the no-Python launcher question), #131 and #133 (by #130), #132 (by #130 and #121's `launch`) |
 | P Packaging | `build-tools.sh`, install wiring, AppImage, Decky zip, all from one tagged commit | | #127 (ready, owner device; its body has drifted from the code map's ruling 34 on where adb comes from and where the tools go), #128 (by #120), #129 (by #123, #127, #128), #134 (by #131) |
-| G Games | Zero Company -> ACE COMBAT 7 -> Planet of Lana + Control -> Spider-Man 2 (tracks below) | | #31-#49, #5, #7, #18-#23, #29 |
+| G Games | Zero Company -> ACE COMBAT 7 -> Control -> 007 First Light -> Spider-Man 2 -> Alan Wake 2 (tracks below) | | #31-#44, #46, #47, #49, #5, #7, #18-#23, #29; no issues yet for 007 First Light and Alan Wake 2 (#11 names both); #45 and #48 (Planet of Lana) are `after-1.0` work |
 | X Design pass (last, R04) | the shared design system over the running app and the Decky panel; `design-pass` issues | | after the rest |
 
 **Critical path to a first end-to-end try (Zero Company, by hand):** #120 -> #27 -> a Zero Company recipe -> the owner's headset session (Z1, Z2, then #51's device half). #119, #66 and #51's file half are merged. The faces (A, D) and packaging (P) are not needed for that try: `flat3d-inject watch` run by hand (or the user unit, #128) plus `flat3d-run %command%` in the game's launch options is enough.
@@ -61,16 +61,30 @@ ACE COMBAT 7 (Steam 502500): Unreal 4, DX11, UEVR with the Nexus "UEVR Compatibi
 | A3 (#42) | Full sortie in the headset at 30+ fps on the gamepad | A2 |
 | A4 (#47) | Recipe at works-now | A3, #25 |
 
-## Geo-11 track: Control and Planet of Lana (added 2026-10-31)
+## Geo-11 track: Control (added 2026-10-31, Planet of Lana moved out 2026-11-11)
 
-Geo-11 (free DX11 stereo driver, says Proton works) writes the two views side by side; an SBS screen viewer puts them on the fixed screen. Spec M21-M23. Peers: Blackskydk/FlatToDepth, artumino/VRScreenCap (MIT).
+Geo-11 (free DX11 stereo driver, says Proton works) writes the two views side by side; an SBS screen viewer puts them on the fixed screen. Spec M21, M22.
+
+Control is the one Geo-11 game left in 1.0 (ruling 43), so it takes G1, the first Geo-11 test, which was planned on Planet of Lana. What that changes: G1 now needs Control's community fix and `Control_DX11.exe`, and G4 no longer has a simpler game before it. The issue titles, the session files (`sessions/g1-geo11.toml`, `g2-viewer.toml`, `g3-lana.toml`), the `lana-fix` pin and the Planet of Lana recipe seed still name Planet of Lana; they are changed in follow-up work, not here. The SBS viewer (G2) stays in 1.0: besides Control it is planned to show 007 First Light's and Alan Wake 2's side-by-side picture. Peers: Blackskydk/FlatToDepth, artumino/VRScreenCap (MIT).
 
 | Step | What | Depends on |
 |---|---|---|
-| G1 (#43) | Geo-11 under Proton: Planet of Lana's fix on the flat screen, check the SBS picture has depth | - |
+| G1 (#43) | Geo-11 under Proton: Control (`Control_DX11.exe`) with the community 3D fix on the flat screen, check the SBS picture has depth | - |
 | G2 (#44) | SBS screen viewer: Geo-11's picture on the fixed screen in the headset (#9's viewer, in 1.0) | G1 |
-| G3 (#45, recipe #48) | Planet of Lana in the headset at 30+ fps, recipe at works-now | G2, #25 |
-| G4 (#46, recipe #49) | Control: `Control_DX11.exe` with the community 3D fix, in the headset at 30+ fps, recipe at works-now | G2, #25 |
+| G4 (#46, recipe #49) | Control: `Control_DX11.exe` with the community 3D fix, in the headset at 30+ fps, recipe at works-now | G1, G2, #25 |
+
+Moved out of 1.0 on 2026-11-11 (`after-1.0`): G3 (#45, recipe #48), Planet of Lana in the headset at 30+ fps with its recipe at works-now (was Spec M23). Its research ([games_group_a.md](notes/research/games_group_a.md#planet-of-lana)) and its recipe seed stay.
+
+## New 1.0 games: 007 First Light and Alan Wake 2 (added 2026-11-11)
+
+Ruling 43 added three games; ruling 45 moved Forza Horizon 6 to `after-1.0` the same day (ruling 7's "not safe" stands; its research note is kept). The two that stay have a planned route each from their research notes (one note per game under `docs/notes/research/games/`). Both routes are untested: nothing has run on the device. Neither game has issues yet; the notes propose them.
+
+| Game | Spec | Planned route (untested) | Fallback | Open |
+|---|---|---|---|---|
+| 007 First Light (Steam 3768760, Glacier, DX12), fourth in the order | M31 | a `dinput8.dll` proxy of our own switches the engine's dormant VR device to its `stereo3d` mode; the side-by-side picture goes to the SBS viewer (G2) | our own two-pass or alternate-eye DX12 stereo (#11) | whether the dormant mode still draws two real views |
+| Alan Wake 2 (Epic only, through Heroic; no Steam appid; Northlight, DX12), sixth in the order | M32 | our own alternate-eye hook on the engine's camera class, loaded by a proxy DLL, into the SBS viewer (G2). Alternate-eye counts here because no workable two-real-views route is known (a two-pass render would double a GPU load the note already puts at its limit); the bar is 30+ fps per eye (ruling 44) | the NoMoreFlat OpenXR mod (also alternate-eye), only if its free build is published; it was not public on 2026-11-11 | recipes and the launch wrapper assume a Steam appid, so a non-Steam game needs a design of its own |
+
+Both depend on G2 (#44), the SBS viewer, which Control needs first.
 
 ## Zero Company track (first in 1.0, added 2026-10-31)
 
@@ -102,3 +116,4 @@ Zero Company proves the headset chain, the link service and the `flat3d-run` wra
 3. Still open from the plan: contacting Spidy's author.
 4. **Issue clean-up:** close #146 (done on main by #174) and the parents #25, #50, #26 and #39 (every child merged). #51 and #78 stay open for their device halves. The 8 merged PRs carry no `by:` / `model:` labels (the guard leaves labels to the coordinator; `by:strix-halo` and `model:claude-sonnet-5-5` don't exist yet).
 5. **Drives.** ACE COMBAT 7 (A1, #40) and Spider-Man Remastered (Step 0, #5) need their library drive mounted or a fresh install.
+6. **Alan Wake 2 is not a Steam game.** The 1.0 list, its order, alternate-eye rendering and the SPEC were ruled and approved on 2026-11-11 (rulings 43-47). Still open: how an Epic game run through Heroic gets a recipe and the `flat3d-run` wrapper.

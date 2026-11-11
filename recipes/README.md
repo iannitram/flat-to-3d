@@ -1,6 +1,6 @@
 # Recipes
 
-One file per game, with `name` plus the eight stereo keys (`docs/notes/DECISIONS.md`, "Recipe keys"). This folder holds the five 1.0 games' recipes (SPEC), versioned with the code and read by the Rust engine (`crates/engine/src/recipes.rs`). The file format is set by the recipes issue. For 1.0 the engine needs Spider-Man 2's recipe (SPEC M12); the owner's per-game notes elsewhere stay notes.
+One file per game, with `name` plus the eight stereo keys (`docs/notes/DECISIONS.md`, "Recipe keys"). This folder holds the six 1.0 games' recipes (SPEC), versioned with the code and read by the Rust engine (`crates/engine/src/recipes.rs`). The file format is set by the recipes issue. For 1.0 the engine needs Spider-Man 2's recipe (SPEC M12); the owner's per-game notes elsewhere stay notes.
 
 ## Format
 

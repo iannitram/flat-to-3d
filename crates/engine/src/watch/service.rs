@@ -515,7 +515,8 @@ mod service_tests {
         ran: Vec<String>,
         gone: bool,
         fail: Option<String>,
-        relay_up: bool,
+        /// The command `start_relay` was given, while the relay runs.
+        relay: Option<String>,
     }
 
     impl CommandRunner for Fake {
@@ -535,8 +536,10 @@ mod service_tests {
             if command.iter().any(|word| word == "devices") {
                 return Ok("List of devices attached\nSER\tdevice\n".to_string());
             }
-            if line == "ps -eo pid=,args=" && self.relay_up {
-                return Ok("7 /x/gnirehtet run SER".to_string());
+            if line == "ps -eo pid=,args=" {
+                if let Some(relay) = &self.relay {
+                    return Ok(format!("7 {relay}"));
+                }
             }
             if line.ends_with("ip addr show tun0") {
                 return Ok("    inet 10.0.0.2/30 scope global tun0".to_string());
@@ -546,13 +549,13 @@ mod service_tests {
 
         fn start_relay(&mut self, command: &[String], _adb: &str) -> Result<(), String> {
             self.ran.push(format!("relay {}", command.join(" ")));
-            self.relay_up = true;
+            self.relay = Some(command.join(" "));
             Ok(())
         }
 
         fn stop_relay(&mut self) -> Result<(), String> {
             self.ran.push("relay stop".to_string());
-            self.relay_up = false;
+            self.relay = None;
             Ok(())
         }
     }

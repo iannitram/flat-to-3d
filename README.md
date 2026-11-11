@@ -4,7 +4,7 @@ Play installed PC games in **true stereoscopic 3D**, where the game draws two ca
 
 ## Ground rules
 
-True stereo, free and open-source tools, offline single-player games, and a fixed screen with no head-steered game camera. See [the decisions](docs/notes/DECISIONS.md).
+True stereo (alternate-eye rendering counts only for a game with no two-real-views route, at 30+ fps per eye), free and open-source tools, offline single-player games, and a fixed screen with no head-steered game camera. See [the decisions](docs/notes/DECISIONS.md).
 
 ## Build and test
 

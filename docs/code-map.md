@@ -106,9 +106,12 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `crates/app/src/view_setup.rs` | stub | Setup page widgets; WP-33 fills the view | M24 |
 | `crates/app/src/view_logs.rs` | stub | Logs page widgets; WP-33 fills the view | M24 |
 | `crates/engine/src/status.rs`, `crates/engine/src/cli/link.rs`, `crates/engine/src/face/headset_view.rs`, `crates/engine/src/face/link_view.rs` | partly present | `status.rs`: status labels, colours, sorting and filtering; `headset_view.rs`: button state and log lines; `link_view.rs`: link labels, hints and flat reason | M11, M24, M26 |
-| `recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships five (#29, #36, #47-#49) | M12, M17, M20-M23 |
+| `recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships six (rulings 43, 45): #29, #36, #47, #49, and one each for 007 First Light and Alan Wake 2 (no issues yet; Alan Wake 2 has no Steam appid, so its file name and key are an open problem); Planet of Lana's (#48) is after 1.0 | M12, M17, M20, M22, M31, M32 |
 | `games/zero-company/`, `games/ace-combat-7/` | planned | UEVR profile settings, launch notes, measured settings | M13-M16, M20 |
-| `games/planet-of-lana/`, `games/control/` | planned | where the Geo-11 fix comes from (fetched, never vendored unless its license allows), settings | M22, M23 |
+| `games/control/` | planned | where the Geo-11 fix comes from (fetched, never vendored unless its license allows), settings | M22 |
+| `games/planet-of-lana/` | planned, after 1.0 (ruling 43) | the same for Planet of Lana's Geo-11 fix | M23 (moved out of 1.0) |
+| `games/007-first-light/` | planned | our `dinput8.dll` proxy that switches the engine's dormant VR device to its `stereo3d` mode, settings (planned route, untested) | M31 |
+| `games/alan-wake-2/` | planned | our alternate-eye hook on the engine's camera class and its proxy DLL, settings (planned route, untested; ruling 44) | M32 |
 | `games/spiderman2/` | planned | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `viewer/` | planned | SBS screen viewer: Geo-11's side-by-side picture on the fixed screen over OpenXR. Likely a Windows binary run in the game's Proton session reading Geo-11's shared texture (FlatToDepth / VRScreenCap, MIT, are the references) | M21 |
 | `layer/` | planned, conditional | fixed-screen OpenXR layer, only if UEVR's 2D Screen Mode loses depth (#33, #9) | M15 |
@@ -116,7 +119,7 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `cmake/clang-cl-xwin.cmake`, `tools/build-spidy.sh` | present | cross-building Windows binaries on Linux in the distrobox build container (`$FLAT3D_BUILD_BOX`) | M3-M8, M21 |
 | `tools/research/`, `tools/xmatch/`, `tools/ghidra/` | present | Spider-Man 2 discovery: Spidy's tools without hash gates, the Remastered → SM2 matcher, headless Ghidra under a memory guard | M3-M6, M8 |
 | `crates/engine/tests/*.rs` | present | Engine behavior and locked contract tests; inspect the test directory for current coverage | all |
-| `.github/workflows/check.yml` | partly present (self-hosted Linux runner: the `engine` job's `cargo build`, `cargo test`, `py_compile` of `decky/main.py`, and the `app` job's `cargo test` and `cargo check` of `crates/app/` (#78); no `cargo fmt --check` or `clippy -D warnings` yet, and main fails both, #183; no decky typecheck or build yet) | CI on Linux: engine build + test; grows to the app (`cargo test` and `cargo check` of `crates/app/`) and a TypeScript typecheck and build of `decky/` (no tests: the panel has no logic) | all |
+| `.github/workflows/check.yml` | partly present (GitHub-hosted `ubuntu-24.04` runner: the `engine` job's `cargo build`, `cargo test`, `py_compile` of `decky/main.py`, and the `app` job's `cargo test` and `cargo check` of `crates/app/` (#78); no `cargo fmt --check` or `clippy -D warnings` yet, and main fails both, #183; no decky typecheck or build yet) | CI on Linux: engine build + test; grows to the app (`cargo test` and `cargo check` of `crates/app/`) and a TypeScript typecheck and build of `decky/` (no tests: the panel has no logic) | all |
 | `docs/` | present | rulings (`notes/DECISIONS.md`), research, the port plan, Step 0 run sheet, maps | all |
 
 ## Commands

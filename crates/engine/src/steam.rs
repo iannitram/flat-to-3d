@@ -55,6 +55,51 @@ pub fn installed_games(steam_root: &Path) -> io::Result<Vec<Game>> {
     Ok(games)
 }
 
+/// The Steam library containing a game's `steamapps/common/<install_dir>` folder.
+pub fn library_of(game: &Game) -> Option<PathBuf> {
+    let install_dir = &game.install_dir;
+    install_dir.file_name()?;
+    let common = install_dir.parent()?;
+    if common.file_name()? != OsStr::new("common") {
+        return None;
+    }
+    let steamapps = common.parent()?;
+    if steamapps.file_name()? != OsStr::new("steamapps") {
+        return None;
+    }
+    steamapps.parent().map(Path::to_path_buf)
+}
+
+/// The existing Proton compatdata folder for a game, preferring its own library.
+pub fn compatdata(steam_root: &Path, game: &Game) -> Option<PathBuf> {
+    let vdf = steam_root.join("steamapps").join("libraryfolders.vdf");
+    let libraries = fs::read_to_string(vdf)
+        .ok()
+        .and_then(|text| parse(&text))
+        .map(|top| library_paths(&top))
+        .unwrap_or_default();
+
+    let own_library = library_of(game);
+    let mut candidates = Vec::new();
+    if let Some(library) = &own_library {
+        candidates.push(library.clone());
+    }
+    candidates.push(steam_root.to_path_buf());
+    candidates.extend(
+        libraries
+            .into_iter()
+            .filter(|library| Some(library) != own_library.as_ref() && library != steam_root),
+    );
+
+    candidates.into_iter().find_map(|library| {
+        let compatdata = library
+            .join("steamapps")
+            .join("compatdata")
+            .join(game.appid.to_string());
+        compatdata.is_dir().then_some(compatdata)
+    })
+}
+
 /// The path of every library listed under `"libraryfolders"`, in file order. A relative or empty
 /// path is dropped: read from the working directory, it would find games that are in no library.
 fn library_paths(top: &[Pair]) -> Vec<PathBuf> {
