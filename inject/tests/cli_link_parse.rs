@@ -31,15 +31,38 @@ fn the_plain_commands() {
 
 #[test]
 fn switch_get_and_set() {
-    assert_eq!(ok(&["switch", "get", "2075800"]), LinkCommand::SwitchGet { appid: 2075800 });
-    assert_eq!(ok(&["switch", "set", "2075800", "off"]), LinkCommand::SwitchSet { appid: 2075800, on: false });
-    assert_eq!(ok(&["switch", "set", "5", "on"]), LinkCommand::SwitchSet { appid: 5, on: true });
+    assert_eq!(
+        ok(&["switch", "get", "2075800"]),
+        LinkCommand::SwitchGet { appid: 2075800 }
+    );
+    assert_eq!(
+        ok(&["switch", "set", "2075800", "off"]),
+        LinkCommand::SwitchSet {
+            appid: 2075800,
+            on: false
+        }
+    );
+    assert_eq!(
+        ok(&["switch", "set", "5", "on"]),
+        LinkCommand::SwitchSet { appid: 5, on: true }
+    );
 }
 
 #[test]
 fn setting_get_and_set() {
-    assert_eq!(ok(&["setting", "get", "auto-3d"]), LinkCommand::SettingGet { key: SettingKey::Auto3d });
-    assert_eq!(ok(&["setting", "set", "tunnel", "off"]), LinkCommand::SettingSet { key: SettingKey::Tunnel, on: false });
+    assert_eq!(
+        ok(&["setting", "get", "auto-3d"]),
+        LinkCommand::SettingGet {
+            key: SettingKey::Auto3d
+        }
+    );
+    assert_eq!(
+        ok(&["setting", "set", "tunnel", "off"]),
+        LinkCommand::SettingSet {
+            key: SettingKey::Tunnel,
+            on: false
+        }
+    );
     assert_eq!(SettingKey::Auto3d.as_str(), "auto-3d");
     assert_eq!(SettingKey::Tunnel.as_str(), "tunnel");
 }
@@ -48,7 +71,10 @@ fn setting_get_and_set() {
 fn run_takes_the_words_after_the_double_dash() {
     assert_eq!(
         ok(&["run", "2075800", "--", "mangohud", "game", "-novid"]),
-        LinkCommand::Run { appid: 2075800, argv: a(&["mangohud", "game", "-novid"]) }
+        LinkCommand::Run {
+            appid: 2075800,
+            argv: a(&["mangohud", "game", "-novid"])
+        }
     );
 }
 

@@ -3,10 +3,17 @@
 use flat3d_inject::watch::{step, Effect, Event, Inputs, Note, Phase, Watch, GRACE_SECS};
 
 fn inp(tunnel_on: bool, g3d: bool) -> Inputs {
-    Inputs { auto_3d: true, tunnel_on, game_3d_running: g3d, game_flat_running: false }
+    Inputs {
+        auto_3d: true,
+        tunnel_on,
+        game_3d_running: g3d,
+        game_flat_running: false,
+    }
 }
 fn grace(since: u64) -> Watch {
-    Watch { phase: Phase::Grace { since } }
+    Watch {
+        phase: Phase::Grace { since },
+    }
 }
 
 #[test]
@@ -27,14 +34,24 @@ fn at_120_seconds_the_link_stops_and_the_player_is_told() {
     assert_eq!(n.phase, Phase::Absent);
     assert_eq!(
         fx,
-        vec![Effect::StopLink, Effect::StopTether, Effect::Notify(Note::StoppedRestartForFlat)]
+        vec![
+            Effect::StopLink,
+            Effect::StopTether,
+            Effect::Notify(Note::StoppedRestartForFlat)
+        ]
     );
 }
 
 #[test]
 fn with_the_tunnel_off_there_is_no_tether_to_stop() {
     let (_, fx) = step(&grace(100), &Event::Tick, 400, &inp(false, true));
-    assert_eq!(fx, vec![Effect::StopLink, Effect::Notify(Note::StoppedRestartForFlat)]);
+    assert_eq!(
+        fx,
+        vec![
+            Effect::StopLink,
+            Effect::Notify(Note::StoppedRestartForFlat)
+        ]
+    );
 }
 
 #[test]

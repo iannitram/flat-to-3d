@@ -41,16 +41,28 @@ fn the_exe_path_of_a_pid() {
 
 #[test]
 fn the_tool_paths() {
-    assert_eq!(tools_dir("/home/deck"), "/home/deck/.local/share/flat3d/bin");
-    assert_eq!(bundled_adb("/home/deck"), "/home/deck/.local/share/flat3d/bin/adb");
+    assert_eq!(
+        tools_dir("/home/deck"),
+        "/home/deck/.local/share/flat3d/bin"
+    );
+    assert_eq!(
+        bundled_adb("/home/deck"),
+        "/home/deck/.local/share/flat3d/bin/adb"
+    );
 }
 
 #[test]
 fn a_running_adb_wins_then_the_bundled_one() {
     let c = choose_adb(Some("/usr/bin/adb"), Some("/h/bin/adb"));
-    assert_eq!((c.path.as_str(), c.source), ("/usr/bin/adb", AdbSource::Running));
+    assert_eq!(
+        (c.path.as_str(), c.source),
+        ("/usr/bin/adb", AdbSource::Running)
+    );
     let c = choose_adb(None, Some("/h/bin/adb"));
-    assert_eq!((c.path.as_str(), c.source), ("/h/bin/adb", AdbSource::Bundled));
+    assert_eq!(
+        (c.path.as_str(), c.source),
+        ("/h/bin/adb", AdbSource::Bundled)
+    );
     let c = choose_adb(Some(""), Some("/h/bin/adb"));
     assert_eq!(c.source, AdbSource::Bundled);
 }

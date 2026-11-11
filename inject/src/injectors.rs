@@ -1,8 +1,8 @@
 //! Inject a game by its recipe's stereo route. 1.0 has one route: the Spider-Man 2 port.
 
-use crate::NotBuilt;
 use crate::recipes::Recipe;
 use crate::steam::Game;
+use crate::NotBuilt;
 
 pub mod uevr;
 

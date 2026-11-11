@@ -142,7 +142,8 @@ fn dispatch(command: &Command) -> Result<Value, ApiError> {
     match command {
         Command::Undo { appid } => {
             let result = undo::undo_game(&engine_data_dir(), *appid)?;
-            serde_json::to_value(result).map_err(|e| ApiError::new("command-failed", &e.to_string()))
+            serde_json::to_value(result)
+                .map_err(|e| ApiError::new("command-failed", &e.to_string()))
         }
         _ => Err(NotBuilt("cli: the command bodies are wired by #27").into()),
     }

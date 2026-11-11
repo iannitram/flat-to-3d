@@ -52,7 +52,14 @@ fn build_wins_over_a_tool_name_in_the_same_route() {
 
 #[test]
 fn a_safe_works_now_recipe_with_a_route_is_injectable() {
-    assert_eq!(check_injectable(&recipe("build: port spidy stereo screen", "works-now", "yes")), Ok(()));
+    assert_eq!(
+        check_injectable(&recipe(
+            "build: port spidy stereo screen",
+            "works-now",
+            "yes"
+        )),
+        Ok(())
+    );
 }
 
 #[test]
@@ -87,5 +94,7 @@ fn unsafe_is_reported_before_status_and_status_before_route() {
     let both = recipe("none", "build", "no");
     assert!(check_injectable(&both).unwrap_err().contains("not safe"));
     let status_and_route = recipe("none", "build", "yes");
-    assert!(check_injectable(&status_and_route).unwrap_err().contains("not works-now"));
+    assert!(check_injectable(&status_and_route)
+        .unwrap_err()
+        .contains("not works-now"));
 }

@@ -21,7 +21,16 @@ jobs:
       - env:
           DEBIAN_FRONTEND: noninteractive
         run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with: { components: "clippy, rustfmt" }
+      - name: fmt
+        run: |
+          cargo fmt --manifest-path inject/Cargo.toml --check \
+            || { echo "::error::FAIL fmt: fix: cargo fmt --manifest-path inject/Cargo.toml"; exit 1; }
+      - name: clippy
+        run: |
+          cargo clippy --manifest-path inject/Cargo.toml --all-targets -- -D warnings \
+            || { echo "::error::FAIL clippy: fix: run cargo clippy --manifest-path inject/Cargo.toml --all-targets -- -D warnings and fix each lint it names"; exit 1; }
       - run: cargo build --manifest-path inject/Cargo.toml
       - run: cargo test --manifest-path inject/Cargo.toml
       - uses: actions/setup-python@v5
@@ -38,6 +47,15 @@ jobs:
       - env:
           DEBIAN_FRONTEND: noninteractive
         run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with: { components: "clippy, rustfmt" }
+      - name: fmt
+        run: |
+          cargo fmt --manifest-path app/Cargo.toml --check \
+            || { echo "::error::FAIL fmt: fix: cargo fmt --manifest-path app/Cargo.toml"; exit 1; }
+      - name: clippy
+        run: |
+          cargo clippy --manifest-path app/Cargo.toml --all-targets -- -D warnings \
+            || { echo "::error::FAIL clippy: fix: run cargo clippy --manifest-path app/Cargo.toml --all-targets -- -D warnings and fix each lint it names"; exit 1; }
       - run: cargo test --manifest-path app/Cargo.toml
       - run: cargo check --manifest-path app/Cargo.toml

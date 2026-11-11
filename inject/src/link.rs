@@ -254,7 +254,10 @@ mod tests {
         let mut f = scripted(vec![
             out(true, ""),
             out(true, ""),
-            out(false, "Failed to stop flat3d-wivrn.service: Access denied\n"),
+            out(
+                false,
+                "Failed to stop flat3d-wivrn.service: Access denied\n",
+            ),
         ]);
         let expected = LinkError {
             command: "systemctl --user stop flat3d-wivrn.service".into(),

@@ -9,7 +9,11 @@ struct Fake {
 impl CommandRunner for Fake {
     fn run(&mut self, command: &[String]) -> CommandOutput {
         self.ran.push(command.to_vec());
-        CommandOutput { success: true, stdout: "out".into(), stderr: String::new() }
+        CommandOutput {
+            success: true,
+            stdout: "out".into(),
+            stderr: String::new(),
+        }
     }
 }
 
@@ -24,7 +28,10 @@ fn runner(serial: Option<&str>) -> AdbRunner<Fake> {
 fn the_adb_word_is_swapped_and_the_serial_added() {
     let mut r = runner(Some("S1"));
     r.run(&c(&["adb", "reverse", "tcp:1", "tcp:2"]));
-    assert_eq!(r.inner().ran, vec![c(&["/h/bin/adb", "-s", "S1", "reverse", "tcp:1", "tcp:2"])]);
+    assert_eq!(
+        r.inner().ran,
+        vec![c(&["/h/bin/adb", "-s", "S1", "reverse", "tcp:1", "tcp:2"])]
+    );
 }
 
 #[test]
@@ -42,7 +49,11 @@ fn server_commands_never_get_a_serial() {
     r.run(&c(&["adb", "start-server"]));
     assert_eq!(
         r.inner().ran,
-        vec![c(&["/h/bin/adb", "devices"]), c(&["/h/bin/adb", "kill-server"]), c(&["/h/bin/adb", "start-server"])]
+        vec![
+            c(&["/h/bin/adb", "devices"]),
+            c(&["/h/bin/adb", "kill-server"]),
+            c(&["/h/bin/adb", "start-server"])
+        ]
     );
 }
 
@@ -50,7 +61,10 @@ fn server_commands_never_get_a_serial() {
 fn a_command_that_already_has_a_serial_is_not_doubled() {
     let mut r = runner(Some("S1"));
     r.run(&c(&["adb", "-s", "OTHER", "shell", "ls"]));
-    assert_eq!(r.inner().ran, vec![c(&["/h/bin/adb", "-s", "OTHER", "shell", "ls"])]);
+    assert_eq!(
+        r.inner().ran,
+        vec![c(&["/h/bin/adb", "-s", "OTHER", "shell", "ls"])]
+    );
 }
 
 #[test]
@@ -58,7 +72,13 @@ fn other_commands_pass_through_unchanged() {
     let mut r = runner(Some("S1"));
     r.run(&c(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]));
     r.run(&[]);
-    assert_eq!(r.inner().ran, vec![c(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]), vec![]]);
+    assert_eq!(
+        r.inner().ran,
+        vec![
+            c(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]),
+            vec![]
+        ]
+    );
 }
 
 #[test]

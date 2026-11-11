@@ -26,7 +26,12 @@ pub fn link_hint(s: LinkState) -> &'static str {
 
 /// The reason a game would play flat, or `None` when it would play in 3D.
 /// Checked in order: no recipe, status, switch, link.
-pub fn flat_reason(link: LinkState, switch_on: bool, has_recipe: bool, status: &str) -> Option<String> {
+pub fn flat_reason(
+    link: LinkState,
+    switch_on: bool,
+    has_recipe: bool,
+    status: &str,
+) -> Option<String> {
     if !has_recipe {
         return Some("No recipe yet".into());
     }
