@@ -21,6 +21,11 @@ for arg in "$@"; do
   esac
 done
 
+if [[ "$dry_run" == true && "$fetch_sdk" == true ]]; then
+  printf '%s\n' '--dry-run cannot be combined with --fetch-sdk' >&2
+  exit 2
+fi
+
 XWIN=${FLAT3D_XWIN_DIR:-$HOME/.local/share/flat-to-3d/xwin}
 CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target/win}
 RUSTFLAGS="-Clinker=rust-lld -Ctarget-feature=+crt-static -Lnative=$XWIN/crt/lib/x86_64 -Lnative=$XWIN/sdk/lib/um/x86_64 -Lnative=$XWIN/sdk/lib/ucrt/x86_64"
