@@ -4,6 +4,8 @@ Play installed PC games in **true stereoscopic 3D**, where the game itself draws
 
 ## Where we're at
 
+**2026-11-11:** the 1.0 list is six games from the owner's Favorites, in this order: STAR WARS Zero Company, ACE COMBAT 7, Control, 007 First Light, Marvel's Spider-Man 2 and Alan Wake 2. Planet of Lana and Forza Horizon 6 moved to after 1.0. Alternate-eye rendering now counts as true stereo for a game that has no two-real-views route, at 30+ fps per eye. The routes for 007 First Light and Alan Wake 2 are planned and untested ([SPEC.md](SPEC.md), rulings 43-47 in [docs/notes/DECISIONS.md](docs/notes/DECISIONS.md)).
+
 **2026-10-31:** 1.0 now covers **STAR WARS Zero Company** (first, through UEVR) and Spider-Man 2. See [SPEC.md](SPEC.md), [docs/ROADMAP.md](docs/ROADMAP.md) and the peer projects in [PEERS.md](PEERS.md). The notes below are from 2026-10-18.
 
 ### 2026-10-18
@@ -39,7 +41,7 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
    - Add the HUD, then pattern scans so game patches don't break it.
 3. **Prove the other big buckets** (from the research report):
    - UEVR on an installed Unreal 4 game (Sifu or Little Nightmares).
-   - Geo-11 on Control and Planet of Lana. Geo-11 alone covers about 33 library games.
+   - Geo-11 on Control (in 1.0) and Planet of Lana (after 1.0 since 2026-11-11). Geo-11 alone covers about 33 library games.
    - The 5-minute check of UEVR's 2D Screen Mode.
 4. **Build the generic 3D-screen pieces** that the other mods need:
    - An OpenXR layer that pins any VR mod's two eyes to a fixed screen.
@@ -48,13 +50,13 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
    - Steam launches the games. Plugging in the headset will start the `flat3d-link` service, which brings up the link.
    - The `flat3d-run` wrapper will check the link and each game's 3D switch, then apply that game's 3D route. If the link is not ready or the switch is off, the game runs flat.
    - The engine will include Quest Tether's tether, ported to Rust.
-6. **Our own stereo for the remaining DX12 games:**
+6. **Our own stereo for the remaining DX12 games** (007 First Light and Alan Wake 2 are 1.0 games since 2026-11-11, SPEC M31 and M32):
    - 007 First Light's dormant built-in stereo mode first.
    - Then Alan Wake 2.
    - Then a Vulkan-level layer for the rest.
 7. **Uncharted 3 through my own Linux port** (`uncharted_pc` on shadPS4):
    - Most of the PS3 stereo 3D mode survives in the PS4 remaster's code: the two-eye camera, the eye-offset maths and side-by-side viewports, all behind one render-mode value.
-   - Tested on the Legion Go (2026-10-18): the game's own two-eye camera works as alternate-frame stereo (each eye 30 Hz at 60 FPS); the side-by-side path does not draw a second view. Whether alternate eyes count as true stereo is pending my ruling. See [docs/uncharted3-stereo.md](docs/uncharted3-stereo.md).
+   - Tested on the Legion Go (2026-10-18): the game's own two-eye camera works as alternate-frame stereo (each eye 30 Hz at 60 FPS); the side-by-side path does not draw a second view. Alternate eyes count as true stereo only where no two-real-views route exists (ruling 44, 2026-11-11). See [docs/uncharted3-stereo.md](docs/uncharted3-stereo.md).
 
 **Future:** Steam Frame support. Keep the 3D-screen output on plain OpenXR so it can also run through SteamVR.
 
@@ -85,7 +87,7 @@ Heavy jobs on the Z13 (builds, Ghidra, the game) run one at a time under a 2 GiB
 
 ## Ground rules
 
-- True stereo only. Depth-buffer reprojection doesn't count.
+- True stereo only. Depth-buffer reprojection doesn't count. Alternate-eye rendering counts only for a game with no two-real-views route, at 30+ fps per eye.
 - Free and open-source tools only. Nothing paywalled.
 - Offline and single-player games only. Never inject into a game with anti-cheat or always-online play.
 - Flat 2D-art games are out of scope.
