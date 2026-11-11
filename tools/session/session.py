@@ -146,6 +146,10 @@ def _fill(value, vals, answers=None, render=False):
     return filled.replace(left_brace, "{").replace(right_brace, "}")
 
 
+def _relative(text, repo):
+    return text.replace(repo + os.sep, "").replace(repo, ".")
+
+
 def render(doc):
     vals={k:v for k,v in _values(doc).items() if k in {"repo", *doc.get("vars",{}).keys()}}
     lines=[HEADER,"", "Placeholders left in braces are filled when the session runs: {home}, {state}, {data}, {re_home}, {build_box}.","",f"# {doc.get('title',doc['name'])}","",f"**Done when:** {doc.get('done_when','')}",""]
@@ -156,9 +160,9 @@ def render(doc):
         lines += [f"## {title}",""]
         for s in steps:
             role="You" if s.get("who")=="you" or s.get("kind") in {"ask","check","measure"} else "Script"
-            txt=_fill(s.get("text",s["id"]),vals,render=True).replace(vals["repo"]+os.sep, "")
+            txt=_relative(_fill(s.get("text",s["id"]),vals,render=True),vals["repo"])
             if s["kind"]=="cmd":
-                argv=[_fill(str(x),vals,render=True).replace(vals["repo"]+os.sep, "") for x in s.get("run",[])]
+                argv=[_relative(_fill(str(x),vals,render=True),vals["repo"]) for x in s.get("run",[])]
                 lines += [f"**{role}:** {txt}","", "```sh", shlex.join(argv), "```",""]
             elif s["kind"]=="check": lines += [f"- [ ] {txt}",""]
             else: lines += [f"**{role}:** {txt}",""]
