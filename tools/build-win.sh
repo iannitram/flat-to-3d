@@ -25,7 +25,7 @@ XWIN=${FLAT3D_XWIN_DIR:-$HOME/.local/share/flat-to-3d/xwin}
 CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target/win}
 RUSTFLAGS="-Clinker=rust-lld -Ctarget-feature=+crt-static -Lnative=$XWIN/crt/lib/x86_64 -Lnative=$XWIN/sdk/lib/um/x86_64 -Lnative=$XWIN/sdk/lib/ucrt/x86_64"
 target=x86_64-pc-windows-msvc
-fix='run tools/build-win.sh --fetch-sdk, or $HOME/.local/share/flat-to-3d/tools/xwin --accept-license splat --output "$XWIN"'
+fix="run tools/build-win.sh --fetch-sdk, or \$HOME/.local/share/flat-to-3d/tools/xwin --accept-license splat --output \"\$XWIN\""
 
 if [[ "$fetch_sdk" == true ]]; then
   "$HOME/.local/share/flat-to-3d/tools/xwin" --accept-license splat --output "$XWIN"
