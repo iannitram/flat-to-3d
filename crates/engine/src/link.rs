@@ -189,10 +189,7 @@ pub fn start_3d_with(
     Ok(LinkState::Ready)
 }
 
-/// Run all of [`stop_3d_commands`] in order, whatever each returns: with the headset
-/// unplugged the two adb steps fail, and the server must still stop. The last command (the
-/// server stop) decides: success or a narrowly recognized missing unit is `Stopped`;
-/// other failures are a [`LinkError`] naming it.
+/// True when systemd says the stop target is not loaded or not found (nothing to stop).
 fn unit_already_gone(stderr: &str) -> bool {
     let message = stderr.trim();
     message == "Unit flat3d-wivrn.service not loaded"
@@ -201,6 +198,10 @@ fn unit_already_gone(stderr: &str) -> bool {
         || message == "Failed to stop flat3d-wivrn.service: Unit flat3d-wivrn.service not found."
 }
 
+/// Run all of [`stop_3d_commands`] in order, whatever each returns: with the headset
+/// unplugged the two adb steps fail, and the server must still stop. The last command (the
+/// server stop) decides: success or a narrowly recognized missing unit is `Stopped`;
+/// other failures are a [`LinkError`] naming it.
 pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
     let commands = stop_3d_commands();
     let (last, before) = commands
