@@ -1,5 +1,9 @@
 use flat3d_inject::undo::{record_path, UndoRecord};
-use std::{fs, path::PathBuf, process::Command};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn root(case: &str) -> PathBuf {
     let path = std::env::temp_dir().join(format!("flat3d-cli-undo-{}-{case}", std::process::id()));
@@ -7,7 +11,7 @@ fn root(case: &str) -> PathBuf {
     fs::create_dir_all(&path).unwrap();
     path
 }
-fn invoke(home: &PathBuf, args: &[&str]) -> std::process::Output {
+fn invoke(home: &Path, args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_flat3d-inject"))
         .args(args)
         .env("HOME", home)
@@ -15,7 +19,7 @@ fn invoke(home: &PathBuf, args: &[&str]) -> std::process::Output {
         .output()
         .unwrap()
 }
-fn record(home: &PathBuf, appid: u32, created: Vec<PathBuf>) {
+fn record(home: &Path, appid: u32, created: Vec<PathBuf>) {
     let data = home.join("flat3d");
     let path = record_path(&data, appid);
     fs::create_dir_all(path.parent().unwrap()).unwrap();

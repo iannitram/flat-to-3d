@@ -72,7 +72,7 @@ fn inject_is_idempotent_and_never_touches_steam_or_launches() {
 
 #[test]
 fn missing_profile_pin_and_download_failure_leave_prefix_untouched() {
-    let (_root, p) = setup(
+    let (root, p) = setup(
         "inject-pin-missing",
         true,
         Some("missing-profile-key"),
@@ -84,13 +84,16 @@ fn missing_profile_pin_and_download_failure_leave_prefix_untouched() {
     assert!(err.message.contains("missing-profile-key"));
     assert!(!undo::record_path(&p.data, APPID).exists());
     assert!(!p.env_file(APPID).exists());
+    assert!(!root.join("lib/steamapps/compatdata").exists());
 
-    let (_root, p) = setup("inject-download-fail", false, None, "yes");
+    let (root, p) = setup("inject-download-fail", false, None, "yes");
     let mut runner = FakeRunner::new().fail(&["curl"], "fixture failure");
     let err = injectors::inject(&p, APPID, &mut runner).unwrap_err();
     assert_eq!(err.code, "command-failed");
+    assert!(runner.ran.iter().any(|argv| argv[0] == "curl"));
     assert!(!undo::record_path(&p.data, APPID).exists());
     assert!(!p.env_file(APPID).exists());
+    assert!(!root.join("lib/steamapps/compatdata").exists());
     let pin = flat3d_inject::injectors::fetch::pin("uevr").unwrap();
     assert!(!flat3d_inject::injectors::fetch::cache_dir(&pin, &p).exists());
 }
@@ -128,4 +131,30 @@ fn env_write_failure_rolls_back_and_bad_or_missing_recipe_is_clean() {
     let err = injectors::inject(&p, APPID, &mut FakeRunner::new()).unwrap_err();
     assert_eq!(err.code, "not-found");
     assert!(ERROR_CODES.contains(&err.code.as_str()));
+}
+
+#[test]
+fn a_stale_setup_is_redone_not_reported_as_already_set_up() {
+    let (_root, p) = setup("inject-stale", true, None, "yes");
+    let mut runner = FakeRunner::new();
+    injectors::inject(&p, APPID, &mut runner).unwrap();
+    let record_path = undo::record_path(&p.data, APPID);
+    let record = undo::UndoRecord::from_text(&fs::read_to_string(&record_path).unwrap()).unwrap();
+    // Someone removed our marker by hand: the reuse check fails, so inject sets up again.
+    let marker = record
+        .created
+        .iter()
+        .find(|path| path.ends_with(injectors::uevr::MARKER_FILE))
+        .unwrap()
+        .clone();
+    fs::remove_file(&marker).unwrap();
+    let again = injectors::inject(&p, APPID, &mut runner).unwrap();
+    assert!(
+        again.summary.ends_with("set up for uevr"),
+        "{}",
+        again.summary
+    );
+    assert!(marker.exists());
+    assert!(record_path.exists());
+    assert!(runner.ran.is_empty());
 }

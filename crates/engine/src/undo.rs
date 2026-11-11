@@ -421,6 +421,50 @@ mod tests {
     }
 
     #[test]
+    fn save_record_writes_once_then_refuses() {
+        let root = scratch("save");
+        let data = root.join("data");
+        let rec = UndoRecord {
+            appid: 11,
+            launch_options_before: String::new(),
+            created: vec![root.join("x")],
+            replaced: vec![],
+        };
+        let path = save_record(&data, &rec).unwrap();
+        assert_eq!(path, record_path(&data, 11));
+        assert_eq!(
+            UndoRecord::from_text(&fs::read_to_string(&path).unwrap()),
+            Ok(rec.clone())
+        );
+        let err = save_record(&data, &rec).unwrap_err();
+        assert_eq!(err.code, "refused");
+        assert!(err.message.contains("flat3d-inject undo 11"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn put_back_runs_every_step_and_keeps_the_record() {
+        let root = scratch("put-back");
+        let data = injected(&root, 12);
+        let game = root.join("game");
+        let mut rec =
+            UndoRecord::from_text(&fs::read_to_string(record_path(&data, 12)).unwrap()).unwrap();
+        // A created path that cannot be removed as a file must not stop the later steps.
+        fs::create_dir_all(game.join("dir.dll")).unwrap();
+        rec.created.insert(0, game.join("dir.dll"));
+        let lines = put_back(&rec);
+        assert_eq!(lines.len(), 3);
+        assert!(lines[0].starts_with("removed "), "{lines:?}");
+        assert!(lines[1].starts_with("failed "), "{lines:?}");
+        assert!(lines[2].starts_with("restored "), "{lines:?}");
+        assert!(!game.join("a.dll").exists());
+        assert_eq!(fs::read_to_string(game.join("b.ini")).unwrap(), "original");
+        assert!(!game.join("b.ini.bak").exists());
+        assert!(record_path(&data, 12).exists());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn data_dir_uses_xdg_then_home() {
         assert_eq!(data_dir(Some("/x"), "/h"), PathBuf::from("/x/flat3d"));
         assert_eq!(

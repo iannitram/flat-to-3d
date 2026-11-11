@@ -57,12 +57,18 @@ fn settings_change_undoes_then_reapplies_and_updates_env() {
     let rec = recipe("uevr");
     let old = BTreeMap::from([("uevr-exe".into(), "Game".into())]);
     let mut runner = FakeRunner::new();
-    injectors::ensure_applied(&game, &rec, &old, &p, &mut runner).unwrap();
+    let before = injectors::ensure_applied(&game, &rec, &old, &p, &mut runner).unwrap();
     let new = BTreeMap::from([
         ("uevr-exe".into(), "Game".into()),
         ("uevr-delay".into(), "20".into()),
     ]);
-    injectors::ensure_applied(&game, &rec, &new, &p, &mut runner).unwrap();
+    let after = injectors::ensure_applied(&game, &rec, &new, &p, &mut runner).unwrap();
+    assert_ne!(before, after);
+    assert!(after
+        .env
+        .iter()
+        .any(|(k, v)| k == "PROTON_REMOTE_DEBUG_CMD" && v.contains("--delay 20")));
+    assert!(runner.ran.is_empty());
     let text = fs::read_to_string(p.env_file(game.appid)).unwrap();
     assert!(text.contains("setting\tuevr-delay\t20\n"));
     assert_eq!(injectors::parse_env_file(&text).unwrap().1, new);
@@ -100,4 +106,53 @@ fn env_format_round_trips_escaped_fields() {
         injectors::parse_env_file(&text).unwrap(),
         (Route::Uevr, settings, env)
     );
+}
+
+fn assert_coded(err: &str) {
+    assert!(
+        flat3d_inject::api::ERROR_CODES
+            .iter()
+            .any(|c| err.starts_with(&format!("{c}: "))),
+        "{err}"
+    );
+}
+
+#[test]
+fn every_other_error_starts_with_a_code_and_writes_nothing() {
+    let (root, p, game) = ready("ensure-errors");
+    let settings = BTreeMap::from([("uevr-exe".into(), "Game".into())]);
+    let mut runner = FakeRunner::new();
+
+    let err =
+        injectors::ensure_applied(&game, &recipe("none"), &settings, &p, &mut runner).unwrap_err();
+    assert!(err.starts_with("refused: "), "{err}");
+    assert_coded(&err);
+
+    let err = injectors::ensure_applied(&game, &recipe("geo-11"), &settings, &p, &mut runner)
+        .unwrap_err();
+    assert!(err.starts_with("not-built: "), "{err}");
+    assert_coded(&err);
+
+    let unknown = BTreeMap::from([
+        ("uevr-exe".into(), "Game".into()),
+        ("uevr-profile".into(), "no-such-pin".into()),
+    ]);
+    let err =
+        injectors::ensure_applied(&game, &recipe("uevr"), &unknown, &p, &mut runner).unwrap_err();
+    assert!(
+        err.starts_with("not-found: ") && err.contains("no-such-pin"),
+        "{err}"
+    );
+    assert!(runner.ran.is_empty());
+    assert!(!root.join("lib/steamapps/compatdata").exists());
+    assert!(!undo::record_path(&p.data, game.appid).exists());
+    assert!(!p.env_file(game.appid).exists());
+
+    let (root, p, game) = uevr_home::uevr_unfetched("ensure-curl-fails");
+    let mut runner = FakeRunner::new().fail(&["curl"], "fixture failure");
+    let err =
+        injectors::ensure_applied(&game, &recipe("uevr"), &settings, &p, &mut runner).unwrap_err();
+    assert!(err.starts_with("command-failed: "), "{err}");
+    assert!(!root.join("lib/steamapps/compatdata").exists());
+    assert!(!undo::record_path(&p.data, game.appid).exists());
 }

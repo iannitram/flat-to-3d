@@ -20,6 +20,10 @@ pub struct RouteEnv {
     pub sidecar: Option<Vec<String>>,
 }
 
+/// Make sure the game is set up for its stereo route and return the environment the wrapper
+/// starts it with. A matching earlier setup is reused with no fetch, writes or commands; a
+/// stale one is undone first. On Err nothing new is left on disk. Every Err starts with a code
+/// from [`api::ERROR_CODES`] and `": "`.
 pub fn ensure_applied(
     game: &Game,
     recipe: &Recipe,
@@ -27,73 +31,44 @@ pub fn ensure_applied(
     p: &EnginePaths,
     r: &mut dyn CommandRunner,
 ) -> Result<RouteEnv, String> {
-    let record_path = undo::record_path(&p.data, game.appid);
+    if let Some(env) = reuse(game.appid, recipe, settings, p) {
+        return Ok(env);
+    }
     let env_path = p.env_file(game.appid);
-    if record_path.exists() {
-        if let (Ok(text), Ok(env_text)) = (
-            fs::read_to_string(&record_path),
-            fs::read_to_string(&env_path),
-        ) {
-            let record = UndoRecord::from_text(&text).ok();
-            if record.as_ref().is_some_and(|record| {
-                record.appid == game.appid && record.created.iter().all(|path| path.exists())
-            }) && parse_env_file(&env_text).is_ok_and(|(route, saved, _)| {
-                route == route_of(&recipe.route) && saved == *settings
-            }) {
-                return parse_env_file(&env_text).map(|(_, _, env)| env);
-            }
-        }
+    if undo::record_path(&p.data, game.appid).exists() {
         undo::undo_game(&p.data, game.appid).map_err(api_error_string)?;
+        // The env file described the setup just undone; never leave it behind on its own.
+        match fs::remove_file(&env_path) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(format!("io: cannot remove {}: {e}", env_path.display())),
+        }
     }
 
-    let route = match route_of(&recipe.route) {
-        Route::Uevr => Route::Uevr,
-        Route::Geo11 => Route::Geo11,
+    let route = route_of(&recipe.route);
+    let keys = match route {
+        Route::Uevr => {
+            let mut keys = vec!["uevr".to_string()];
+            keys.extend(settings.get("uevr-profile").cloned());
+            keys
+        }
+        // geo11::apply (WP-16) is not on main yet; fail before anything is fetched or written.
+        Route::Geo11 => return Err("not-built: geo-11 route needs geo11::apply (WP-16)".into()),
         Route::Port => return Err("not-built: port route: #27b (WP-27)".into()),
         Route::NoRoute => {
-            return Err(format!(
-                "refused: {}",
-                check_injectable(recipe).unwrap_err()
-            ))
+            let why = check_injectable(recipe)
+                .err()
+                .unwrap_or_else(|| format!("{} has no stereo route", recipe.name));
+            return Err(format!("refused: {why}"));
         }
     };
-    let mut keys = Vec::new();
-    match route {
-        Route::Uevr => {
-            keys.push("uevr".to_string());
-            if let Some(key) = settings.get("uevr-profile") {
-                keys.push(key.clone());
-            }
-        }
-        Route::Geo11 => {
-            keys.push("geo11".to_string());
-            if let Some(key) = settings.get("geo11-fix") {
-                keys.push(key.clone());
-            }
-        }
-        _ => unreachable!(),
-    }
     for key in keys {
         let pin = fetch::pin(&key).map_err(fetch_error_string)?;
         fetch::fetch(&pin, p, r).map_err(fetch_error_string)?;
     }
-    let (record, env) = match route {
-        Route::Uevr => {
-            let (applied, env) = uevr::apply_with(game, settings, p)?;
-            (applied.record, env)
-        }
-        Route::Geo11 => {
-            let (applied, env) = geo11::apply(
-                &p.cache(),
-                &game.install_dir,
-                game.appid,
-                settings,
-                &p.viewer_bin(),
-            )?;
-            (applied.record, env)
-        }
-        _ => unreachable!(),
-    };
+    let (applied, env) = uevr::apply_with(game, settings, p)?;
+    let record = applied.record;
+
     let rec_path = match undo::save_record(&p.data, &record) {
         Ok(path) => path,
         Err(e) => {
@@ -101,36 +76,56 @@ pub fn ensure_applied(
             return Err(api_error_string(e));
         }
     };
-    let write_result = (|| {
-        let parent = env_path.parent().expect("env path has parent");
-        fs::create_dir_all(parent)?;
-        crate::fsx::write_atomic(&env_path, env_file_text(route, settings, &env).as_bytes())
-    })();
-    if let Err(e) = write_result {
+    let written = env_path
+        .parent()
+        .map_or(Ok(()), fs::create_dir_all)
+        .and_then(|()| {
+            crate::fsx::write_atomic(&env_path, env_file_text(route, settings, &env).as_bytes())
+        });
+    if let Err(e) = written {
         undo::put_back(&record);
-        let _ = fs::remove_file(rec_path);
-        return Err(format!("io: {}", e));
+        let _ = fs::remove_file(&rec_path);
+        return Err(format!("io: cannot write {}: {e}", env_path.display()));
     }
     Ok(env)
+}
+
+/// The reuse check (`ensure_applied` step 1): the record and the env file both exist, every
+/// file the record created is still there, and the env file names this route and settings.
+fn reuse(
+    appid: u32,
+    recipe: &Recipe,
+    settings: &RouteSettings,
+    p: &EnginePaths,
+) -> Option<RouteEnv> {
+    let record = fs::read_to_string(undo::record_path(&p.data, appid)).ok()?;
+    let record = UndoRecord::from_text(&record).ok()?;
+    if record.appid != appid || !record.created.iter().all(|path| path.exists()) {
+        return None;
+    }
+    let (route, saved, env) = parse_env_file(&fs::read_to_string(p.env_file(appid)).ok()?).ok()?;
+    (route == route_of(&recipe.route) && saved == *settings).then_some(env)
+}
+
+fn route_name(route: Route) -> &'static str {
+    match route {
+        Route::Uevr => "uevr",
+        Route::Geo11 => "geo11",
+        Route::Port => "port",
+        Route::NoRoute => "none",
+    }
 }
 
 fn api_error_string(e: ApiError) -> String {
     format!("{}: {}", e.code, e.message)
 }
+
 fn fetch_error_string(e: fetch::FetchError) -> String {
     api_error_string(ApiError::from(e))
 }
 
 pub fn env_file_text(route: Route, settings: &RouteSettings, env: &RouteEnv) -> String {
-    let mut text = format!(
-        "flat3d-env 1\nroute\t{}\n",
-        match route {
-            Route::Uevr => "uevr",
-            Route::Geo11 => "geo11",
-            Route::Port => "port",
-            Route::NoRoute => "none",
-        }
-    );
+    let mut text = format!("flat3d-env 1\nroute\t{}\n", route_name(route));
     for (key, value) in settings {
         text.push_str(&format!(
             "setting\t{}\t{}\n",
@@ -243,8 +238,9 @@ pub fn check_injectable(recipe: &Recipe) -> Result<(), String> {
     Ok(())
 }
 
-/// Set the game up to launch with its stereo route; returns a one-line summary.
-/// Refuses a recipe whose `safe` is not "yes" or whose `status` is not "works-now".
+/// Set the game up to launch with its stereo route (`inject <appid>`). Nothing is written
+/// before the recipe, the refusal rule, the route settings and the installed game all check
+/// out. Never writes Steam launch options and never starts the game.
 pub fn inject(
     p: &EnginePaths,
     appid: u32,
@@ -265,78 +261,58 @@ pub fn inject(
         .into_iter()
         .find(|game| game.appid == appid)
         .ok_or_else(|| ApiError::new("not-found", &format!("{appid} is not installed")))?;
-    let record = undo::record_path(&p.data, appid);
-    let reusable = record.exists()
-        && p.env_file(appid).exists()
-        && fs::read_to_string(&p.env_file(appid))
-            .ok()
-            .and_then(|s| parse_env_file(&s).ok())
-            .is_some_and(|(route, saved, _)| route == route_of(&recipe.route) && saved == settings);
-    let _env = ensure_applied(&game, &recipe, &settings, p, r)
-        .map_err(|error| string_api_error(&error))?;
-    let route = route_of(&recipe.route);
+    let reused = reuse(appid, &recipe, &settings, p).is_some();
+    ensure_applied(&game, &recipe, &settings, p, r).map_err(|e| string_api_error(&e))?;
+    let route = route_name(route_of(&recipe.route));
     Ok(api::InjectResult {
         appid,
-        route: match route {
-            Route::Uevr => "uevr",
-            Route::Geo11 => "geo11",
-            Route::Port => "port",
-            Route::NoRoute => "none",
-        }
-        .into(),
+        route: route.into(),
         launched: false,
-        summary: if reusable {
+        summary: if reused {
             format!("{}: already set up", recipe.name)
         } else {
-            format!(
-                "{}: set up for {}",
-                recipe.name,
-                match route {
-                    Route::Uevr => "uevr",
-                    Route::Geo11 => "geo11",
-                    Route::Port => "port",
-                    Route::NoRoute => "none",
-                }
-            )
+            format!("{}: set up for {}", recipe.name, route)
         },
     })
 }
 
+/// Split an `ensure_applied` error into its code and message; text without a known code
+/// prefix is `command-failed` with the whole text.
 fn string_api_error(text: &str) -> ApiError {
-    let Some((code, message)) = text.split_once(": ") else {
-        return ApiError::new("command-failed", text);
-    };
-    if api::ERROR_CODES.contains(&code) {
-        ApiError::new(code, message)
-    } else {
-        ApiError::new("command-failed", text)
+    match text.split_once(": ") {
+        Some((code, message)) if api::ERROR_CODES.contains(&code) => ApiError::new(code, message),
+        _ => ApiError::new("command-failed", text),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
-    fn stub_exists() {
-        let game = Game {
-            appid: 1,
-            name: "x".into(),
-            install_dir: PathBuf::from("/x"),
-        };
-        let recipe = Recipe {
-            appid: 1,
-            name: "x".into(),
-            status: "untested".into(),
-            route: String::new(),
-            engine: String::new(),
-            api: "unknown".into(),
-            mod_url: "none".into(),
-            free: "unclear".into(),
-            safe: "no".into(),
-            checked: "2026-10-26".into(),
-        };
-        assert!(inject(&game, &recipe).is_err());
+    fn error_strings_split_on_a_known_code_only() {
+        let e = string_api_error("not-found: no pin `x`");
+        assert_eq!(
+            (e.code.as_str(), e.message.as_str()),
+            ("not-found", "no pin `x`")
+        );
+        let e = string_api_error("weird: thing");
+        assert_eq!(
+            (e.code.as_str(), e.message.as_str()),
+            ("command-failed", "weird: thing")
+        );
+        let e = string_api_error("no prefix");
+        assert_eq!(
+            (e.code.as_str(), e.message.as_str()),
+            ("command-failed", "no prefix")
+        );
+    }
+
+    #[test]
+    fn env_file_rejects_unknown_header_and_tag() {
+        assert!(parse_env_file("flat3d-env 2\nroute\tuevr\n").is_err());
+        assert!(parse_env_file("flat3d-env 1\nroute\tbogus\n").is_err());
+        assert!(parse_env_file("flat3d-env 1\nroute\tuevr\nextra\tx\n").is_err());
+        assert!(parse_env_file("flat3d-env 1\nroute\tuevr\nset\tonly-key\n").is_err());
     }
 }
