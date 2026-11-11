@@ -126,6 +126,51 @@ fn library_of_and_compatdata_follow_the_expected_search_order() {
 }
 
 #[test]
+fn compatdata_searches_the_remaining_libraries_in_vdf_order() {
+    let paths = scenes::two_libs_new_vdf("steam-compatdata-third-tier");
+    let steam_root = paths.home.join(steam::DEFAULT_STEAM_ROOT);
+    let games = steam::installed_games(&steam_root).unwrap();
+    let game = games.iter().find(|game| game.appid == 200).unwrap();
+    let lib2 = game.install_dir.ancestors().nth(3).unwrap().to_path_buf();
+    let lib3 = lib2.parent().unwrap().join("lib3");
+    let lib4 = lib2.parent().unwrap().join("lib4");
+    let vdf: String = [&steam_root, &lib2, &lib3, &lib4]
+        .iter()
+        .enumerate()
+        .map(|(i, lib)| format!("\t\"{i}\" {{ \"path\" \"{}\" }}\n", lib.display()))
+        .collect();
+    fs::write(
+        steam_root.join("steamapps/libraryfolders.vdf"),
+        format!("\"libraryfolders\" {{\n{vdf}}}\n"),
+    )
+    .unwrap();
+
+    let in_lib4 = lib4.join("steamapps/compatdata/200");
+    fs::create_dir_all(&in_lib4).unwrap();
+    assert_eq!(steam::compatdata(&steam_root, game), Some(in_lib4));
+    let in_lib3 = lib3.join("steamapps/compatdata/200");
+    fs::create_dir_all(&in_lib3).unwrap();
+    assert_eq!(steam::compatdata(&steam_root, game), Some(in_lib3));
+}
+
+#[test]
+fn an_unreadable_vdf_is_an_io_error_naming_the_vdf_file() {
+    let paths = scenes::no_steam("list-vdf-unreadable");
+    let vdf = paths
+        .home
+        .join(steam::DEFAULT_STEAM_ROOT)
+        .join("steamapps/libraryfolders.vdf");
+    fs::create_dir_all(&vdf).unwrap();
+    let error = run(&paths, Command::List).unwrap_err();
+    assert_eq!(error.code, "io");
+    assert!(
+        error.message.contains("libraryfolders.vdf"),
+        "{}",
+        error.message
+    );
+}
+
+#[test]
 fn status_reports_stopped_fresh_ready_and_stale_snapshot_states() {
     let paths = scenes::no_steam("status-snapshots");
     let absent = run(&paths, Command::Status).unwrap();

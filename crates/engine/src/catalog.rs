@@ -15,8 +15,10 @@ pub struct Catalog {
 /// Read installed games and the matching recipes without requiring every recipe directory to exist.
 pub fn catalog(paths: &EnginePaths) -> Result<Catalog, api::ApiError> {
     let steam_root = paths.home.join(steam::DEFAULT_STEAM_ROOT);
-    let installed = steam::installed_games(&steam_root)
-        .map_err(|error| api::ApiError::new("io", &format!("{}: {error}", steam_root.display())))?;
+    let installed = steam::installed_games(&steam_root).map_err(|error| {
+        let vdf = steam_root.join("steamapps").join("libraryfolders.vdf");
+        api::ApiError::new("io", &format!("{}: {error}", vdf.display()))
+    })?;
 
     let mut found = BTreeMap::new();
     for game in &installed {
