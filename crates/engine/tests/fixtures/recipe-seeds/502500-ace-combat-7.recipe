@@ -1,0 +1,15 @@
+# Seed (OD6): untested until sessions/a3-sortie.toml passes; real recipe lands in recipes/ at works-now.
+name: ACE COMBAT 7: SKIES UNKNOWN
+stereo-status: untested
+stereo-route: uevr 2d screen mode + keton profile
+stereo-engine: unreal 4
+stereo-api: dx11
+stereo-mod: https://github.com/keton/ace-combat-uevr
+stereo-free: yes
+stereo-safe: yes
+stereo-checked: 2026-11-08
+uevr-exe: Ace7Game
+uevr-rendering: native
+uevr-2d-screen: yes
+uevr-delay: 15
+uevr-profile: ac7-profile
