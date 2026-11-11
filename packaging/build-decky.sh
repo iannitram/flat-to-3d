@@ -12,7 +12,7 @@ DRY=0
 NO_TOOLS=0
 SKIP_BUILD=0
 TOOLS="$ROOT/dist/tools"
-BIN_DIR="${CARGO_TARGET_DIR:-$ROOT/target}/release"
+BIN_DIR=
 ROOT_DIR=$ROOT
 OUT="$ROOT/dist/flat-to-3d.zip"
 while (($#)); do
@@ -27,16 +27,17 @@ while (($#)); do
     *) usage_error ;;
   esac
 done
+BIN_DIR="${BIN_DIR:-${CARGO_TARGET_DIR:-$ROOT_DIR/target}/release}"
 
 if [ "$DRY" = 1 ]; then
   DRY=1
   if [ "$SKIP_BUILD" = 0 ]; then
     printf '+ pnpm -C %s/decky i --frozen-lockfile\n' "$ROOT_DIR"
     printf '+ pnpm -C %s/decky run build\n' "$ROOT_DIR"
-    printf '+ cargo build --release --locked -p flat3d-inject\n'
-    printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture\n'
+    printf '+ cargo build --release --locked -p flat3d-inject --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
+    printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
   fi
-  printf "+ mkdir -p \$stage/flat-to-3d/bin/recipes\n"
+  printf "+ mkdir -p \$stage/flat-to-3d/dist \$stage/flat-to-3d/bin/recipes\n"
   for file in dist/index.js package.json plugin.json main.py README.md; do
     printf "+ cp %s/decky/%s \$stage/flat-to-3d/%s\n" "$ROOT_DIR" "$file" "$file"
   done
@@ -59,8 +60,8 @@ fi
 if [ "$SKIP_BUILD" = 0 ]; then
   run pnpm -C "$ROOT_DIR/decky" i --frozen-lockfile
   run pnpm -C "$ROOT_DIR/decky" run build
-  run cargo build --release --locked -p flat3d-inject
-  run cargo build --release --locked -p flat3d-viewer --features xr,capture
+  run cargo build --release --locked -p flat3d-inject --manifest-path "$ROOT_DIR/Cargo.toml"
+  run cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path "$ROOT_DIR/Cargo.toml"
 fi
 
 stage=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-decky.XXXXXX")

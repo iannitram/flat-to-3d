@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import os
+import signal
 
 try:
     import decky
@@ -52,17 +53,20 @@ async def run_engine(*args: str, timeout: float = 30.0) -> dict:
     try:
         proc = await asyncio.create_subprocess_exec(
             ENGINE, *args, "--json", stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE, env=_env()
+            stderr=asyncio.subprocess.PIPE, env=_env(), start_new_session=True,
         )
     except OSError as e:
         return _failure(command, "io", f"cannot run the engine: {e}")
 
+    communication = asyncio.create_task(proc.communicate())
     try:
-        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout)
+        stdout, _stderr = await asyncio.wait_for(asyncio.shield(communication), timeout)
     except asyncio.TimeoutError:
-        proc.kill()
-        await proc.wait()
+        await _stop_engine(proc, communication)
         return _failure(command, "command-failed", f"timed out after {timeout:g}s")
+    except asyncio.CancelledError:
+        await _stop_engine(proc, communication)
+        raise
 
     detail = stdout.decode(errors="replace").strip()
     try:
@@ -75,6 +79,14 @@ async def run_engine(*args: str, timeout: float = 30.0) -> dict:
         command, "command-failed",
         f"engine printed invalid JSON (exit code {proc.returncode}): {detail[:200]}",
     )
+
+
+async def _stop_engine(proc, communication) -> None:
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    await communication
 
 
 class Plugin:

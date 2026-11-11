@@ -46,19 +46,23 @@ pub fn profile_text(settings: &UevrSettings) -> String {
     text
 }
 
-pub fn profile_dir(compatdata: &Path, appid: u32, exe_name: &str) -> PathBuf {
-    let stem = exe_name
-        .get(..exe_name.len().saturating_sub(4))
-        .filter(|_| {
-            exe_name
-                .get(exe_name.len().saturating_sub(4)..)
-                .is_some_and(|suffix| suffix.eq_ignore_ascii_case(".exe"))
-        })
-        .unwrap_or(exe_name);
+fn strip_exe(name: &str) -> &str {
+    let cut = name.len().saturating_sub(4);
+    match name.get(cut..) {
+        Some(suffix) if suffix.eq_ignore_ascii_case(".exe") => &name[..cut],
+        _ => name,
+    }
+}
+
+fn profile_dir_for_stem(compatdata: &Path, appid: u32, stem: &str) -> PathBuf {
     compatdata
         .join(appid.to_string())
         .join("pfx/drive_c/users/steamuser/AppData/Roaming/UnrealVRMod")
         .join(stem)
+}
+
+pub fn profile_dir(compatdata: &Path, appid: u32, exe_name: &str) -> PathBuf {
+    profile_dir_for_stem(compatdata, appid, strip_exe(exe_name))
 }
 
 /// The profile file UEVR reads inside the profile directory.
@@ -111,11 +115,14 @@ pub fn extras_from(s: &RouteSettings) -> Result<UevrExtras, String> {
         .map(String::as_str)
         .filter(|v| !v.trim().is_empty())
         .ok_or_else(|| "bad-recipe: uevr-exe is missing".to_owned())?;
-    let exe_stem = exe
-        .strip_suffix(".exe")
-        .or_else(|| exe.strip_suffix(".EXE"))
-        .unwrap_or(exe)
-        .to_owned();
+    let exe_stem = strip_exe(exe).to_owned();
+    if exe_stem.is_empty()
+        || exe_stem == "."
+        || exe_stem == ".."
+        || exe_stem.contains(['/', '\\', '\0'])
+    {
+        return Err("bad-recipe: uevr-exe must be a file name, not a path".to_owned());
+    }
     let delay_s = match s.get("uevr-delay") {
         None => DEFAULT_DELAY_S,
         Some(value) => value
@@ -235,7 +242,7 @@ pub fn apply_with(
             "flat3d-uevr-inject.exe is not installed; run tools/build-win.sh --install",
         ));
     }
-    let profile_dir = profile_dir(&compatdata, game.appid, &extras.exe_stem);
+    let profile_dir = profile_dir_for_stem(&compatdata, game.appid, &extras.exe_stem);
     let profile = profile_dir.join(PROFILE_FILE);
     let backup = profile_dir.join(BACKUP_FILE);
     let marker = profile_dir.join(MARKER_FILE);

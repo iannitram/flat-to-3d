@@ -151,6 +151,16 @@ class PinTests(unittest.TestCase):
         self.assert_token(self.run_pin("missing"), 2, "unknown-key")
         self.assert_token(self.run_pin("crate"), 2, "not-a-fetch-key")
 
+    def test_size_must_be_digits_or_tbd(self):
+        for bad in ("$(touch pwned)", "1+1", "12abc"):
+            self.write_pins(size=bad)
+            before = self.pins.read_bytes()
+            self.assert_token(self.run_pin("t"), 2, "bad-pins")
+            self.assertEqual(self.pins.read_bytes(), before)
+
+    def test_file_with_all_tbd_is_usage_error(self):
+        self.assert_token(self.run_pin("--all-tbd", "--file", self.blob), 2, "usage")
+
     def test_dry_run_does_not_write(self):
         before = self.pins.read_bytes()
         result = self.run_pin("t", "--dry-run")
