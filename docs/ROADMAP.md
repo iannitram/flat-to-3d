@@ -90,7 +90,7 @@ Ruling 43 added three games; ruling 45 moved Forza Horizon 6 to `after-1.0` the 
 | Game | Spec | Planned route (untested) | Fallback | Open |
 |---|---|---|---|---|
 | 007 First Light (Steam 3768760, Glacier, DX12), fourth in the order | M31 | a `dinput8.dll` proxy of our own switches the engine's dormant VR device to its `stereo3d` mode; the side-by-side picture goes to the SBS viewer (G2) | our own two-pass or alternate-eye DX12 stereo (#11) | whether the dormant mode still draws two real views |
-| Alan Wake 2 (Epic only, through Heroic; no Steam appid; Northlight, DX12), sixth in the order | M32 | our own alternate-eye hook on the engine's camera class, loaded by a proxy DLL, into the SBS viewer (G2). Alternate-eye counts here because no two-real-views route is known; the bar is 30+ fps per eye (ruling 44) | none named | recipes and the launch wrapper assume a Steam appid, so a non-Steam game needs a design of its own |
+| Alan Wake 2 (Epic only, through Heroic; no Steam appid; Northlight, DX12), sixth in the order | M32 | our own alternate-eye hook on the engine's camera class, loaded by a proxy DLL, into the SBS viewer (G2). Alternate-eye counts here because no workable two-real-views route is known (a two-pass render would double a GPU load the note already puts at its limit); the bar is 30+ fps per eye (ruling 44) | the NoMoreFlat OpenXR mod (also alternate-eye), only if its free build is published; it was not public on 2026-11-11 | recipes and the launch wrapper assume a Steam appid, so a non-Steam game needs a design of its own |
 
 Both depend on G2 (#44), the SBS viewer, which Control needs first.
 
