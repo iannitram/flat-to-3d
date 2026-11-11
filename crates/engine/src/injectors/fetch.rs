@@ -286,11 +286,7 @@ pub fn fetch_with(
             r,
             &["sha256sum".into(), archive.to_string_lossy().into_owned()],
         )?;
-        let got_sha = hash_output
-            .split_whitespace()
-            .next()
-            .unwrap_or("")
-            .to_ascii_lowercase();
+        let got_sha = sha256sum_digest(&hash_output).to_ascii_lowercase();
         let expected = pin.sha256.to_ascii_lowercase();
         if got_sha != expected {
             return Err(FetchError::ShaMismatch {
@@ -333,6 +329,20 @@ fn run(r: &mut dyn CommandRunner, argv: &[String]) -> Result<String, FetchError>
     }
 }
 
+fn sha256sum_digest(output: &str) -> &str {
+    let token = output.split_whitespace().next().unwrap_or("");
+    // GNU sha256sum prefixes escaped output lines with `\\` when the filename
+    // contains a character it escapes (notably `\\` in a Windows path).
+    // Strip exactly that optional marker only when the remaining token is a
+    // complete SHA-256 digest; malformed output remains a mismatch.
+    if let Some(digest) = token.strip_prefix('\\') {
+        if digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return digest;
+        }
+    }
+    token
+}
+
 fn io_error(error: std::io::Error) -> FetchError {
     FetchError::Io(error.to_string())
 }
@@ -343,4 +353,24 @@ fn is_archive(name: &str) -> bool {
     ]
     .iter()
     .any(|suffix| name.ends_with(suffix))
+}
+
+#[cfg(test)]
+mod sha256sum_tests {
+    use super::sha256sum_digest;
+
+    #[test]
+    fn optional_escape_marker_is_removed_only_from_a_full_digest() {
+        let digest = "a".repeat(64);
+        assert_eq!(sha256sum_digest(&format!("{digest}  plain.bin\n")), digest);
+        assert_eq!(
+            sha256sum_digest(&format!("\\{digest} *C:\\path\\file.bin\n")),
+            digest
+        );
+        assert_eq!(sha256sum_digest("\\short *path\n"), "\\short");
+        assert_eq!(
+            sha256sum_digest(&format!("\\{}z *path\n", "a".repeat(63))),
+            format!("\\{}z", "a".repeat(63))
+        );
+    }
 }

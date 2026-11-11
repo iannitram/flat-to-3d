@@ -311,15 +311,19 @@ fn live_asset(label: &str, content: &[u8], archive: bool) -> Option<(EnginePaths
         .output()
         .unwrap();
     assert!(output.status.success());
-    let sha = String::from_utf8_lossy(&output.stdout)
-        .split_whitespace()
-        .next()
-        .unwrap()
+    let hash_output = String::from_utf8_lossy(&output.stdout);
+    let token = hash_output.split_whitespace().next().unwrap();
+    // GNU sha256sum uses a leading `\\` marker when it escapes a Windows
+    // filename. Keep that marker out of the pin digest, as production does.
+    let sha = token
+        .strip_prefix('\\')
+        .filter(|digest| digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_hexdigit()))
+        .unwrap_or(token)
         .to_string();
     let pin = Pin {
         key: label.into(),
         version: "1".into(),
-        url: format!("file://{}", asset.display()),
+        url: file_url(&asset),
         size,
         sha256: sha,
         ..Pin::default()
@@ -331,6 +335,15 @@ fn live_asset(label: &str, content: &[u8], archive: bool) -> Option<(EnginePaths
         pin.sha256
     );
     Some((p, pin, home))
+}
+
+fn file_url(path: &std::path::Path) -> String {
+    let path = path.to_string_lossy().replace('\\', "/");
+    if path.starts_with('/') {
+        format!("file://{path}")
+    } else {
+        format!("file:///{path}")
+    }
 }
 
 fn live_fetch(label: &str, content: &[u8], archive: bool) -> Option<(EnginePaths, Pin, PathBuf)> {
