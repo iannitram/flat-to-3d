@@ -58,7 +58,7 @@ pub fn check_injectable(recipe: &Recipe) -> Result<(), String> {
 /// Refuses a recipe whose `safe` is not "yes" or whose `status` is not "works-now".
 pub fn inject(game: &Game, recipe: &Recipe) -> Result<String, NotBuilt> {
     let _ = (game, recipe);
-    Err(NotBuilt("injectors::inject: see the inject issue"))
+    Err(NotBuilt("injectors::inject (WP-27)"))
 }
 
 #[cfg(test)]

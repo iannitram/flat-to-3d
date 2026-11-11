@@ -1,7 +1,6 @@
 use crate::api::LinkSnapshot;
 use crate::runs::{parse_run_record, running_modes, RunRecord};
 use crate::state::{self, Request};
-use crate::switches::{parse_settings, Settings};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -69,13 +68,6 @@ pub(super) fn take_request(path: &str) -> Option<Request> {
     let text = fs::read_to_string(path).ok()?;
     let _ = fs::remove_file(path);
     state::parse_request(&text)
-}
-
-/// The settings, or the defaults when the file is missing.
-pub(super) fn read_settings(path: &str) -> Settings {
-    fs::read_to_string(path)
-        .map(|text| parse_settings(&text))
-        .unwrap_or_default()
 }
 
 /// Whether a live game runs in 3D and whether one runs flat, from the run records.
