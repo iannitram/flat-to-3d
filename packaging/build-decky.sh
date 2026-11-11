@@ -52,7 +52,7 @@ if [ "$DRY" = 1 ]; then
   fi
   printf '+ shopt -s nullglob; cp %s/recipes/*.recipe $stage/flat-to-3d/bin/recipes/\n' "$ROOT_DIR"
   printf '+ chmod 755 $stage/flat-to-3d/bin/*\n'
-  printf '+ python3 -m zipfile -c %s flat-to-3d\n' "$OUT"
+  printf '+ (cd $stage && python3 -m zipfile -c %s flat-to-3d)\n' "$OUT"
   exit 0
 fi
 
@@ -96,4 +96,4 @@ shopt -s nullglob
 recipes=("$ROOT_DIR"/recipes/*.recipe)
 if ((${#recipes[@]})); then run cp "${recipes[@]}" "$package/bin/recipes/"; fi
 run mkdir -p "$(dirname "$out_abs")"
-run python3 -m zipfile -c "$out_abs" flat-to-3d
+run bash -c 'cd "$1" && python3 -m zipfile -c "$2" flat-to-3d' _ "$stage" "$out_abs"

@@ -101,6 +101,7 @@ cp "$FIXTURES/${url##*/}" "$destination"
 """,
         "cmake": "#!/bin/sh\nexit 0\n",
         "pkg-config": "#!/bin/sh\nexit 0\n",
+        "unzip": "#!/bin/sh\nexit 0\n",
         "ninja": """#!/bin/sh
 set -eu
 mkdir -p build
