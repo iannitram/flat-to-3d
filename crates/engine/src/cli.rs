@@ -617,6 +617,19 @@ mod tests {
     }
 
     #[test]
+    fn human_not_built_result_goes_to_stderr() {
+        let error = crate::NotBuilt("cli::engine::run (WP-07)").into();
+        let out = render("list", Err(error), false);
+
+        assert_eq!(out.code, 2);
+        assert!(out.stdout.is_empty());
+        assert_eq!(
+            out.stderr,
+            "error: not built yet: cli::engine::run (WP-07)\n"
+        );
+    }
+
+    #[test]
     fn dispatch_routes_each_family() {
         let rows: &[&[&str]] = &[
             &["list"],
