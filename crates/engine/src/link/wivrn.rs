@@ -72,91 +72,21 @@ impl Default for WivrnStart {
     }
 }
 
-pub fn app_dir_from_location(out: &str) -> Option<PathBuf> {
-    let deploy = Path::new(out.trim());
-    let mut app_dir = deploy.to_path_buf();
-    for _ in 0..3 {
-        app_dir.pop();
-    }
-    (app_dir.ends_with("app/io.github.wivrn.wivrn") && app_dir != deploy).then_some(app_dir)
+pub fn app_dir_from_location(_out: &str) -> Option<PathBuf> {
+    None
 }
-pub fn version_from_info(out: &str) -> Option<String> {
-    out.lines().find_map(|line| {
-        line.trim()
-            .strip_prefix("Version:")
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-    })
+pub fn version_from_info(_out: &str) -> Option<String> {
+    None
 }
-pub fn version_name(dumpsys: &str) -> Option<String> {
-    dumpsys.lines().find_map(|line| {
-        line.trim()
-            .strip_prefix("versionName=")
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-    })
+pub fn version_name(_dumpsys: &str) -> Option<String> {
+    None
 }
-pub fn versions_match(server: &str, app: &str) -> bool {
-    server.split('-').next() == app.split('-').next()
+pub fn versions_match(_server: &str, _app: &str) -> bool {
+    false
 }
-pub fn detect_server(r: &mut dyn CommandRunner) -> Result<WivrnDirs, String> {
-    for scope in [FlatpakScope::User, FlatpakScope::System] {
-        let flag = scope.flag();
-        let location = r.run(&[
-            "flatpak".into(),
-            "info".into(),
-            "--show-location".into(),
-            flag.into(),
-            "io.github.wivrn.wivrn".into(),
-        ]);
-        if !location.success {
-            continue;
-        }
-        let deploy = PathBuf::from(location.stdout.trim());
-        let Some(app_dir) = app_dir_from_location(&location.stdout) else {
-            continue;
-        };
-        let info = r.run(&[
-            "flatpak".into(),
-            "info".into(),
-            flag.into(),
-            "io.github.wivrn.wivrn".into(),
-        ]);
-        let version = info
-            .success
-            .then(|| version_from_info(&info.stdout))
-            .flatten();
-        return Ok(WivrnDirs {
-            scope,
-            app_dir,
-            deploy,
-            version,
-        });
-    }
-    Err("WiVRn server is not installed as a Flatpak (tried --user and --system); fix: flatpak install --user flathub io.github.wivrn.wivrn".into())
+pub fn detect_server(_r: &mut dyn CommandRunner) -> Result<WivrnDirs, String> {
+    Err("not-built: link::wivrn::detect_server (WP-12)".into())
 }
-pub fn detect_quest_app(r: &mut dyn CommandRunner, serial: &str) -> Option<QuestApp> {
-    for package in QUEST_APPS {
-        let output = r.run(&[
-            "adb".into(),
-            "-s".into(),
-            serial.into(),
-            "shell".into(),
-            "dumpsys".into(),
-            "package".into(),
-            package.into(),
-        ]);
-        if !output.success {
-            return None;
-        }
-        if let Some(version) = version_name(&output.stdout) {
-            return Some(QuestApp {
-                package: package.into(),
-                version: Some(version),
-            });
-        }
-    }
+pub fn detect_quest_app(_r: &mut dyn CommandRunner, _serial: &str) -> Option<QuestApp> {
     None
 }

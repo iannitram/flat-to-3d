@@ -18,13 +18,41 @@ fn uid() -> u32 {
     0
 }
 
+/// Run the original command untouched; never returns.
+fn play_flat(argv: &[std::ffi::OsString]) -> ! {
+    let Some((program, rest)) = argv.split_first() else {
+        eprintln!("flat3d-run: no game command");
+        std::process::exit(1)
+    };
+    let mut command = std::process::Command::new(program);
+    command.args(rest);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        let error = command.exec();
+        eprintln!("flat3d-run: {error}");
+        std::process::exit(1)
+    }
+    #[cfg(not(unix))]
+    {
+        match command.status() {
+            Ok(status) => std::process::exit(status.code().unwrap_or(1)),
+            Err(error) => {
+                eprintln!("flat3d-run: {error}");
+                std::process::exit(1)
+            }
+        }
+    }
+}
+
 fn main() {
     let argv: Vec<_> = std::env::args_os().skip(1).collect();
     let env: BTreeMap<_, _> = std::env::vars_os()
         .filter_map(|(key, value)| Some((key.into_string().ok()?, value.into_string().ok()?)))
         .collect();
     let Ok(paths) = EnginePaths::from_env(&env, uid()) else {
-        std::process::exit(1)
+        // Bad input plays flat: run the original command unchanged.
+        play_flat(&argv)
     };
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

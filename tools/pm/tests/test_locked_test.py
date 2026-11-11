@@ -82,6 +82,26 @@ class LockedTestTests(unittest.TestCase):
         self.assertEqual(result.returncode, 3)
         self.assertIn("locked-test: no-snapshot fix:", result.stderr)
 
+    def test_uppercase_sha_matches(self):
+        result = self.run_locked(self.sha.upper())
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_destination_gets_normal_mode(self):
+        self.assertEqual(self.run_locked().returncode, 0)
+        self.assertEqual(self.dest.stat().st_mode & 0o777, 0o644)
+
+    @unittest.skipIf(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0), "needs permission checks")
+    def test_unwritable_destination_is_not_a_sha_mismatch(self):
+        locked = self.root / "ro"
+        locked.mkdir()
+        locked.chmod(0o555)
+        try:
+            result = self.run_locked(dest=locked / "sub" / "x.rs")
+        finally:
+            locked.chmod(0o755)
+        self.assertEqual(result.returncode, 4)
+        self.assertIn("locked-test: dest-unwritable fix:", result.stderr)
+
     def test_scratch_unset_is_usage_error(self):
         result = self.run_locked(env={"SCRATCH": ""})
         self.assertEqual(result.returncode, 2)
