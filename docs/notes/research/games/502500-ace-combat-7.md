@@ -75,13 +75,13 @@ Installed at `<Steam library>/steamapps/common/ACE COMBAT 7/` on a removable lib
 
 - Engine stereo switches: `emulatestereo` (command line), `r.EnableStereoEmulation`, `vr.bEnableStereo`, `vr.bEnableHMD`, `vr.InstancedStereo`, `vr.MirrorMode`, `vr.SpectatorScreenMode`, `vr.WorldToMetersScale`, `vr.MonoscopicFarField`.
 - The PS4 VR mode is still in the PC exe: source path `Nimbus\Source\Nimbus\VR\NimbusBlueprintLibraryVR.cpp`, settings `Neo.VR.Mission.RenderSetting`, `Neo.VR.Hangar.RenderSetting`, `Neo.VR.AirShow.RenderSetting` and `ace.vr.r.PS4VROverlayAdditiveBlend`, `bEnableMorpheus`, the shader `PostProcessHMDMorpheus.usf`, and dozens of `Psvr...` menu text keys.
-- **No PC headset plugin**: no SteamVR, OpenVR, Oculus or OpenXR module, DLL or string. The engine's "HMD module not found" message is present. So the VR mode has no device to run on without a tool such as UEVR (inferred).
+- **No PC headset plugin**: no SteamVR, OpenVR or OpenXR module, DLL or string, and no Oculus plugin module (only the engine's built-in Oculus shader names). The engine's "HMD module not found" message is present. So the VR mode has no device to run on without a tool such as UEVR (inferred).
 - Because `emulatestereo` is present, the engine's built-in fake stereo device is very likely compiled in, as it is in Zero Company (inferred; without a PDB the class cannot be named).
 
 ### Proton prefix and Steam state
 
 - The prefix was made by **Proton 11.0-100**. Steam records about 7 hours of play on this device, so the game starts and runs under Proton here (the offline check of #40 is still to do).
-- The prefix holds only the save (`AppData/Local/BANDAI NAMCO Entertainment/ACE COMBAT 7/SaveGames/<Steam id>/ACE7Save.sav`, synced by Steam Cloud). There is **no `Config` folder**, so there is no ini file to edit; graphics settings appear to live in the save (inferred).
+- The prefix holds the save (`AppData/Local/BANDAI NAMCO Entertainment/ACE COMBAT 7/SaveGames/<Steam id>/ACE7Save.sav`, synced by Steam Cloud) and a `Config` folder there with `GameUserSettings.ini` (resolution, full-screen mode, vsync, quality), `Input.ini` and a short `Engine.ini` that lists only content paths. The other ini files are empty. So an ini route exists for graphics settings; none of them holds a stereo key.
 - No UEVR profile folder (`AppData/Roaming/UnrealVRMod/`) and no .NET runtime are in the prefix: UEVR has never run here.
 - The game's Steam launch options currently wrap it in a frame-generation layer (lsfg-vk) with a 90 fps cap. See risk 4.
 
