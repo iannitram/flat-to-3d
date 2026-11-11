@@ -32,6 +32,24 @@ class IssuesReportTests(unittest.TestCase):
         self.assertTrue(by_id[6]["device"])
         self.assertEqual(set(by_id[1]), {"number", "title", "status", "blockers", "external", "device"})
 
+    def test_none_lines_never_block_even_with_refs_or_bold_markers(self):
+        issues = [
+            {"number": 1, "title": "a", "body": "Blocked by: none (was #2)", "labels": []},
+            {"number": 2, "title": "b", "body": "**Blocked by**: none", "labels": []},
+            {"number": 3, "title": "c", "body": "**Blocked by**: #2", "labels": []},
+            {"number": 4, "title": "d", "body": "**Blocked by**: Step 0", "labels": []},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "issues.json"
+            path.write_text(json.dumps(issues), encoding="utf-8")
+            result = self.run_report("--json-file", path, "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        by_id = {row["number"]: row for row in json.loads(result.stdout)}
+        self.assertEqual((by_id[1]["status"], by_id[1]["blockers"]), ("ready", []))
+        self.assertEqual((by_id[2]["status"], by_id[2]["external"]), ("ready", []))
+        self.assertEqual((by_id[3]["status"], by_id[3]["blockers"]), ("blocked", [2]))
+        self.assertEqual((by_id[4]["status"], by_id[4]["external"]), ("blocked-external", ["Step 0"]))
+
     def make_plan(self, root, *, wp02_files="tools/check.sh, tools/pm/issues_report.py", wp02_dep="WP-00",
                   wp02_body_dep=None, wp02_wave=1, extra_rows="", frozen="- `tools/ghidra/headless.sh` (WP-02, WP-25b)"):
         plan = root / "docs" / "plans" / "roadmap-v2"

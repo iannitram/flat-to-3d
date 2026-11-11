@@ -66,8 +66,12 @@ fn only_exec_spawns_outside_tagged_architecture_allowlist() {
                     )
                 });
                 if *tag == "follow-up" {
+                    let above = index
+                        .checked_sub(1)
+                        .and_then(|previous| contents.lines().nth(previous))
+                        .unwrap_or("");
                     assert!(
-                        contents.contains(&format!("architecture-allowlist: {tag}")),
+                        above.contains(&format!("architecture-allowlist: {tag}")),
                         "{file}:{}: missing architecture allowlist tag {tag}",
                         index + 1
                     );

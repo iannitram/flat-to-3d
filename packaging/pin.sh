@@ -19,6 +19,7 @@ while (($#)); do
     *) [[ -z $key ]] || { usage; token_exit 2 usage no 'name the bad line or key'; }; key=$1; shift ;;
   esac
 done
+if [[ -n $file && $all == 1 ]]; then usage; token_exit 2 usage no 'name the bad line or key'; fi
 if [[ ! -f $pins ]]; then token_exit 2 bad-pins no 'name the bad line or key'; fi
 
 declare -A field=()
@@ -48,6 +49,7 @@ validate() {
     if [[ $fetch == auto ]]; then
       for f in version url size sha256 license; do [[ -n ${field["$k.$f"]-} ]] || token_exit 2 bad-pins no 'name the bad line or key'; done
       sha=${field["$k.sha256"]}; url=${field["$k.url"]}
+      [[ ${field["$k.size"]} == TBD-at-pin || ${field["$k.size"]} =~ ^[0-9]+$ ]] || token_exit 2 bad-pins no 'name the bad line or key'
       [[ $sha == TBD-at-pin || $sha =~ ^[a-fA-F0-9]{64}$ ]] || token_exit 2 bad-pins no 'name the bad line or key'
       if [[ $sha != TBD-at-pin && ( $url == TBD-at-pin || ${field["$k.size"]} == TBD-at-pin ) ]]; then token_exit 2 bad-pins no 'name the bad line or key'; fi
       [[ $url != TBD-at-pin || -n ${field["$k.page"]-} ]] || token_exit 2 bad-pins no 'name the bad line or key'
@@ -61,13 +63,13 @@ validate() {
 validate
 
 pin_one() {
-  local k=$1 sha url size license page tmp base cap actual actual_size got_digest route repo tag name checks newsha newsize stamp out field_size fill_size
+  local k=$1 sha url size page tmp base cap actual actual_size got_digest route repo tag name checks newsha newsize stamp out field_size fill_size
   [[ $k != crate && $k != npm ]] || token_exit 2 not-a-fetch-key no 'name the bad line or key'
   fetch=${field["$k.fetch"]-}
   [[ -n $fetch ]] || token_exit 2 unknown-key no 'name the bad line or key'
   page=${field["$k.page"]-}
   [[ $fetch == auto ]] || token_exit 3 manual no "download it from $page (packaging/README.md)"
-  sha=${field["$k.sha256"]}; url=${field["$k.url"]}; size=${field["$k.size"]}; license=${field["$k.license"]}
+  sha=${field["$k.sha256"]}; url=${field["$k.url"]}; size=${field["$k.size"]}
   field_size=$size
   [[ $url != TBD-at-pin ]] || token_exit 3 url-tbd no "set $k.url from $k.page, then rerun"
   if [[ $sha =~ ^[a-fA-F0-9]{64}$ && $check == 0 ]]; then token_exit 5 already-pinned no "packaging/pin.sh $k --check"; fi
