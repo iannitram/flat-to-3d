@@ -3,7 +3,18 @@ import type { CollectionPlan } from "./types";
 
 let name = "3D Ready";
 
-export async function syncCollection(): Promise<CollectionPlan | ApiError> {
+let inflight: Promise<CollectionPlan | ApiError> | null = null;
+
+export function syncCollection(): Promise<CollectionPlan | ApiError> {
+  if (!inflight) {
+    inflight = runSync().finally(() => {
+      inflight = null;
+    });
+  }
+  return inflight;
+}
+
+async function runSync(): Promise<CollectionPlan | ApiError> {
   const { collectionStore, appStore } = window;
   const id = collectionStore.GetCollectionIDByUserTag(name);
   const c =

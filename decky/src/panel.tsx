@@ -45,6 +45,12 @@ export function Content(): JSX.Element {
       .then((plan) =>
         "code" in plan ? [plan] : syncLaunchOptions(plan),
       )
+      .catch((e): ApiError[] => [
+        {
+          code: "command-failed",
+          message: `Steam sync failed: ${e instanceof Error ? e.message : String(e)}`,
+        },
+      ])
       .then((syncErrors) => {
         if (mounted) setErrors((current) => [...current, ...syncErrors]);
       });
