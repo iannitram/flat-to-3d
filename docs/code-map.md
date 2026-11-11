@@ -105,9 +105,12 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `crates/app/src/view_setup.rs` | stub | Setup page widgets; WP-33 fills the view | M24 |
 | `crates/app/src/view_logs.rs` | stub | Logs page widgets; WP-33 fills the view | M24 |
 | `crates/engine/src/status.rs`, `crates/engine/src/cli/link.rs`, `crates/engine/src/face/headset_view.rs`, `crates/engine/src/face/link_view.rs` | partly present | `status.rs`: status labels, colours, sorting and filtering; `headset_view.rs`: button state and log lines; `link_view.rs`: link labels, hints and flat reason | M11, M24, M26 |
-| `recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships five (#29, #36, #47-#49) | M12, M17, M20-M23 |
+| `recipes/` | skeleton (README with the file format only; no `.recipe` files yet) | one file per game, the canonical home (#15); 1.0 ships six (rulings 43, 45): #29, #36, #47, #49, and one each for 007 First Light and Alan Wake 2 (no issues yet; Alan Wake 2 has no Steam appid, so its file name and key are an open problem); Planet of Lana's (#48) is after 1.0 | M12, M17, M20, M22, M31, M32 |
 | `games/zero-company/`, `games/ace-combat-7/` | planned | UEVR profile settings, launch notes, measured settings | M13-M16, M20 |
-| `games/planet-of-lana/`, `games/control/` | planned | where the Geo-11 fix comes from (fetched, never vendored unless its license allows), settings | M22, M23 |
+| `games/control/` | planned | where the Geo-11 fix comes from (fetched, never vendored unless its license allows), settings | M22 |
+| `games/planet-of-lana/` | planned, after 1.0 (ruling 43) | the same for Planet of Lana's Geo-11 fix | M23 (moved out of 1.0) |
+| `games/007-first-light/` | planned | our `dinput8.dll` proxy that switches the engine's dormant VR device to its `stereo3d` mode, settings (planned route, untested) | M31 |
+| `games/alan-wake-2/` | planned | our alternate-eye hook on the engine's camera class and its proxy DLL, settings (planned route, untested; ruling 44) | M32 |
 | `games/spiderman2/` | planned | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `viewer/` | planned | SBS screen viewer: Geo-11's side-by-side picture on the fixed screen over OpenXR. Likely a Windows binary run in the game's Proton session reading Geo-11's shared texture (FlatToDepth / VRScreenCap, MIT, are the references) | M21 |
 | `layer/` | planned, conditional | fixed-screen OpenXR layer, only if UEVR's 2D Screen Mode loses depth (#33, #9) | M15 |
