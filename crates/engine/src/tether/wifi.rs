@@ -75,6 +75,11 @@ pub fn connect_network_command(ssid: &str, security: Security, psk: &str) -> Vec
     ]
 }
 
+/// Public form used by the tether's Wi-Fi sync entry point.
+pub fn connect_argv(ssid: &str, sec: Security, psk: &str) -> Vec<String> {
+    connect_network_command(ssid, sec, psk)
+}
+
 /// Joins command words for logging, replacing a connect-network passphrase with `***`.
 pub fn redact_command(cmd: &[String]) -> String {
     let line = cmd.join(" ");
