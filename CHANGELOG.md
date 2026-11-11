@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-11 The owner's ruling 43, "This is the 1.0 list.": 1.0 is seven Favorites (Zero Company, ACE COMBAT 7, Control, Spider-Man 2, 007 First Light, Alan Wake 2, Forza Horizon 6). Planet of Lana moves to after-1.0 (SPEC M23 out; research and seed kept); M31-M33 are placeholders with the route to be chosen by research; Control takes the first Geo-11 test (G1, #43). SPEC approval back to "not yet" until the owner re-approves (#256).
 - 2026-11-07 Wave 1 merged (PRs #190-#197, main `50c1e49`, 459 engine + 4 app tests): #66, #119, #75, #99, #84, #96, #51 file half, #78. Roadmap and code map synced; next is #183 alone, then wave 2 (#120, #125, #76, #116, #118).
 - 2026-11-07 #78 app crate: `app/` (iced 0.14, linked to `inject/` by path) opens a window with the four tabs (Setup, Headset, Games, Logs) on placeholder text, tested in `lib.rs`; the `app` job in `check.yml` runs its `cargo test` and `cargo check`. The faces stage has started.
 - 2026-11-07 Link stage E2 (WiVRn half) done: `link::stop_3d` closes the WiVRn app, the `adb reverse` and the server unit and reports Stopped, so Start 3D works again (#66, rebuilt after PR #188 was closed unmerged).

@@ -4,6 +4,8 @@ Play installed PC games in **true stereoscopic 3D**, where the game itself draws
 
 ## Where we're at
 
+**2026-11-11:** the 1.0 list is seven games, the owner's Steam Favorites: STAR WARS Zero Company, ACE COMBAT 7, Control, Marvel's Spider-Man 2, 007 First Light, Alan Wake 2 and Forza Horizon 6. Planet of Lana moved to after 1.0. The three new games have no route yet; research picks one each ([SPEC.md](SPEC.md), ruling 43 in [docs/notes/DECISIONS.md](docs/notes/DECISIONS.md)).
+
 **2026-10-31:** 1.0 now covers **STAR WARS Zero Company** (first, through UEVR) and Spider-Man 2. See [SPEC.md](SPEC.md), [docs/ROADMAP.md](docs/ROADMAP.md) and the peer projects in [PEERS.md](PEERS.md). The notes below are from 2026-10-18.
 
 ### 2026-10-18
@@ -39,7 +41,7 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
    - Add the HUD, then pattern scans so game patches don't break it.
 3. **Prove the other big buckets** (from the research report):
    - UEVR on an installed Unreal 4 game (Sifu or Little Nightmares).
-   - Geo-11 on Control and Planet of Lana. Geo-11 alone covers about 33 library games.
+   - Geo-11 on Control (in 1.0) and Planet of Lana (after 1.0 since 2026-11-11). Geo-11 alone covers about 33 library games.
    - The 5-minute check of UEVR's 2D Screen Mode.
 4. **Build the generic 3D-screen pieces** that the other mods need:
    - An OpenXR layer that pins any VR mod's two eyes to a fixed screen.
@@ -48,7 +50,7 @@ In parallel, the Spider-Man 2 address mapping has started on Hyperion ([docs/spi
    - Steam launches the games. Plugging in the headset will start the `flat3d-link` service, which brings up the link.
    - The `flat3d-run` wrapper will check the link and each game's 3D switch, then apply that game's 3D route. If the link is not ready or the switch is off, the game runs flat.
    - The engine will include Quest Tether's tether, ported to Rust.
-6. **Our own stereo for the remaining DX12 games:**
+6. **Our own stereo for the remaining DX12 games** (007 First Light and Alan Wake 2 are 1.0 games since 2026-11-11; whether this is their route is for research to say):
    - 007 First Light's dormant built-in stereo mode first.
    - Then Alan Wake 2.
    - Then a Vulkan-level layer for the rest.

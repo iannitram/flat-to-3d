@@ -16,7 +16,7 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 | 4 | Experience | **Giant 3D TV.** A fixed screen, no head-steered camera. |
 | 5 | Headset link | *(Link layer superseded 2026-11-01 by ruling 30: the tether is now ported into the engine.)* **Quest Tether** (SteamOS port + Decky plugin) stays the USB link layer, and a Decky "Start 3D" button comes in the build phase. Research picked **WiVRn** as the streamer: its wired mode (`adb reverse tcp:9757`) runs alongside Quest Tether's internet sharing. Steam Link VR is the fallback. |
 | 6 | Frame rate | **A steady 30+ fps** is fine. Lower resolution and settings are acceptable. |
-| 7 | Online / anti-cheat | **Offline and single-player only.** Any game with anti-cheat or always-online play is marked "not safe" and skipped. Forza Horizon 6 is not safe. |
+| 7 | Online / anti-cheat | **Offline and single-player only.** Any game with anti-cheat or always-online play is marked "not safe" and skipped. Forza Horizon 6 is not safe. *(Open since 2026-11-11: ruling 43 puts Forza Horizon 6 in the 1.0 list. This ruling is not withdrawn; the offline and anti-cheat check comes first, and the owner rules if the game fails it.)* |
 | 8 | Money | **Free only.** Existing open-source VR mods for specific games are the baseline: keep their injection method, switch the output to a 3D screen. |
 | 9 | Build vs adopt | Adopt existing tools and build the glue. Where no path exists for a game with a **real 3D world**, we **build our own** stereo. Flat 2D-art games (Hades, Hades II) are marked "won't work", and that is fine. |
 | 10 | End product | A **Rai Pal-style app**: a command-line engine plus a **Decky plugin** in Game Mode. It detects installed games and shows an **Inject** button. |
@@ -50,6 +50,7 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 | 39 | Desktop app toolkit | **A native Rust GUI, not Tauri and not a web UI** (2026-11-01, question tool: "Native Rust GUI", toolkit "iced (Recommended)"). The app is a Rust crate `app/` (iced, MIT) that depends on `inject/` by path; its Elm-style state and `update` functions are plain Rust and unit-tested in CI. Packaging is an AppImage of that binary (no WebKitGTK). Supersedes "Tauri (Rust + web UI) (Recommended)" of 2026-10-31. |
 | 40 | Decky plugin | **A Rust backend and a thin TypeScript panel** (2026-11-01, question tool: "Rust backend, thin TS panel (Recommended)"). No Python backend: the backend is the engine binary (the PowerTools way). The panel has no logic: it draws the engine's `--json` and calls Steam's client API (launch options, `collectionStore`, toasts) only because only JavaScript can. The logic that was planned for `ui-shared/` (status labels and colours, sort, link wording, launch-option compose and remove, collection diff, toast selection) lives in Rust in `inject/` and reaches the panel through `--json`. The `ui-shared/` package is dropped. |
 | 41 | Other languages | **The Spider-Man 2 port stays C++ on SpidyVR and the research tools stay Python** (2026-11-01, question tool: "Leave them as is (Recommended)"). |
+| 43 | 1.0 games | **The 1.0 games are the owner's seven Steam Favorites** (2026-11-11, the owner, looking at his Steam Favorites: "This is the 1.0 list."): STAR WARS Zero Company, ACE COMBAT 7, Control, Marvel's Spider-Man 2, 007 First Light, Alan Wake 2 and Forza Horizon 6. **Supersedes the five-game list of 2026-10-31.** (1) Planet of Lana leaves 1.0 and becomes `after-1.0`; its research and its recipe seed stay. (2) The four games that stay keep their routes and their order: Zero Company, ACE COMBAT 7, Control, Spider-Man 2. (3) The three new games have no route yet: research picks one each, and nothing here invents one. (4) Control is now the only Geo-11 game in 1.0, so it takes the first Geo-11 test (G1) that Planet of Lana had. **Not ruled, open for the owner:** the order of the three new games (they sit after the old order until he says); whether ruling 7 gives way for Forza Horizon 6 if it can't play offline or has anti-cheat; whether the SBS viewer stays in 1.0 for one Geo-11 game. (Number 42 is left free for the Quest Tether ruling of 2026-11-10, which is still in review.) |
 
 Ruling 14 (where decisions, research and status are kept) is retired: they now live in this repo, under `docs/notes/`.
 
@@ -77,16 +78,18 @@ Each game's notes also carry a `## 3D (stereo)` section. The per-game records th
 
 ## Favorites and verdicts
 
-| Game | Verdict | Route |
-|---|---|---|
-| Marvel's Spider-Man 2 | build (first trial) | port SpidyVR's stereo screen |
-| ACE COMBAT 7 | likely, best candidate | UEVR (not mounted right now) |
-| Control | likely | Geo-11 + the community Control fix, DX11 mode |
-| Planet of Lana | likely | Geo-11 fix |
-| STAR WARS Zero Company | likely, uncertain | UEVR nightly (UE 5.6) |
-| 007 First Light | build, strong lead | its own dormant stereo mode |
-| Alan Wake 2 | build, later | our own DX12 hook |
-| Forza Horizon 6 | not safe | none |
-| Hades, Hades II | won't work | none |
+The verdicts and routes are the research verdicts of 2026-10-18. The last column is the 1.0 list of 2026-11-11 (ruling 43); for the three new games the route shown is the old lead, not a chosen route.
 
-Open questions: does AER count as true stereo (fallback for our own builds)? Should I contact SpidyVR's author about the Spider-Man 2 port? Go-ahead to register REA in Claude Code's config.
+| Game | Verdict | Route | In 1.0 |
+|---|---|---|---|
+| Marvel's Spider-Man 2 | build (first trial) | port SpidyVR's stereo screen | yes |
+| ACE COMBAT 7 | likely, best candidate | UEVR (not mounted right now) | yes |
+| Control | likely | Geo-11 + the community Control fix, DX11 mode | yes |
+| Planet of Lana | likely | Geo-11 fix | no, moved out 2026-11-11 (`after-1.0`) |
+| STAR WARS Zero Company | likely, uncertain | UEVR nightly (UE 5.6) | yes (first) |
+| 007 First Light | build, strong lead | its own dormant stereo mode | yes, new; route to be chosen by research |
+| Alan Wake 2 | build, later | our own DX12 hook | yes, new; route to be chosen by research |
+| Forza Horizon 6 | not safe | none | yes, new; route to be chosen by research; ruling 7 check first |
+| Hades, Hades II | won't work | none | no |
+
+Open questions: the three under ruling 43 (order of the new games, ruling 7 and Forza Horizon 6, the SBS viewer for one game); does AER count as true stereo (fallback for our own builds)? Should I contact SpidyVR's author about the Spider-Man 2 port? Go-ahead to register REA in Claude Code's config.
