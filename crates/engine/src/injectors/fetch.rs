@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 pub const PINS: &str = include_str!("../../../../packaging/pins");
 pub const TBD: &str = "TBD-at-pin";
+const CACHE_LOCK: &str = ".fetch.lock";
 pub const MARKER: &str = ".flat3d-fetch";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -169,7 +170,7 @@ pub fn pin_in(pins: &BTreeMap<String, Pin>, key: &str) -> Result<Pin, FetchError
             });
         }
     }
-    if !path_safe(&pin.version) || pin.version.starts_with("TBD") {
+    if !path_safe(&pin.version) || pin.version.starts_with("TBD") || pin.version == CACHE_LOCK {
         return Err(FetchError::BadPin {
             key: key.into(),
             field: "version",
@@ -191,7 +192,7 @@ pub fn pin_in(pins: &BTreeMap<String, Pin>, key: &str) -> Result<Pin, FetchError
 }
 
 fn path_safe(part: &str) -> bool {
-    !part.is_empty() && part != "." && part != ".." && !part.contains(['/', '\\'])
+    !part.is_empty() && part != "." && part != ".." && !part.contains(['/', '\\', ':', '\0'])
 }
 
 pub fn cache_dir(pin: &Pin, p: &EnginePaths) -> PathBuf {
@@ -231,10 +232,22 @@ pub fn fetch_with(
     if is_fetched(&pin, p) {
         return Ok(dir);
     }
+    let parent = p.cache().join(&pin.key);
+    fs::create_dir_all(&parent).map_err(io_error)?;
+    // Keep the lock file in place so concurrent callers always lock the same file.
+    let lock = fs::File::options()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(parent.join(CACHE_LOCK))
+        .map_err(io_error)?;
+    lock.lock().map_err(io_error)?;
+    if is_fetched(&pin, p) {
+        return Ok(dir);
+    }
     if dir.exists() {
         fs::remove_dir_all(&dir).map_err(io_error)?;
     }
-    let parent = p.cache().join(&pin.key);
     let tmp = parent.join(format!(".{}.tmp", pin.version));
     if tmp.exists() {
         fs::remove_dir_all(&tmp).map_err(io_error)?;
@@ -250,7 +263,7 @@ pub fn fetch_with(
             .rsplit('/')
             .next()
             .unwrap_or("");
-        if name.is_empty() {
+        if !path_safe(name) {
             return Err(FetchError::BadPin {
                 key: pin.key.clone(),
                 field: "url",

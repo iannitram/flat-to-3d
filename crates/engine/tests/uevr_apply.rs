@@ -353,3 +353,48 @@ fn uevr_version_matches_pins() {
     assert!(include_str!("../../../packaging/pins")
         .contains(&format!("uevr.version: {}\n", uevr::UEVR_VERSION)));
 }
+
+#[test]
+fn uevr_exe_must_be_a_file_name() {
+    for bad in [
+        "../../../tmp/x.exe",
+        "a/b.exe",
+        "a\\b.exe",
+        "..",
+        ".",
+        ".exe",
+        "a\0b",
+    ] {
+        code(
+            uevr::extras_from(&settings(&[("uevr-exe", bad)])).unwrap_err(),
+            "bad-recipe",
+        );
+    }
+}
+
+#[test]
+fn exe_suffix_is_stripped_once_and_case_insensitively() {
+    for (name, stem) in [
+        ("Game.Exe", "Game"),
+        ("Game.EXE", "Game"),
+        ("Foo.exe.exe", "Foo.exe"),
+        ("Game", "Game"),
+    ] {
+        let extras = uevr::extras_from(&settings(&[("uevr-exe", name)])).unwrap();
+        assert_eq!(extras.exe_stem, stem);
+    }
+    let (_root, p, game) = uevr_home::uevr_ready("apply-exe-case");
+    let (applied, env) =
+        uevr::apply_with(&game, &settings(&[("uevr-exe", "Foo.exe.exe")]), &p).unwrap();
+    let compat = game
+        .install_dir
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("compatdata");
+    let dir = uevr::profile_dir(&compat, game.appid, "Foo.exe.exe");
+    assert!(dir.ends_with("UnrealVRMod/Foo.exe"), "{dir:?}");
+    assert!(applied.record.created.iter().all(|f| f.starts_with(&dir)));
+    assert!(env.env.iter().any(|(_, v)| v.contains("Foo.exe")));
+}
