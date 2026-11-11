@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# shellcheck source=lib.sh
+# shellcheck source=lib.sh disable=SC1091
 . "$(dirname "$0")/lib.sh"
 
 usage() {
@@ -21,7 +21,7 @@ while (($#)); do
     --skip-build) SKIP_BUILD=1; shift ;;
     --tools) (($# >= 2)) || usage_error; TOOLS=$2; shift 2 ;;
     --bin-dir) (($# >= 2)) || usage_error; BIN_DIR=$2; shift 2 ;;
-    --pins) (($# >= 2)) || usage_error; PINS=$2; shift 2 ;;
+    --pins) (($# >= 2)) || usage_error; export PINS=$2; shift 2 ;;
     --out) (($# >= 2)) || usage_error; OUT=$2; shift 2 ;;
     *) usage_error ;;
   esac
@@ -38,28 +38,28 @@ if [ "$DRY" = 1 ]; then
     printf '+ cargo build --release --locked -p flat3d-inject -p flat3d-app\n'
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture\n'
   fi
-  printf '+ mkdir -p $tmp/AppDir/usr/bin $tmp/AppDir/usr/tools $tmp/AppDir/usr/recipes\n'
-  printf '+ cp %s/flat3d-app $tmp/AppDir/usr/bin/flat3d-app\n' "$BIN_DIR"
+  printf "+ mkdir -p \$tmp/AppDir/usr/bin \$tmp/AppDir/usr/tools \$tmp/AppDir/usr/recipes\n"
+  printf "+ cp %s/flat3d-app \$tmp/AppDir/usr/bin/flat3d-app\n" "$BIN_DIR"
   for name in "${PAYLOAD_BIN[@]}"; do
-    printf '+ cp %s/%s $tmp/AppDir/usr/bin/%s\n' "$BIN_DIR" "$name" "$name"
-    printf '+ ln -s bin/%s $tmp/AppDir/usr/%s\n' "$name" "$name"
+    printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$name" "$name"
+    printf "+ ln -s bin/%s \$tmp/AppDir/usr/%s\n" "$name" "$name"
   done
   if [ "$NO_TOOLS" = 0 ]; then
     for name in "${PAYLOAD_TOOLS[@]}"; do
-      printf '+ cp %s/%s $tmp/AppDir/usr/tools/%s\n' "$TOOLS" "$name" "$name"
+      printf "+ cp %s/%s \$tmp/AppDir/usr/tools/%s\n" "$TOOLS" "$name" "$name"
     done
-    printf '+ cp %s/lib/* $tmp/AppDir/usr/tools/lib/\n' "$TOOLS"
+    printf "+ cp %s/lib/* \$tmp/AppDir/usr/tools/lib/\n" "$TOOLS"
   fi
-  printf '+ shopt -s nullglob; cp %s/recipes/*.recipe $tmp/AppDir/usr/recipes/\n' "$ROOT"
-  printf '+ write $tmp/AppDir/AppRun flat3d.desktop flat3d.svg\n'
-  printf '+ ln -s flat3d.svg $tmp/AppDir/.DirIcon\n'
-  printf '+ curl -fL --proto =https --tlsv1.2 --retry 3 -o $CACHE/dl.XXXXXX/%s %s\n' "${APPIMAGETOOL_URL##*/}" "$APPIMAGETOOL_URL"
-  printf '+ sha256sum -c $CACHE/dl.XXXXXX/%s (sha256 %s)\n' "${APPIMAGETOOL_URL##*/}" "$APPIMAGETOOL_SHA"
-  printf '+ chmod +x $CACHE/dl.XXXXXX/%s\n' "${APPIMAGETOOL_URL##*/}"
-  printf '+ curl -fL --proto =https --tlsv1.2 --retry 3 -o $CACHE/dl.XXXXXX/%s %s\n' "${RUNTIME_URL##*/}" "$RUNTIME_URL"
-  printf '+ sha256sum -c $CACHE/dl.XXXXXX/%s (sha256 %s)\n' "${RUNTIME_URL##*/}" "$RUNTIME_SHA"
-  printf '+ APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 %s --runtime-file $CACHE/dl.XXXXXX/%s $tmp/AppDir %s\n' "${APPIMAGETOOL_URL##*/}" "${RUNTIME_URL##*/}" "$OUT"
-  printf '+ test no *.so* outside $tmp/AppDir/usr/tools/lib\n'
+  printf "+ shopt -s nullglob; cp %s/recipes/*.recipe \$tmp/AppDir/usr/recipes/\n" "$ROOT"
+  printf "+ write \$tmp/AppDir/AppRun flat3d.desktop flat3d.svg\n"
+  printf "+ ln -s flat3d.svg \$tmp/AppDir/.DirIcon\n"
+  printf "+ curl -fL --proto =https --tlsv1.2 --retry 3 -o \$CACHE/dl.XXXXXX/%s %s\n" "${APPIMAGETOOL_URL##*/}" "$APPIMAGETOOL_URL"
+  printf "+ sha256sum -c \$CACHE/dl.XXXXXX/%s (sha256 %s)\n" "${APPIMAGETOOL_URL##*/}" "$APPIMAGETOOL_SHA"
+  printf "+ chmod +x \$CACHE/dl.XXXXXX/%s\n" "${APPIMAGETOOL_URL##*/}"
+  printf "+ curl -fL --proto =https --tlsv1.2 --retry 3 -o \$CACHE/dl.XXXXXX/%s %s\n" "${RUNTIME_URL##*/}" "$RUNTIME_URL"
+  printf "+ sha256sum -c \$CACHE/dl.XXXXXX/%s (sha256 %s)\n" "${RUNTIME_URL##*/}" "$RUNTIME_SHA"
+  printf "+ APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 %s --runtime-file \$CACHE/dl.XXXXXX/%s \$tmp/AppDir %s\n" "${APPIMAGETOOL_URL##*/}" "${RUNTIME_URL##*/}" "$OUT"
+  printf "+ test no *.so* outside \$tmp/AppDir/usr/tools/lib\n"
   exit 0
 fi
 

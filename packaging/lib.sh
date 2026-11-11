@@ -2,7 +2,9 @@
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PINS=${PINS:-$ROOT/packaging/pins}
 
+# shellcheck disable=SC2034
 PAYLOAD_BIN=(flat3d-inject flat3d-run flat3d-viewer)
+# shellcheck disable=SC2034
 PAYLOAD_TOOLS=(adb gnirehtet gnirehtet.apk)
 
 pin() {

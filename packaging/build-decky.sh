@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# shellcheck source=lib.sh
+# shellcheck source=lib.sh disable=SC1091
 . "$(dirname "$0")/lib.sh"
 
 usage() {
@@ -36,23 +36,23 @@ if [ "$DRY" = 1 ]; then
     printf '+ cargo build --release --locked -p flat3d-inject\n'
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture\n'
   fi
-  printf '+ mkdir -p $stage/flat-to-3d/bin/recipes\n'
+  printf "+ mkdir -p \$stage/flat-to-3d/bin/recipes\n"
   for file in dist/index.js package.json plugin.json main.py README.md; do
-    printf '+ cp %s/decky/%s $stage/flat-to-3d/%s\n' "$ROOT_DIR" "$file" "$file"
+    printf "+ cp %s/decky/%s \$stage/flat-to-3d/%s\n" "$ROOT_DIR" "$file" "$file"
   done
-  printf '+ cp %s/LICENSE $stage/flat-to-3d/LICENSE\n' "$ROOT_DIR"
+  printf "+ cp %s/LICENSE \$stage/flat-to-3d/LICENSE\n" "$ROOT_DIR"
   for name in "${PAYLOAD_BIN[@]}"; do
-    printf '+ cp %s/%s $stage/flat-to-3d/bin/%s\n' "$BIN_DIR" "$name" "$name"
+    printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$name" "$name"
   done
   if [ "$NO_TOOLS" = 0 ]; then
     for name in "${PAYLOAD_TOOLS[@]}"; do
-      printf '+ cp %s/%s $stage/flat-to-3d/bin/tools/%s\n' "$TOOLS" "$name" "$name"
+      printf "+ cp %s/%s \$stage/flat-to-3d/bin/tools/%s\n" "$TOOLS" "$name" "$name"
     done
-    printf '+ cp %s/lib/* $stage/flat-to-3d/bin/tools/lib/\n' "$TOOLS"
+    printf "+ cp %s/lib/* \$stage/flat-to-3d/bin/tools/lib/\n" "$TOOLS"
   fi
-  printf '+ shopt -s nullglob; cp %s/recipes/*.recipe $stage/flat-to-3d/bin/recipes/\n' "$ROOT_DIR"
-  printf '+ chmod 755 $stage/flat-to-3d/bin/*\n'
-  printf '+ (cd $stage && python3 -m zipfile -c %s flat-to-3d)\n' "$OUT"
+  printf "+ shopt -s nullglob; cp %s/recipes/*.recipe \$stage/flat-to-3d/bin/recipes/\n" "$ROOT_DIR"
+  printf "+ chmod 755 \$stage/flat-to-3d/bin/*\n"
+  printf "+ (cd \$stage && python3 -m zipfile -c %s flat-to-3d)\n" "$OUT"
   exit 0
 fi
 
