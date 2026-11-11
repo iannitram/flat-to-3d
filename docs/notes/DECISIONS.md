@@ -77,7 +77,7 @@ Each game's notes also carry a `## 3D (stereo)` section. The per-game records th
 ## Facts the rulings rest on
 
 - **Library:** all 99 installed games were classified on 2026-10-18, 5 of them with newly written notes.
-- **Installed on the Z13** (2026-10-18): 98 Steam games across internal storage and a storage card ([library-scan.tsv](library-scan.tsv)), plus Alan Wake 2 and Baldur's Gate II through Heroic. ACE COMBAT 7 is on the removable library, which wasn't mounted.
+- **Installed on the Z13** (2026-10-18): 98 Steam games across internal storage and the `FF8S5` card ([library-scan.tsv](library-scan.tsv)), plus Alan Wake 2 and Baldur's Gate II through Heroic. ACE COMBAT 7 is on the `sandisk_4tb` library, which wasn't mounted.
 - **Quest Tether** on SteamOS reverse-tethers the Quest over USB with gnirehtet (measured ~28 Mbit/s with Steam Link). WiVRn's wired mode needs only `adb reverse`, so Quest Tether isn't required for a WiVRn session.
 - **Spider-Man 2** (`Spider-Man2.exe` v2.810.0.0) contains the same engine system names SpidyVR hooks in Remastered, with no packer. Its C++ type information is stripped.
 
