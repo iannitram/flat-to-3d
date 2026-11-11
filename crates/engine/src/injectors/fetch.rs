@@ -169,6 +169,18 @@ pub fn pin_in(pins: &BTreeMap<String, Pin>, key: &str) -> Result<Pin, FetchError
             });
         }
     }
+    if !path_safe(&pin.version) || pin.version.starts_with("TBD") {
+        return Err(FetchError::BadPin {
+            key: key.into(),
+            field: "version",
+        });
+    }
+    if !path_safe(&pin.key) {
+        return Err(FetchError::BadPin {
+            key: key.into(),
+            field: "key",
+        });
+    }
     if pin.sha256.len() != 64 || !pin.sha256.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(FetchError::BadPin {
             key: key.into(),
@@ -176,6 +188,10 @@ pub fn pin_in(pins: &BTreeMap<String, Pin>, key: &str) -> Result<Pin, FetchError
         });
     }
     Ok(pin.clone())
+}
+
+fn path_safe(part: &str) -> bool {
+    !part.is_empty() && part != "." && part != ".." && !part.contains(['/', '\\'])
 }
 
 pub fn cache_dir(pin: &Pin, p: &EnginePaths) -> PathBuf {

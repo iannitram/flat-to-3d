@@ -382,6 +382,7 @@ fn sha_mismatch_leaves_no_dir() {
         Err(FetchError::ShaMismatch { .. })
     ));
     assert!(!fetch::cache_dir(&pin, &p).exists());
+    assert!(!p.cache().join(&pin.key).join(".1.tmp").exists());
 }
 
 #[test]
@@ -396,4 +397,55 @@ fn size_mismatch() {
         Err(FetchError::SizeMismatch { .. })
     ));
     assert!(!fetch::cache_dir(&pin, &p).exists());
+    assert!(!p.cache().join(&pin.key).join(".1.tmp").exists());
+}
+
+#[test]
+fn size_one_too_small_leaves_no_dir_or_tmp() {
+    let Some((p, mut pin, _)) = live_asset("live-small-size", b"size mismatch\n", false) else {
+        return;
+    };
+    pin.size -= 1;
+    let mut runner = SystemRunner;
+    assert!(matches!(
+        fetch::fetch_with(&pin, &p, &mut runner, &FetchOpts { allow_file: true }),
+        Err(FetchError::SizeMismatch { .. })
+    ));
+    assert!(!fetch::cache_dir(&pin, &p).exists());
+    assert!(!p.cache().join(&pin.key).join(".1.tmp").exists());
+}
+
+#[test]
+fn unsafe_version_or_key_is_bad_pin() {
+    for version in ["", "TBD-at-pin", "TBDx", ".", "..", "../x", "a/b", "a\\b"] {
+        let mut pins = sample();
+        pins.get_mut("ok").unwrap().version = version.into();
+        assert!(
+            matches!(
+                fetch::pin_in(&pins, "ok"),
+                Err(FetchError::BadPin {
+                    field: "version",
+                    ..
+                })
+            ),
+            "version {version:?}"
+        );
+    }
+    for key in ["..", "a/b", "a\\b", "."] {
+        let mut pins = BTreeMap::new();
+        pins.insert(
+            key.to_string(),
+            Pin {
+                key: key.into(),
+                ..sample()["ok"].clone()
+            },
+        );
+        assert!(
+            matches!(
+                fetch::pin_in(&pins, key),
+                Err(FetchError::BadPin { field: "key", .. })
+            ),
+            "key {key:?}"
+        );
+    }
 }
