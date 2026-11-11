@@ -2,7 +2,7 @@
 
 ## Latest local checkpoint
 
-Verified integration tip **4f8467961bc6c274e007751a5b70a93e7e71e847**. WP-21 and WP-22 have passed their integration gates. For the current statuses and PRs, see [progress.md](progress.md). The historical handoff below documents the original published checkpoint. If restoring from this local checkpoint, use its verified integration tip in the restore command.
+Verified integration tip **921320c2224a9772148a3e67504bd39d364f03a7**. WP-13 and WP-21 through WP-24 have passed their integration gates. For the current statuses and PRs, see [progress.md](progress.md). The historical handoff below documents the original published checkpoint. If restoring from this local checkpoint, use its verified integration tip in the restore command.
 
 The 2026-11-10 run stopped after the owner asked the two active builders to finish. Of 39 runnable work packages, 17 passed integration, two passed their branch checks and await integration, three are blocked, nine are skipped on dependencies, and eight are queued. [Progress and PRs](progress.md)
 
