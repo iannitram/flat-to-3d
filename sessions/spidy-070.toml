@@ -1,0 +1,51 @@
+schema = 1
+name = "spidy-070"
+title = "Spidy 0.7.0 verification"
+q = "Q13"
+issues = [155]
+spec = ["M1"]
+device = ["z13", "quest2"]
+done_when = "Spider-Man Remastered still shows the city in 3D on the Quest 2 at 30+ fps on the new pin, and the README and SPEC mention the new pin."
+after = ["step0"]
+
+[[step]]
+id = "upgrade"
+kind = "ask"
+who = "you"
+text = "Advance the SpidyVR submodule to commit 5753758 (0.7.0) and reread docs/LINUX.md, tools/spidy-wivrn.sh and the stereo address map."
+
+[[step]]
+id = "build"
+kind = "cmd"
+who = "script"
+text = "Rebuild SpidyVR from the new pin."
+run = ["bash", "{repo}/tools/build-spidy.sh"]
+timeout = 3600
+
+[[step]]
+id = "proton-tests"
+kind = "ask"
+who = "you"
+text = "Run the SpidyVR unit tests under Proton and record the result."
+
+[[step]]
+id = "addresses"
+kind = "ask"
+who = "you"
+text = "Refresh the stereo addresses if the new pin changed them."
+
+[[step]]
+id = "docs-pin"
+kind = "check"
+who = "you"
+text = "README and SPEC mention new pin."
+gate = true
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record 30+ fps in 3D."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]

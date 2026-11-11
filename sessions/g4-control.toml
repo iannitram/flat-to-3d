@@ -1,0 +1,39 @@
+schema = 1
+name = "g4-control"
+title = "G4 Control"
+q = "Q11"
+issues = [46, 49]
+device = ["z13", "quest2"]
+done_when = "a mission section plays at 30+ fps with depth (`needs-owner-device`).; `flat3d-inject list` shows it as works-now, and the locked test loads the file."
+after = ["q0"]
+evidence_only = [49]
+
+[vars]
+appid = "870780"
+
+[[trouble]]
+symptom = "link never becomes ready"
+cause = "Check service logs and headset connection."
+
+[[step]]
+id = "remove-helix"
+kind = "ask"
+who = "you"
+text = "Remove HelixSR dxgi.dll first."
+
+[[step]]
+id = "depth"
+kind = "check"
+who = "you"
+text = "Control runs with stereo depth."
+gate = true
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record 30+ fps."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]
+optional = false

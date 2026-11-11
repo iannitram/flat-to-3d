@@ -1,0 +1,70 @@
+schema = 1
+name = "app-window"
+title = "App Window"
+q = "Q15"
+issues = [78, 122, 123]
+device = ["ci"]
+done_when = "`cargo test --manifest-path app/Cargo.toml` and `cargo check --manifest-path app/Cargo.toml` pass in CI; the window opens on the owner's device (needs-owner-device). No WebKitGTK, no Node. Device check: opening the window on the Deck's desktop mode is `needs-owner-device`.; `cargo check` passes; each page renders from sample state in the owner's window (needs-owner-device); no logic beyond layout. Size note: this is a Medium because iced layout code has no useful unit test; it is capped at four files of about 60 lines each.; `cargo check` passes; on the owner's device Start/Stop works and the Headset page follows the service within 2 s (needs-owner-device)."
+
+[[step]]
+id = "app-tests"
+kind = "cmd"
+who = "script"
+text = "Run the app's locked test suite."
+run = ["cargo", "test", "--locked", "-p", "flat3d-app"]
+timeout = 3600
+
+[[step]]
+id = "app-check"
+kind = "cmd"
+who = "script"
+text = "Check the app build."
+run = ["cargo", "check", "--locked", "-p", "flat3d-app"]
+timeout = 3600
+
+[[step]]
+id = "launch"
+kind = "cmd"
+who = "script"
+text = "Open the app window."
+run = ["cargo", "run", "--locked", "-p", "flat3d-app"]
+background = true
+
+[[step]]
+id = "pages"
+kind = "check"
+who = "you"
+text = "Four app pages render."
+gate = true
+
+[[step]]
+id = "start-stop"
+kind = "check"
+who = "you"
+text = "Start/Stop writes request file and Headset follows within 2 seconds."
+gate = true
+
+[[step]]
+id = "toggles"
+kind = "ask"
+who = "you"
+text = "Auto 3D and Tunnel, game switch and Undo work against real CLI."
+
+[[step]]
+id = "headset-actions"
+kind = "ask"
+who = "you"
+text = "Check again, Install headset apps and Run doctor work with headset plugged in."
+
+[[step]]
+id = "clipboard"
+kind = "ask"
+who = "you"
+text = "Copy reaches desktop clipboard."
+
+[[step]]
+id = "service-survives"
+kind = "check"
+who = "you"
+text = "Closing app leaves flat3d-link.service running."
+gate = true

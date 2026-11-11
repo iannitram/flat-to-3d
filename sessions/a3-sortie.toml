@@ -1,0 +1,29 @@
+schema = 1
+name = "a3-sortie"
+title = "A3 Sortie"
+q = "Q8"
+issues = [42, 47]
+device = ["z13", "quest2"]
+done_when = "the sortie runs at 30+ fps with no dropped eyes or crashes (`needs-owner-device`).; `flat3d-inject list` shows it as works-now, and the locked test loads the file."
+after = ["a2-uevr"]
+evidence_only = [47]
+
+[vars]
+appid = "502500"
+
+[[step]]
+id = "sortie"
+kind = "check"
+who = "you"
+text = "Complete a sortie at 30+ fps."
+gate = true
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record 30+ fps."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]
+optional = false
