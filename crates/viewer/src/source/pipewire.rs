@@ -187,15 +187,15 @@ fn pick_modifier(object: &spa::pod::Object, offered: &[u64]) -> Option<u64> {
     let Value::Choice(ChoiceValue::Long(choice)) = &modifier_property(object)?.value else {
         return None;
     };
+    // A fixated property stays a Choice pod of type None: already fixed.
     let candidates: Vec<i64> = match &choice.1 {
-        ChoiceEnum::None(v) => vec![*v],
         ChoiceEnum::Enum {
             default,
             alternatives,
         } => std::iter::once(*default)
             .chain(alternatives.iter().copied())
             .collect(),
-        _ => Vec::new(),
+        _ => return None,
     };
     candidates
         .into_iter()
@@ -498,6 +498,17 @@ mod tests {
         assert_eq!(pick_modifier(&with, &[3, 11]), Some(11));
         assert_eq!(pick_modifier(&with, &[3, 5]), Some(3));
         assert_eq!(pick_modifier(&fixed(&with, 7), &[7, 11]), None);
+        let mut choice_fixed = with.clone();
+        for p in choice_fixed.properties.iter_mut() {
+            if p.key == spa::param::format::FormatProperties::VideoModifier.as_raw() {
+                p.value = Value::Choice(ChoiceValue::Long(spa::utils::Choice(
+                    spa::utils::ChoiceFlags::empty(),
+                    spa::utils::ChoiceEnum::None(7),
+                )));
+            }
+        }
+        assert_eq!(pick_modifier(&choice_fixed, &[7, 11]), None);
+        assert!(is_dmabuf(&choice_fixed));
         let plain = object(&format_params(&offer(Vec::new()))[0]);
         assert_eq!(pick_modifier(&plain, &[7]), None);
     }
