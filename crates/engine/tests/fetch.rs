@@ -376,6 +376,34 @@ fn second_fetch_runs_no_commands() {
 }
 
 #[test]
+fn concurrent_fetches_share_a_completed_cache_entry() {
+    let payload = b"concurrent fetch\n";
+    let Some((paths, pin, _)) = live_asset("live-concurrent", payload, false) else {
+        return;
+    };
+    let start = std::sync::Barrier::new(2);
+    let fetch = || {
+        start.wait();
+        fetch::fetch_with(
+            &pin,
+            &paths,
+            &mut SystemRunner,
+            &FetchOpts { allow_file: true },
+        )
+        .unwrap()
+    };
+    let out = std::thread::scope(|scope| {
+        let first = scope.spawn(fetch);
+        let second = scope.spawn(fetch);
+        let out = first.join().unwrap();
+        assert_eq!(second.join().unwrap(), out);
+        out
+    });
+    assert_eq!(fs::read(out.join("plain.bin")).unwrap(), payload);
+    assert!(fetch::is_fetched(&pin, &paths));
+}
+
+#[test]
 fn plain_file_is_kept_by_name() {
     let Some((_, _, out)) = live_fetch("live-plain", b"plain payload\n", false) else {
         return;
@@ -430,7 +458,18 @@ fn size_one_too_small_leaves_no_dir_or_tmp() {
 
 #[test]
 fn unsafe_version_or_key_is_bad_pin() {
-    for version in ["", "TBD-at-pin", "TBDx", ".", "..", "../x", "a/b", "a\\b"] {
+    for version in [
+        "",
+        "TBD-at-pin",
+        "TBDx",
+        ".",
+        "..",
+        "../x",
+        "a/b",
+        "a\\b",
+        "C:",
+        ".fetch.lock",
+    ] {
         let mut pins = sample();
         pins.get_mut("ok").unwrap().version = version.into();
         assert!(
