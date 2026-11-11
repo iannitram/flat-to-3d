@@ -34,6 +34,8 @@ pub struct HealthLoop {
     health: Option<api::Health>,
     up_since: Option<u64>,
     gave_up: bool,
+    in_own: bool,
+    reconnects_base: u32,
     tunnel: bool,
     rates: (u64, u64),
 }
@@ -51,6 +53,8 @@ impl HealthLoop {
             health: None,
             up_since: None,
             gave_up: false,
+            in_own: false,
+            reconnects_base: 0,
             tunnel: false,
             rates: (0, 0),
         }
@@ -116,12 +120,23 @@ impl HealthLoop {
             );
             append_best_effort(self.soak_file.as_ref(), &line);
         } else if mode != TetherMode::Own {
+            if self.in_own {
+                self.in_own = false;
+                self.reconnects_base = self.reconnects();
+                self.healer = Healer::new();
+                self.gave_up = false;
+                self.last_tun0 = None;
+            }
             self.up_since = None;
             self.tunnel = false;
             tunnel = false;
             self.rates = (0, 0);
             rates = (0, 0);
             self.meter.sample(now.saturating_mul(1000), None);
+        }
+
+        if mode == TetherMode::Own {
+            self.in_own = true;
         }
 
         let mut toast = None;
@@ -159,7 +174,7 @@ impl HealthLoop {
                 rx_bytes_s: rates.0,
                 tx_bytes_s: rates.1,
                 uptime_s: now.saturating_sub(start),
-                reconnects: self.healer.reconnects(),
+                reconnects: self.reconnects(),
             })
         } else {
             None
@@ -175,13 +190,13 @@ impl HealthLoop {
     }
 
     pub fn reconnects(&self) -> u32 {
-        self.healer.reconnects()
+        self.reconnects_base
+            .saturating_add(self.healer.reconnects())
     }
 
     pub fn finish(self, now: u64, mem_end_kb: u64, orphans: u32) -> SoakSummary {
-        let summary = self
-            .soak
-            .finish(now, mem_end_kb, self.healer.reconnects(), orphans);
+        let reconnects = self.reconnects();
+        let summary = self.soak.finish(now, mem_end_kb, reconnects, orphans);
         append_best_effort(self.soak_file.as_ref(), &summary.to_text());
         summary
     }

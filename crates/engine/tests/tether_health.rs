@@ -197,6 +197,30 @@ fn at_most_ten_full_reconnects_then_give_up() {
 }
 
 #[test]
+fn a_new_own_session_heals_again_after_give_up() {
+    let mut fake = Fake::default();
+    fake.put("ps -eo pid=,args=", "");
+    fake.put("adb shell ip addr show tun0", "absent");
+    fake.put("adb shell dumpsys battery", "level: 80\ntemperature: 300\n");
+    let mut loop_ = HealthLoop::new(0, 0, None);
+    let mut t = 0;
+    while t <= 15_000 {
+        tick(&mut loop_, t, &mut fake);
+        t += 120;
+    }
+    assert!(tick(&mut loop_, t, &mut fake).heal.is_none());
+    let before = loop_.reconnects();
+    assert_eq!(before, 10);
+    t += 5;
+    loop_.tick(t, TetherMode::Off, true, &mut fake);
+    let heals: Vec<_> = (1..=3)
+        .map(|i| tick(&mut loop_, t + 5 * i, &mut fake).heal)
+        .collect();
+    assert_eq!(heals, [None, None, Some(Heal::RestartClient)]);
+    assert_eq!(loop_.reconnects(), before);
+}
+
+#[test]
 fn fast_misses_trip_the_flap_breaker() {
     let mut fake = Fake::default();
     fake.put("ps -eo pid=,args=", "");
