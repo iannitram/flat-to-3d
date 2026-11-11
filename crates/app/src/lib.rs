@@ -1,6 +1,5 @@
-//! The desktop app's state: the four pages (Setup, Headset, Games, Logs), the messages
-//! that change them and the pure `update`. No iced here, so the tests run without a window;
-//! the widgets live in `main.rs`.
+//! Desktop app state and message routing. The `view_*` modules build iced widgets; `update` stays
+//! pure (no I/O) and returns `Effect`s for `engine` to perform.
 
 pub mod engine;
 pub mod games_page;
@@ -47,23 +46,110 @@ impl Tab {
     }
 }
 
-/// What the window holds: the tab on screen.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+/// State held by the desktop window.
+#[derive(Debug, Default, Clone)]
 pub struct App {
     pub active: Tab,
+    pub now: u64,
+    pub ticks: u64,
+    pub headset: headset_page::HeadsetState,
+    pub games: games_page::GamesState,
+    pub setup: setup_page::SetupState,
+    pub logs: logs_page::LogsState,
 }
 
-/// What the user can do. More variants come with the pages.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Message {
-    /// A tab button was pressed.
     Select(Tab),
+    Tick(u64),
+    Headset(headset_page::Msg),
+    Games(games_page::Msg),
+    Setup(setup_page::Msg),
+    Logs(logs_page::Msg),
+    SwitchSaved(Result<(), String>),
 }
 
-/// Apply a message to the state.
-pub fn update(app: &mut App, message: Message) {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Effect {
+    ReadSnapshot,
+    Request(flat3d_inject::state::Request),
+    SetSetting { key: &'static str, on: bool },
+    LoadRows { filter: String },
+    SetSwitch { appid: u32, on: bool },
+    Undo(u32),
+    ReadPackages,
+    RunSetup(setup_page::SetupKind),
+    LoadLogs,
+    Copy(String),
+}
+
+/// Update state without performing IO; effects are executed by the engine adapter.
+pub fn update(app: &mut App, message: Message) -> Vec<Effect> {
+    use Effect as E;
     match message {
-        Message::Select(tab) => app.active = tab,
+        Message::Select(tab) => {
+            app.active = tab;
+            let mut effects = vec![E::ReadSnapshot];
+            match tab {
+                Tab::Games => effects.push(E::LoadRows {
+                    filter: app.games.filter.clone(),
+                }),
+                Tab::Setup => effects.push(E::ReadPackages),
+                Tab::Logs => effects.push(E::LoadLogs),
+                Tab::Headset => {}
+            }
+            effects
+        }
+        Message::Tick(now) => {
+            app.now = now;
+            app.ticks += 1;
+            let mut effects = vec![E::ReadSnapshot];
+            if app.active == Tab::Logs {
+                effects.push(E::LoadLogs);
+            }
+            if app.active == Tab::Setup && app.ticks.is_multiple_of(10) {
+                effects.push(E::ReadPackages);
+            }
+            effects
+        }
+        Message::Headset(message) => headset_page::update(&mut app.headset, message)
+            .map(|a| match a {
+                headset_page::Action::Start3d => E::Request(flat3d_inject::state::Request::Start3d),
+                headset_page::Action::Stop3d => E::Request(flat3d_inject::state::Request::Stop3d),
+                headset_page::Action::SetSetting { key, on } => E::SetSetting { key, on },
+                headset_page::Action::Refresh => E::ReadSnapshot,
+            })
+            .into_iter()
+            .collect(),
+        Message::Games(message) => games_page::update(&mut app.games, message)
+            .map(|a| match a {
+                games_page::Action::LoadRows { filter } => E::LoadRows { filter },
+                games_page::Action::SetSwitch { appid, on } => E::SetSwitch { appid, on },
+                games_page::Action::Undo(id) => E::Undo(id),
+            })
+            .into_iter()
+            .collect(),
+        Message::Setup(message) => setup_page::update(&mut app.setup, message)
+            .map(|a| match a {
+                setup_page::Action::RunSetup(kind) => E::RunSetup(kind),
+                setup_page::Action::Refresh => E::ReadPackages,
+            })
+            .into_iter()
+            .collect(),
+        Message::Logs(message) => logs_page::update(&mut app.logs, message)
+            .map(|a| match a {
+                logs_page::Action::Load => E::LoadLogs,
+                logs_page::Action::Copy(text) => E::Copy(text),
+            })
+            .into_iter()
+            .collect(),
+        Message::SwitchSaved(Ok(())) => vec![E::LoadRows {
+            filter: app.games.filter.clone(),
+        }],
+        Message::SwitchSaved(Err(error)) => {
+            app.games.error = Some(error);
+            vec![]
+        }
     }
 }
 
