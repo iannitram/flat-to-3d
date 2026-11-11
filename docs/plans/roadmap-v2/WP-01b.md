@@ -1,5 +1,6 @@
 <!-- split from WP-01.md (roadmap-v2.md lines 755-1385 at c0e6874), part b of four -->
 ### WP-01b: Leaf modules, exec split, architecture test
+> Note (2026-11-10, ruling 42): the tether parts of this WP are removed by WP-35..37; this file stays as history.
 
 **Closes:** A12, K2, K7. It writes the full leaf modules (`exec`, `paths`, `fsx`, `sys`, `catalog`, `testing`, the `state`/`switches` readers and writers, the `recipes` route settings, the viewer `frame`/`source`/`spec`) with their tests, and lands the layering lint `tests/architecture.rs` (rulings 2026-11-09; Craft review A6, A10). `catalog::find_recipe` is the first half of the A5 fix; WP-01d wires it into the wrapper.
 
@@ -25,7 +26,7 @@
   - Engine `src/`: `lib.rs` (six `pub mod` lines), `link.rs` (the runner types move out; one re-export line), `tether/adb.rs`, `state.rs`, `switches.rs`, `recipes.rs`, the `watch/` file that holds the private `read_settings` and its callers, `injectors.rs` (one retag), `cli.rs` (one interim retag and its unit-test string).
   - Viewer `src/`: `frame.rs`, `source.rs`, `spec.rs` (empty skeletons from WP-01a, written in full here).
 - **Not edited:** `Cargo.*`, `check.yml`, any moved test file. **There is no `mod.rs` anywhere and no `x/x.rs`.**
-- **Ownership after this part:** `exec.rs`: WP-01 owns it because it holds the trait split. WP-10 may change only the body of `ProcessRunner::run` and add private helpers. `paths.rs`, `testing.rs` and the viewer `frame`/`source`/`spec` are frozen (§0 "Frozen after wave 1", `00-run-the-pass.md`).
+- **Ownership after this part:** `exec.rs`: WP-01 owns it because it holds the trait split. WP-36 later folds the relay methods out of it (WP-10, merged #253, is superseded by ruling 42). `paths.rs`, `testing.rs` and the viewer `frame`/`source`/`spec` are frozen (§0 "Frozen after wave 1", `00-run-the-pass.md`).
 
 ---
 

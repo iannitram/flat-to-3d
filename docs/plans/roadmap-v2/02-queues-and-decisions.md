@@ -20,7 +20,7 @@
 | T15 | link cmds `watch snapshot switch setting install uninstall run start-3d stop-3d` (WP-08, `crates/engine/src/cli/link.rs`) | #120 | yes |
 | T16 | view cmds `view rows launch collection toasts logs` (WP-28, `crates/engine/src/cli/view.rs`) + `crates/engine/tests/decky_face.rs` (WP-28) | #121; decky_face.rs runs each `decky/src/engine.ts` wrapper's sample argv, with the trailing `--json`, through `cli::parse_any`, and checks the TS ErrorCode union and the types.ts mirror keys | yes |
 | T17 | `list status inject undo` (WP-07, WP-27, `crates/engine/src/cli/{engine,inject,undo}.rs`) | #27a | fake prefix |
-| T18 | `packaging/build-tools.sh` (WP-22) | pins → `dist/tools/{adb,lib/,gnirehtet,gnirehtet.apk}` | dry-run |
+| T18 | `packaging/build-tools.sh` (WP-22) | pins → `dist/tools/{adb,lib/}` (no gnirehtet, ruling 42) | dry-run |
 | T19 | `packaging/build-appimage.sh` + `.github/workflows/appimage.yml` (WP-22; `ubuntu-24.04`, `rust-toolchain@1.95.0`) | → `dist/Flat_to_3D-x86_64.AppImage` | dispatch run |
 | T20 | `packaging/build-decky.sh` (WP-22) | → `dist/flat-to-3d.zip` | zip listing |
 | T21 | `crates/engine/tests/recipes_repo.rs` + `crates/engine/tests/recipe_seeds.rs` (WP-26) | recipes lint + route keys ⇒ pin keys | yes |
@@ -52,7 +52,7 @@
 
 - Every session TOML carries `q = "Qn"`, and `session.py check` rejects an unknown Q id.
 - Each deferred device claim maps to a session step:
-  - link-smoke (Q3): unplug/replug and sleep/wake heal (WP-09); tun0 has `inet`, the gnirehtet package is present, and Wi-Fi comes back after a disconnect (WP-10); `stop-3d` twice, then status shows stopped, plus a Quest app version check (WP-12); `list --json` (WP-07).
+  - link-smoke (Q3): unplug/replug and sleep/wake heal (WP-09); the tun0, gnirehtet package and Wi-Fi-back steps are void (WP-10 superseded, ruling 42); `stop-3d` twice, then status shows stopped, plus a Quest app version check (WP-12); `list --json` (WP-07).
   - decky (Q14): `launch-opts-persist`, `collection-save-persist`, `toast-shows`, `xdg-runtime-set` (WP-32), plus the Game Mode gates (the QAM panel renders, the plugin survives a Game Mode restart).
   - g2-viewer (Q10): ask steps `overlay-in-capture`, `portal-window-kde` and `portal-restore-token` (WP-18), and `xr-runtime-found`, `quad-shows`, `eyes-left-right`, `dmabuf-import`, `recenter-works` and `exits-with-game` (WP-19). WP-24's Session index row has the wording of each.
 - **Closing (rulings D1, D5):** the rule lives in `01-new-bones.md` §2 "PR and issue rules" (Refs vs Closes) and §0 "PR body" (`## Verified` / `## Not verified`). In short, a WP named under "Needs WPs" writes `Refs #N`, lists the Q row under `## Not verified`, and the owner or PM closes the issue when its session passes.
@@ -63,10 +63,10 @@
 - **Rewrite:**
   - #183 (48 files plus the clippy allow, both jobs);
   - #120 (A24 one-actor rule, `run`→`run_with`, `cli::link::run(cmd,ctx)`, `cli::link::request_3d`);
-  - #125 (Where → `crates/engine/tests/tether_health.rs`, `crates/engine/src/watch/health_loop.rs`; remote tun0);
+  - #125 (Where → `crates/engine/src/watch/health_loop.rs`; battery/temperature only: the tunnel, heal, throughput and soak path is not planned, ruling 42);
   - #121 (+ `logs`, #75);
   - #122/#123 (`check.yml`, `read_snapshot`, request file; `stop_3d` exists; the app's snapshot tick is 1 s, where #123 and docs/code-map.md:74 say 2 s);
-  - #127 (ruling 34: adb from nmeum source, gnirehtet zip, `dist/tools`);
+  - #127 (ruling 34, reworded by ruling 42: adb from nmeum source for WiVRn, no gnirehtet, `dist/tools`);
   - #128 (no launch-option edits, ruling 27/40; `unit_text_with`);
   - #130 (`check.yml`; `main.py` shim per OD1);
   - #132 (drop #80); #133 (+#121); #134 (both binaries + tools in `bin/`);
@@ -100,14 +100,15 @@
 Owner rulings, 2026-11-09 (section D of the Craft review; full text in `rulings-2026-11-09.md`). This file cites them as "ruling D1" to "ruling D6". The bare D-numbers in the OD table and in the list below are the older plan decisions, not these. This note is the whole fix: the older decisions are not renamed to PD-n, and no WP owns such a rename (WP-34 cannot edit this file).
 - **D1 PR rules:** every PR body has `## Verified` (each done-check command and its exit status) and `## Not verified` (each host skip it hit, plus its device Q row) sections, and never claims a run that was not done. A merge takes only the head commit the review passed. The two-commit landings (WP-00) stay as two commits.
 - **D2 WP-01 contract, three additions:** `api::error_help(code) -> (retryable, fix)` with a test that every code has an entry; a dispatch hook that lets a command set its own exit code; and a full `cli::COMMANDS` registry in which each command declares its id, args and effects. The usage text, the Decky wrappers, the app's effect args and the code-map Commands table are checked against the registry.
-- **D3 WP-05 hint:** fixed in WP-05. The step-1 hint drops "install Quest Tether" (stale under ruling 30) and points at the engine's own setup command. The brief is updated to match. No WP-34 follow-up.
+- **D3 WP-05 hint:** fixed in WP-05. The step-1 hint drops "install Quest Tether" (stale under ruling 30) and points at the engine's own setup command. The brief is updated to match. No WP-34 follow-up. **Superseded by ruling 42 (2026-11-10):** the hint may name Quest Tether again.
 - **D4 doctor:** a red report exits 1 and still prints the full report.
 - **D5 issue closing:** a WP that has a device Q row uses `Refs #N`. The issue is closed when its device session passes (§5).
 - **D6 error codes:** closed at 8 for this pass (`ERROR_CODES` in api.rs; the locked `api_response.rs` pins 8). No WP adds a code. A new failure maps to an existing code with a specific message.
+- **Ruling 42 (2026-11-10):** Flat to 3D and Quest Tether stay separate apps. The built-in tether (gnirehtet relay, tun0, Wi-Fi move, heal ladder) is removed; only the adb choice WiVRn needs stays (`link/adb.rs`). Quest Tether's state may be shown read-only, never started, stopped or healed. 1.0 promises the 3D picture over WiVRn only. WP-10 (merged #253) is superseded and its code removed by WP-36; WP-35..39 are added. Supersedes rulings 30 and 33, and D3 above; full text in `docs/notes/DECISIONS.md`.
 
 Resolved without the owner:
 - D4: `*_with` + follow-up.
-- D6: adb from source + gnirehtet zip.
+- D6: adb from source (adb only, for WiVRn; the gnirehtet zip is void, ruling 42).
 - `KillMode` default `control-group` (documented in packaging/README).
 - pnpm 10.34.9 in CI. Local 9.15.9 reads lockfile v9.
 - Rust 1.95.0 pinned in every workflow (matches host rustc 1.95.0).
@@ -139,7 +140,7 @@ Review note: rejected `python3 -m unittest discover -s decky/tests -t decky` bec
 
 Review note: rejected `todo!()` stubs for the frozen `cli::<m>::run` because dispatch runs through them in the CLI tests, and a panic would replace today's `not-built` result (cli.rs:147; cli_json.rs:64-66 asserts exit 2 for not-built). The stubs return `Err(NotBuilt(..).into())`.
 
-Review note: rejected `r:&dyn CommandRunner` in `HealthLoop::tick`, `ensure_applied` and `detect_server` because both runner traits take `&mut self` (link.rs:110, tether/adb.rs:64). The frozen forms use `&mut dyn`. Health takes `RelayRunner`, following the exec rule that tether/health use the relay shape.
+Review note: rejected `r:&dyn CommandRunner` in `HealthLoop::tick`, `ensure_applied` and `detect_server` because both runner traits take `&mut self` (link.rs:110, tether/adb.rs:64). The frozen forms use `&mut dyn`. Health took `RelayRunner` (void: the relay shape is removed, ruling 42).
 
 Review note: rejected the claim that `@1.95.0` is already pinned. check.yml:26 uses `dtolnay/rust-toolchain@stable` today, so the 1.95.0 pin is new in this pass. The single-runner and single-pin fix is otherwise applied.
 
@@ -148,7 +149,7 @@ Review note (moved from WP-22, where it sat though it is about WP-19 and WP-21):
 - WP-21 declares the npm registry and moves the network step out of the offline part, because an offline local-pnpm install can't work: the metadata cache is empty and four pinned versions are missing from the store.
 - WP-21's `--options` fix goes in the TS `launchSync` helper, not in main.py, because #67's locked order test fixes main.py's argv. The CLI's `--json` stripping (cli.rs:58-62) makes the duplicate flag harmless. (Now: WP-21 runs its own single pnpm registry step; see §0 "Network".)
 
-Review note: the §2 frozen forms were reconciled against the implementing WPs. §2 now freezes the implementer's form for wivrn (WP-12: `link/wivrn.rs`, re-exported as `crate::wivrn`), HealthLoop (WP-11), ensure_applied (WP-27), install (WP-20), wrapper (WP-31) and the viewer frame (WP-17/18/19). It keeps bones' form for `from_env` (BTreeMap/ApiError) and `Ctx` (relay, json). Rejected:
+Review note: the §2 frozen forms were reconciled against the implementing WPs. §2 now freezes the implementer's form for wivrn (WP-12: `link/wivrn.rs`, re-exported as `crate::wivrn`), HealthLoop (WP-11), ensure_applied (WP-27), install (WP-20), wrapper (WP-31) and the viewer frame (WP-17/18/19). It keeps bones' form for `from_env` (BTreeMap/ApiError) and `Ctx` (relay, json; `relay` is removed by WP-36, ruling 42). Rejected:
 - closure `from_env`;
 - 4-arg `ensure_applied`/`injectors::Applied`;
 - `HealthAction`/`WriteSoak`;

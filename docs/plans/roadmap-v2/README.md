@@ -25,9 +25,9 @@ History only (a builder does not need this): old line numbers (`L1969`, `roadmap
 | [WP-06.md](WP-06.md) | 1730-1840 | WP-06: Logs view model + app Logs page |
 | [WP-07.md](WP-07.md) | 1841-1931 | WP-07: list and status commands, catalog join (#27a part) |
 | [WP-08.md](WP-08.md) | 1932-2001 | WP-08: Link commands wiring (#120) |
-| [WP-09.md](WP-09.md) | 2002-2068 | WP-09: Watch service correctness |
-| [WP-10.md](WP-10.md) | 2069-2171 | WP-10: Tether plans, runner errors, Wi-Fi sync |
-| [WP-11.md](WP-11.md) | 2172-2282 | WP-11: Health loop (#125) |
+| [WP-09.md](WP-09.md) | 2002-2068 | WP-09: Watch service correctness (3D half) |
+| [WP-10.md](WP-10.md) | 2069-2171 | WP-10: Tether plans, runner errors, Wi-Fi sync (merged #253; superseded 2026-11-10 by ruling 42) |
+| [WP-11.md](WP-11.md) | 2172-2282 | WP-11: Headset health loop (#125, cut back) |
 | [WP-12.md](WP-12.md) | 2283-2385 | WP-12: Link stop idempotence + WiVRn detection |
 | [WP-13.md](WP-13.md) | 2386-2487 | WP-13: Pinned fetch (`fetch.rs`) |
 | [WP-14.md](WP-14.md) | 2488-2585 | WP-14: UEVR route file half |
@@ -52,6 +52,11 @@ History only (a builder does not need this): old line numbers (`L1969`, `roadmap
 | [WP-32.md](WP-32.md) | 4416-4485 | WP-32: Decky panel, launch sync, collection, toasts (#131-#133) |
 | [WP-33.md](WP-33.md) | 4486-4594 | WP-33: App views + main wiring (#122/#123) |
 | [WP-34.md](WP-34.md) | 4595-4709 | WP-34: Docs sync after the pass |
+| [WP-35.md](WP-35.md) | — | WP-35: Move adb choice to link/adb.rs |
+| [WP-36.md](WP-36.md) | — | WP-36: Remove the tether from watch, exec, api and settings |
+| [WP-37.md](WP-37.md) | — | WP-37: Remove gnirehtet from faces, Setup, doctor, install and packaging, add own udev rule |
+| [WP-38.md](WP-38.md) | — | WP-38: Quest Tether status line, read-only |
+| [WP-39.md](WP-39.md) | — | WP-39: Display-backend seam (after 1.0) |
 | [progress.md](progress.md) | — | Coordinator's status table for the unattended run (§0a) |
 | [rulings-2026-11-09.md](rulings-2026-11-09.md) | — | Owner rulings D1-D6 (already folded into §0, §2, §7 and the WPs) |
 | [questions.md](questions.md) | — | Open owner questions with recommended answers, and unresolved verify problems |
