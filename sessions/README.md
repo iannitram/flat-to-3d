@@ -14,7 +14,7 @@ TOML documents use `schema = 1` and carry `name`, `title`, `q`, `issues`, option
 
 Each `[[step]]` has a unique lowercase `id`, a `kind` (`cmd`, `ask`, `check`, or `measure`), `who`, and `text`. A command has an argv array in `run`; it does not invoke a shell unless the argv explicitly starts one. `expect`, `expect_json`, and `expect_code` check command output. A check is a human gate. Measures call `tools/stereo/fps.py` or `tools/stereo/disparity.py` and record their JSON output. Marking a step `optional = true` means a missing input or failed check does not change the session verdict.
 
-Known placeholders include `{repo}`, `{home}`, `{state}`, `{data}`, `{re_home}`, `{build_box}`, user variables from `[vars]`, and `{ans:step-id}` for an earlier answer. Render preserves machine-specific placeholders; run fills them. Set `FLAT3D_RE_HOME` or `FLAT3D_BUILD_BOX` to override their defaults.
+Known placeholders include `{repo}`, `{home}`, `{state}`, `{data}`, `{re_home}`, `{build_box}`, user variables from `[vars]`, and `{ans:step-id}` for an earlier answer. Double braces escape a literal brace pair, so `{{home}}` renders as `{home}`. Render preserves machine-specific placeholders; run fills them. Set `FLAT3D_RE_HOME` or `FLAT3D_BUILD_BOX` to override their defaults.
 
 ## Results
 

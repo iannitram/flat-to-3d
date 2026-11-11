@@ -4,6 +4,7 @@ use ::pipewire as pw;
 use pw::spa::{self, pod::Pod};
 use std::os::fd::{BorrowedFd, OwnedFd};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -29,6 +30,7 @@ pub struct Offer {
 }
 pub struct PwSource {
     rx: Receiver<Result<Frame, String>>,
+    error: Arc<Mutex<Option<String>>>,
     stop: pw::channel::Sender<()>,
     thread: Option<JoinHandle<()>>,
 }
@@ -166,6 +168,46 @@ fn format_params(offer: &Offer) -> Vec<Vec<u8>> {
     }
     result
 }
+fn modifier_property(object: &spa::pod::Object) -> Option<&spa::pod::Property> {
+    let key = spa::param::format::FormatProperties::VideoModifier.as_raw();
+    object.properties.iter().find(|p| p.key == key)
+}
+/// The negotiated format is DMA-BUF exactly when its pod carries a modifier
+/// property. The value cannot decide it: 0 is DRM_FORMAT_MOD_LINEAR, and
+/// `VideoInfoRaw` reports 0 when the property is absent.
+fn is_dmabuf(object: &spa::pod::Object) -> bool {
+    modifier_property(object).is_some()
+}
+/// While the modifier is still an unfixated choice, pick the value to fixate
+/// on: the first alternative the producer offered that we also offered, else
+/// our first offered one. `None` when the modifier is absent or already fixed.
+fn pick_modifier(object: &spa::pod::Object, offered: &[u64]) -> Option<u64> {
+    use spa::pod::{ChoiceValue, Value};
+    use spa::utils::ChoiceEnum;
+    let Value::Choice(ChoiceValue::Long(choice)) = &modifier_property(object)?.value else {
+        return None;
+    };
+    // A fixated property stays a Choice pod of type None: already fixed.
+    let candidates: Vec<i64> = match &choice.1 {
+        ChoiceEnum::Enum {
+            default,
+            alternatives,
+        } => std::iter::once(*default)
+            .chain(alternatives.iter().copied())
+            .collect(),
+        _ => return None,
+    };
+    candidates
+        .into_iter()
+        .map(|v| v as u64)
+        .find(|v| offered.contains(v))
+        .or_else(|| offered.first().copied())
+}
+fn set_error(slot: &Mutex<Option<String>>, message: String) {
+    if let Ok(mut guard) = slot.lock() {
+        guard.get_or_insert(message);
+    }
+}
 fn buffers_data_type(dmabuf: bool) -> i32 {
     if dmabuf {
         1 << spa::buffer::DataType::DmaBuf.as_raw()
@@ -190,6 +232,8 @@ pub fn open(remote: Remote, target: Target, offer: &Offer) -> Result<PwSource, S
         Target::NodeName(name) => (None, Some(name)),
     };
     let (tx, rx) = mpsc::sync_channel(2);
+    let error = Arc::new(Mutex::new(None));
+    let error_thread = error.clone();
     let (stop, stop_rx) = pw::channel::channel();
     let stop_thread = stop.clone();
     let thread = thread::Builder::new().name("flat3d-pipewire".into()).spawn(move || {
@@ -202,38 +246,37 @@ pub fn open(remote: Remote, target: Target, offer: &Offer) -> Result<PwSource, S
             let stream = pw::stream::StreamBox::new(&core, "flat3d-viewer", props).map_err(|e| e.to_string())?;
             let (format_tx, format_rx) = mpsc::channel::<(u32,u32,u32,u64,bool)>();
             let offered_modifiers = offer.modifiers.clone();
-            let tx_cb = tx.clone();
+            let error_cb = error_thread.clone();
+            let error_param = error_thread.clone();
+            let error_process = error_thread.clone();
             let tx_process = tx.clone();
             let mut seq = 0u64;
             let _listener = stream.add_local_listener::<()>()
-                .state_changed(move |_,_,_,state| if let pw::stream::StreamState::Error(error) = state { let _ = tx_cb.try_send(Err(error)); })
+                .state_changed(move |_,_,_,state| if let pw::stream::StreamState::Error(error) = state { set_error(&error_cb, error); })
                 .param_changed({ let format_tx = format_tx.clone(); move |stream,_,id,param| {
                     if id != spa::param::ParamType::Format.as_raw() { return; }
                     let Some(param) = param else { return; };
-                    if let (Some(modifier), Ok((_, spa::pod::Value::Object(mut object)))) = (
-                        offered_modifiers.first().copied(),
-                        spa::pod::deserialize::PodDeserializer::deserialize_from::<spa::pod::Value>(param.as_bytes()),
-                    ) {
-                        let fixated = if let Some(property) = object.properties.iter_mut().find(|p| p.key == spa::param::format::FormatProperties::VideoModifier.as_raw()) {
-                            if matches!(property.value, spa::pod::Value::Choice(spa::pod::ChoiceValue::Long(_))) {
-                                property.value = spa::pod::Value::Long(modifier as i64);
-                                true
-                            } else { false }
-                        } else { false };
-                        if fixated {
-                            if let Ok(bytes) = pod_bytes(object) {
-                                if let Some(pod) = Pod::from_bytes(&bytes) {
-                                    let mut params = [pod];
-                                    let _ = stream.update_params(&mut params);
-                                }
+                    let mut object = match spa::pod::deserialize::PodDeserializer::deserialize_from::<spa::pod::Value>(param.as_bytes()) {
+                        Ok((_, spa::pod::Value::Object(object))) => object,
+                        _ => { set_error(&error_param, "unreadable PipeWire format param".into()); return; }
+                    };
+                    if let Some(modifier) = pick_modifier(&object, &offered_modifiers) {
+                        if let Some(property) = object.properties.iter_mut().find(|p| p.key == spa::param::format::FormatProperties::VideoModifier.as_raw()) {
+                            property.value = spa::pod::Value::Long(modifier as i64);
+                        }
+                        if let Ok(bytes) = pod_bytes(object) {
+                            if let Some(pod) = Pod::from_bytes(&bytes) {
+                                let mut params = [pod];
+                                let _ = stream.update_params(&mut params);
                             }
                         }
+                        return;
                     }
+                    let dmabuf = is_dmabuf(&object);
                     let mut info = spa::param::video::VideoInfoRaw::new();
                     if info.parse(param).is_err() { return; }
                     let Some(fourcc) = fourcc_of(info.format()) else { return; };
                     let modifier = info.modifier();
-                    let dmabuf = modifier != u64::MAX;
                     let _ = format_tx.send((info.size().width, info.size().height, fourcc, modifier, dmabuf));
                     let ty = buffers_data_type(dmabuf);
                     let obj = spa::pod::Object { type_: spa::utils::SpaTypes::ObjectParamBuffers.as_raw(), id: spa::param::ParamType::Buffers.as_raw(), properties: vec![spa::pod::Property { key: spa::sys::SPA_PARAM_BUFFERS_dataType, flags: spa::pod::PropertyFlags::empty(), value: spa::pod::Value::Int(ty) }] };
@@ -250,7 +293,7 @@ pub fn open(remote: Remote, target: Target, offer: &Offer) -> Result<PwSource, S
                             if data.type_() != spa::buffer::DataType::DmaBuf || skip_chunk(chunk.size(), chunk.flags()) { return; }
                             let fd = match unsafe { BorrowedFd::borrow_raw(data.fd()).try_clone_to_owned() } {
                                 Ok(fd) => fd,
-                                Err(error) => { let _ = tx_process.try_send(Err(error.to_string())); return; }
+                                Err(error) => { set_error(&error_process, error.to_string()); return; }
                             };
                             planes.push(Plane { fd, offset: chunk.offset(), stride: chunk.stride().max(0) as u32 });
                         }
@@ -278,10 +321,11 @@ pub fn open(remote: Remote, target: Target, offer: &Offer) -> Result<PwSource, S
             ml.run();
             Ok(())
         };
-        if let Err(error) = run() { let _ = tx.try_send(Err(error)); }
+        if let Err(error) = run() { set_error(&error_thread, error); }
     }).map_err(|e| e.to_string())?;
     Ok(PwSource {
         rx,
+        error,
         stop: stop_thread,
         thread: Some(thread),
     })
@@ -310,6 +354,16 @@ pub fn find_node(remote: Remote, name: &str, wait: Duration) -> Result<Option<u3
             }
         })
         .register();
+    let done_loop = ml.clone();
+    let done_found = found.clone();
+    let _core_listener = core
+        .add_listener_local()
+        .done(move |_, _| {
+            if done_found.get().is_some() {
+                done_loop.quit();
+            }
+        })
+        .register();
     core.sync(0).map_err(|e| e.to_string())?;
     let timeout_loop = ml.clone();
     let timer = ml.loop_().add_timer(move |_| timeout_loop.quit());
@@ -325,8 +379,18 @@ impl FrameSource for PwSource {
     fn next(&mut self, timeout: Duration) -> Result<Option<Frame>, String> {
         match self.rx.recv_timeout(timeout) {
             Ok(value) => value.map(Some),
-            Err(RecvTimeoutError::Timeout) => Ok(None),
-            Err(RecvTimeoutError::Disconnected) => Err("PipeWire stream stopped".into()),
+            Err(RecvTimeoutError::Timeout) => {
+                match self.error.lock().ok().and_then(|mut e| e.take()) {
+                    Some(error) => Err(error),
+                    None => Ok(None),
+                }
+            }
+            Err(RecvTimeoutError::Disconnected) => Err(self
+                .error
+                .lock()
+                .ok()
+                .and_then(|mut e| e.take())
+                .unwrap_or_else(|| "PipeWire stream stopped".into())),
         }
     }
 }
@@ -405,6 +469,48 @@ mod tests {
         );
         modified.fourccs = vec![123];
         assert!(format_params(&modified).is_empty());
+    }
+
+    fn fixed(object: &spa::pod::Object, value: i64) -> spa::pod::Object {
+        let mut object = object.clone();
+        for p in object.properties.iter_mut() {
+            if p.key == spa::param::format::FormatProperties::VideoModifier.as_raw() {
+                p.value = Value::Long(value);
+            }
+        }
+        object
+    }
+
+    #[test]
+    fn dmabuf_is_decided_by_the_modifier_property_not_its_value() {
+        let plain = object(&format_params(&offer(Vec::new()))[0]);
+        assert!(!is_dmabuf(&plain));
+        let with = object(&format_params(&offer(vec![7, 11]))[0]);
+        assert!(is_dmabuf(&with));
+        assert!(is_dmabuf(&fixed(&with, 0)));
+        assert!(is_dmabuf(&fixed(&with, 7)));
+    }
+
+    #[test]
+    fn modifier_fixation_prefers_a_value_both_sides_know() {
+        let with = object(&format_params(&offer(vec![7, 11]))[0]);
+        assert_eq!(pick_modifier(&with, &[7, 11]), Some(7));
+        assert_eq!(pick_modifier(&with, &[3, 11]), Some(11));
+        assert_eq!(pick_modifier(&with, &[3, 5]), Some(3));
+        assert_eq!(pick_modifier(&fixed(&with, 7), &[7, 11]), None);
+        let mut choice_fixed = with.clone();
+        for p in choice_fixed.properties.iter_mut() {
+            if p.key == spa::param::format::FormatProperties::VideoModifier.as_raw() {
+                p.value = Value::Choice(ChoiceValue::Long(spa::utils::Choice(
+                    spa::utils::ChoiceFlags::empty(),
+                    spa::utils::ChoiceEnum::None(7),
+                )));
+            }
+        }
+        assert_eq!(pick_modifier(&choice_fixed, &[7, 11]), None);
+        assert!(is_dmabuf(&choice_fixed));
+        let plain = object(&format_params(&offer(Vec::new()))[0]);
+        assert_eq!(pick_modifier(&plain, &[7]), None);
     }
 
     #[test]

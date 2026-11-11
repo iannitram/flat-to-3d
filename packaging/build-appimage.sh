@@ -35,8 +35,8 @@ RUNTIME_SHA=$(pin appimage-runtime.sha256)
 if [ "$DRY" = 1 ]; then
   DRY=1
   if [ "$SKIP_BUILD" = 0 ]; then
-    printf '+ cargo build --release --locked -p flat3d-inject -p flat3d-app\n'
-    printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture\n'
+    printf '+ cargo build --release --locked -p flat3d-inject -p flat3d-app --manifest-path %s/Cargo.toml\n' "$ROOT"
+    printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT"
   fi
   printf "+ mkdir -p \$tmp/AppDir/usr/bin \$tmp/AppDir/usr/tools \$tmp/AppDir/usr/recipes\n"
   printf "+ cp %s/flat3d-app \$tmp/AppDir/usr/bin/flat3d-app\n" "$BIN_DIR"
@@ -64,8 +64,8 @@ if [ "$DRY" = 1 ]; then
 fi
 
 if [ "$SKIP_BUILD" = 0 ]; then
-  run cargo build --release --locked -p flat3d-inject -p flat3d-app
-  run cargo build --release --locked -p flat3d-viewer --features xr,capture
+  run cargo build --release --locked -p flat3d-inject -p flat3d-app --manifest-path "$ROOT/Cargo.toml"
+  run cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path "$ROOT/Cargo.toml"
 fi
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-appimage.XXXXXX")
