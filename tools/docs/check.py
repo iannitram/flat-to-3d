@@ -229,7 +229,7 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
             if cp.is_file():
                 for n, line in enumerate(cp.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
                     for usage in USAGE_RE.findall(line):
-                        for alt in usage.split("|"):
+                        for alt in usage_commands(usage):
                             word = alt.strip().split()[0] if alt.strip() else ""
                             if word.startswith(("{", "<", "[")):
                                 continue
@@ -286,6 +286,24 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                 add(out, Path("docs/STEP0-RUNSHEET.md"), 1, "generated", f"runsheet renderer failed: {exc}", "fix tools/session/session.py render")
 
     return sorted(out)
+
+
+def usage_commands(usage: str) -> list[str]:
+    """Split a usage string into commands: only a spaced ` | ` outside [...] and <...> separates them.
+
+    `[--filter <status>|all]` is an option-value alternative and `launch add|remove` is one command with sub-verbs.
+    """
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(usage):
+        if ch in "[<{":
+            depth += 1
+        elif ch in "]>}":
+            depth = max(0, depth - 1)
+        elif ch == "|" and depth == 0 and usage[i - 1:i] == " " and usage[i + 1:i + 2] == " ":
+            out.append(usage[start:i])
+            start = i + 1
+    out.append(usage[start:])
+    return out
 
 
 def main() -> int:

@@ -1,64 +1,9 @@
 # Spider-Man 2 address map (Remastered → Spider-Man 2)
 
-Every game-specific item on Spidy's GAME SCREEN 3D path ([spidy-stereo-core-map.md](spidy-stereo-core-map.md)), with its Remastered address and, once found, its Spider-Man 2 counterpart as a byte pattern. Plan step 3 (and steps 4–8 after it) works from this table.
+Every game-specific item on Spidy's GAME SCREEN 3D path ([spidy-core-map.md](spidy-core-map.md)), with its Remastered address and, once found, its Spider-Man 2 counterpart as a byte pattern. Plan step 3 (and steps 4–8 after it) works from this table.
 
-Started 2026-10-18 on Hyperion.
 
-## Where this stands (2026-10-18, first scan leg)
-
-**No exe has been analysed yet. Every SM2 column below says `pending`.** Both games were still downloading on Hyperion for the whole leg (14:41–16:00 MDT):
-
-- Steam suspended Remastered (app 1817070) at 14:40 and downloaded Spider-Man 2 (app 2651280) first. Steam's own log says `AppID 1817070 update canceled : Priority (Suspended)`.
-- Download speed was 0–280 Mbps, about 150 on average. At that rate Spider-Man 2's 97 GB takes about 90 minutes and Remastered's 56 GB about 50 more. That's an estimate from the log, not a promise.
-- Steam pre-allocates every file at full size and fills it later. Both `Spider-Man2.exe` (194,262,992 bytes) and `Spider-Man.exe` (121,901,008 bytes) existed on disk from 14:40, but every byte of both was still zero at 15:50. That's checked over 1 MiB blocks with `tools/xmatch/filled.py`. **A file existing is not the same as it being downloaded.**
-
-What this leg did instead:
-
-1. **Wrote the matcher** (`tools/xmatch/`, below) and tested it on a Steam DLL. It's ready to run the moment both exes are on disk.
-2. **Listed all 85 items** on the stereo path, with the bytes Spidy checks at each, into `tools/xmatch/targets.py`. That's the Remastered column of the table below.
-3. **Read the two games' shipped file lists** from Steam's pre-allocation. That turned up four facts that change the plan ([below](#what-the-file-lists-already-show)).
-
-### One thing in Remastered already measured
-
-`Spider-Man.exe` from Steam is **121,901,008 bytes, exactly the size of 4.630.0.0**, the build Spidy 0.3.8 targets (`inspect_game.py`, `docs/REFERENCE.md`). The same size strongly suggests the same build. It doesn't prove it: the SHA-256 check (`verify_rem.py`) is the proof and has not run yet.
-
-## What the file lists already show
-
-These come from the files Steam created for each game, by name and size. That's measured. What each file means is read from its maker's public documentation, not from the game. Nothing here has looked inside an exe.
-
-| Spider-Man 2 ships | Remastered ships | What it means for the port |
-|---|---|---|
-| `cohtml.WindowsDesktop.dll`, `RenoirCore.WindowsDesktop.dll`, `v8.dll` (Coherent Gameface: HTML and JavaScript UI) | none of these | **Spidy's HUD hooks have no counterpart.** Spidy moves the HUD through Scaleform: its render command (`0x1d2b6c0`), its RTT stream (`0x2104400`) and the Scaleform settings menu (`game_menu.cpp`, 11 hooks). Spider-Man 2 draws its UI with a different library. The HUD-panel gate has to go (step 6 already plans that), and the SPIDY VR settings tab can't be ported. Make GAME SCREEN the only mode. `PlayerModelHudFollower` is still in SM2's type names (Z13 scan), so the panel may still be a 3D model: worth checking in step 7. |
-| `PsPcSdkRuntimeInstaller.msi`, `PsPcSdkRuntimeManager.msi` (PlayStation PC SDK) | no | This is the PlayStation Network sign-in runtime. **Ground rule check:** before injecting anything, confirm the game plays fully offline with no PSN sign-in. Public reports say PSN is optional for SM2 on PC. That's read, not tested here. |
-| `NRD.dll`, `NRI.dll` (NVIDIA real-time denoisers), `nvngx_dlssd.dll` (DLSS ray reconstruction) | no | Ray-traced effects keep their own denoiser history per view. An extra eye view may need its own denoiser state, or ray tracing off for the eyes. This is plan risk "Ray tracing tied to the main view", now more likely. |
-| `dstoragecore.dll` (DirectStorage) | no | Asset streaming only. It adds copy and compute GPU queues. Spidy's `render_probe` already picks the *direct* queue the exe submits from, so it should still find the right one. Low risk. |
-| `sl.interposer.dll`, `nvngx_dlssg.dll` (Streamline, DLSS frame generation) | **same** in both | Streamline wraps DXGI. Spidy already hooks Present through that wrapper on Remastered, so this isn't new. Frame generation stays off for the eyes. |
-| `D3D12/D3D12Core.dll` (Agility SDK) | same | DX12 in both. No DX11 path to fall back to. |
-| No anti-cheat files (`EasyAntiCheat`, `BattlEye`) | same | As expected for offline single-player. The Z13 scan of SM2 2.810.0.0 found no packer sections. Whether this Hyperion build matches that needs the exe (`survey.py` reports sections, entropy and protection strings). |
-
-## How the matcher works (`tools/xmatch/`)
-
-Read-only, offline and low-memory (mmap). It never touches the installed game. Copy the exes to `B:/private/flat-to-3d-re/` first.
-
-- **`verify_rem.py <Spider-Man.exe>`**: the step-0 risk check. It gives the SHA-256 against Spidy's `e297d4d9…81ad1`, the version, `SizeOfImage` against Spidy's hard-coded 140,496,896, and for every item the bytes Spidy checks there (match or not), whether hooked functions start where `.pdata` says, and each vtable's RTTI name.
-- **`survey.py <exe> out.json`**: one exe's identity (version, hash, sections with entropy, imports, TLS), protection strings (Denuvo, VMProtect, Themida, anti-cheat, debugger checks), RTTI vtables for the camera, HUD and player types, plan-relevant feature strings (stereo, split screen, photo mode, debug or free camera, multi-view, OpenXR) and the functions that use Spidy's anchor strings (`ViewContextManager`, `Adapted Lum`, `kTaaTarget0`, `RenderAlloc`, `TemporalAa`, `PrepareSrgbOverlay`, `TimeScaleSystem Update`…).
-- **`run_match.py <Spider-Man.exe> <Spider-Man2.exe> out.json`**: the diff. For each Remastered function:
-  1. Masked byte windows (rel32 branch targets and RIP-relative displacements made wildcards) are searched in SM2 and vote for the SM2 function they land in.
-  2. Each candidate is scored by how closely its instruction sequence (mnemonics and registers, numbers blanked) matches Remastered's. Confidence: **high** means ≥ 0.85 similarity and clearly ahead of the runner-up; **medium** means ≥ 0.65; else **low**.
-  3. Aligned instruction pairs map **callees** (call-graph propagation, which upgrades a weak match when a confident caller agrees) and **globals** (RIP-relative refs; `ViewContextManager`, the game clock and the render allocator come out this way).
-  4. Vtables are matched by their RTTI type name, which SM2 keeps.
-  5. Call sites and return addresses (`0x164703f`, `0x1647044`, `0x175aaa9`, `0x186c325`…) map through the aligned parent function.
-  6. For every match it emits the **shortest pattern unique in SM2's `.text`** (`48 89 5c 24 ?? …`), which is what plan step 7 needs.
-- **`mkmap.py out.json`** renders the table below from the result.
-
-Expected cost: about 1–2 GB of memory and minutes, not hours (the matcher is targeted, not a whole-program Ghidra analysis). Ghidra Version Tracking is still the cross-check for anything that comes out low.
-
-## The map
-
-Kinds: **hook** = Spidy hooks it; **call** = Spidy only calls it; **check** = Spidy only checks its bytes; **site** = a call site or return address; **data** = a global; **vtable**; **gate** = removable gate extra (swing bridge, player watch). Priority 1 is what plan steps 1–3 need.
-
-Spidy's checked bytes are from the SpidyVR v0.3.8 sources (`stereo_probe.cpp:1694-1783`, `native_hud.cpp:281-294`, `game_time.cpp:20-36`, `native_render_memory.cpp:118-137`, `game_bridge.cpp:264-277`). The gate rows' bytes are truncated prefixes.
-
+<!-- BEGIN GENERATED -->
 ### Priority 1. Steps 1-3: camera, frame entry, view setup
 
 | Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found |
@@ -159,10 +104,12 @@ Spidy's checked bytes are from the SpidyVR v0.3.8 sources (`stereo_probe.cpp:169
 | component registry | data | `0x7a44320` | - | pending | - | pending | - |
 | component registry 2 | data | `0x7a44340` | - | pending | - | pending | - |
 
+<!-- END GENERATED -->
+
 ## Next leg: exact steps
 
 1. Wait for both installs: `appmanifest_2651280.acf` and `appmanifest_1817070.acf` with `StateFlags` 4 and no bytes left (`tools/xmatch/filled.py` on each exe must show every block non-zero).
-2. Copy both exes to `B:/private/flat-to-3d-re/` and record their SHA-256.
+2. Copy both exes to `$FLAT3D_RE_HOME/exe/<game>-<version>/` and record their SHA-256.
 3. Run `verify_rem.py` on Remastered. That's the step-0 answer. If the hash is Spidy's, all 31 + 4 + 7 + 4 checks pass by definition.
 4. Run `survey.py` on Spider-Man 2. That answers the packer/Denuvo question for this build and lists any built-in multi-view, photo-mode or debug-camera paths.
 5. Run `run_match.py` (priority 1 first: `run_match.py A B out.json 1`), then `mkmap.py`, and paste the table in here. Check every priority-1 match by hand (decompile both sides) before step 3 uses it.
