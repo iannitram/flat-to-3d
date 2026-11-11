@@ -1,0 +1,11 @@
+# Seed (OD6): untested; no session in this pass (port route, #27b); real recipe lands in recipes/ at works-now.
+name: Marvel's Spider-Man 2
+stereo-status: untested
+stereo-route: build: port spidy stereo screen
+stereo-engine: custom
+stereo-api: dx12
+stereo-mod: https://github.com/IlyaMez/SpidyVR
+stereo-free: yes
+# pending #7
+stereo-safe: yes
+stereo-checked: 2026-11-08
