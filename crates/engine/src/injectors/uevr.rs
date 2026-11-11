@@ -1,6 +1,23 @@
+use crate::injectors::RouteEnv;
+use crate::paths::EnginePaths;
+use crate::recipes::RouteSettings;
+use crate::steam::Game;
 use crate::undo::{Replaced, UndoRecord};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+pub const UEVR_VERSION: &str = "nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d";
+pub const UEVR_DLLS: [&str; 2] = ["openxr_loader.dll", "UEVRBackend.dll"];
+pub const INJECTOR_EXE: &str = "flat3d-uevr-inject.exe";
+pub const DEFAULT_DELAY_S: u32 = 15;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UevrExtras {
+    pub exe_stem: String,
+    pub delay_s: u32,
+    pub native_stereo_fix: Option<bool>,
+    pub profile: Option<String>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rendering {
@@ -29,19 +46,23 @@ pub fn profile_text(settings: &UevrSettings) -> String {
     text
 }
 
-pub fn profile_dir(compatdata: &Path, appid: u32, exe_name: &str) -> PathBuf {
-    let stem = exe_name
-        .get(..exe_name.len().saturating_sub(4))
-        .filter(|_| {
-            exe_name
-                .get(exe_name.len().saturating_sub(4)..)
-                .is_some_and(|suffix| suffix.eq_ignore_ascii_case(".exe"))
-        })
-        .unwrap_or(exe_name);
+fn strip_exe(name: &str) -> &str {
+    let cut = name.len().saturating_sub(4);
+    match name.get(cut..) {
+        Some(suffix) if suffix.eq_ignore_ascii_case(".exe") => &name[..cut],
+        _ => name,
+    }
+}
+
+fn profile_dir_for_stem(compatdata: &Path, appid: u32, stem: &str) -> PathBuf {
     compatdata
         .join(appid.to_string())
         .join("pfx/drive_c/users/steamuser/AppData/Roaming/UnrealVRMod")
         .join(stem)
+}
+
+pub fn profile_dir(compatdata: &Path, appid: u32, exe_name: &str) -> PathBuf {
+    profile_dir_for_stem(compatdata, appid, strip_exe(exe_name))
 }
 
 /// The profile file UEVR reads inside the profile directory.
@@ -63,6 +84,236 @@ pub struct Applied {
     /// The environment the wrapper starts the game with. Empty for now: the real UEVR
     /// environment comes with the device half of #51, which waits on #32.
     pub env: Vec<(String, String)>,
+}
+
+/// Convert route settings to the UEVR profile fields.
+pub fn settings_from(s: &RouteSettings) -> Result<UevrSettings, String> {
+    let rendering = match s
+        .get("uevr-rendering")
+        .map(String::as_str)
+        .unwrap_or("native")
+    {
+        "native" => Rendering::NativeStereo,
+        "synced" => Rendering::SynchronizedSequential,
+        _ => return Err("bad-recipe: uevr-rendering must be native or synced".into()),
+    };
+    let screen_2d = match s.get("uevr-2d-screen").map(String::as_str).unwrap_or("no") {
+        "yes" => true,
+        "no" => false,
+        _ => return Err("bad-recipe: uevr-2d-screen must be yes or no".into()),
+    };
+    Ok(UevrSettings {
+        rendering,
+        screen_2d,
+    })
+}
+
+/// Read launch-time values from the UEVR route settings.
+pub fn extras_from(s: &RouteSettings) -> Result<UevrExtras, String> {
+    let exe = s
+        .get("uevr-exe")
+        .map(String::as_str)
+        .filter(|v| !v.trim().is_empty())
+        .ok_or_else(|| "bad-recipe: uevr-exe is missing".to_owned())?;
+    let exe_stem = strip_exe(exe).to_owned();
+    if exe_stem.is_empty()
+        || exe_stem == "."
+        || exe_stem == ".."
+        || exe_stem.contains(['/', '\\', '\0'])
+    {
+        return Err("bad-recipe: uevr-exe must be a file name, not a path".to_owned());
+    }
+    let delay_s = match s.get("uevr-delay") {
+        None => DEFAULT_DELAY_S,
+        Some(value) => value
+            .parse::<u32>()
+            .ok()
+            .filter(|n| *n <= 120)
+            .ok_or_else(|| "bad-recipe: uevr-delay must be a u32 from 0 to 120".to_owned())?,
+    };
+    let native_stereo_fix = match s.get("uevr-native-stereo-fix").map(String::as_str) {
+        None => None,
+        Some("yes") => Some(true),
+        Some("no") => Some(false),
+        Some(_) => return Err("bad-recipe: uevr-native-stereo-fix must be yes or no".into()),
+    };
+    let profile = match s.get("uevr-profile") {
+        None => None,
+        Some(value)
+            if !value.is_empty()
+                && value
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-') =>
+        {
+            Some(value.clone())
+        }
+        Some(_) => return Err("bad-recipe: uevr-profile must be a pin key ([a-z0-9-]+)".into()),
+    };
+    Ok(UevrExtras {
+        exe_stem,
+        delay_s,
+        native_stereo_fix,
+        profile,
+    })
+}
+
+pub fn profile_text_full(settings: &UevrSettings, extras: &UevrExtras) -> String {
+    let mut text = profile_text(settings);
+    if let Some(value) = extras.native_stereo_fix {
+        text.push_str(if value {
+            "VR_NativeStereoFix=true\n"
+        } else {
+            "VR_NativeStereoFix=false\n"
+        });
+    }
+    text.push_str("Frontend_RequestedRuntime=openxr_loader.dll\n");
+    text
+}
+
+pub fn uevr_dir(p: &EnginePaths) -> PathBuf {
+    p.uevr_cache().join(UEVR_VERSION)
+}
+
+pub fn injector_path(p: &EnginePaths) -> PathBuf {
+    p.data.join("bin").join(INJECTOR_EXE)
+}
+
+pub fn win_path(unix: &Path) -> String {
+    format!("Z:{}", unix.to_string_lossy().replace('/', "\\"))
+}
+
+fn shlex_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+pub fn debug_cmd(injector: &Path, stem: &str, delay: u32, dir: &Path) -> String {
+    let mut args = vec![
+        shlex_quote(&injector.to_string_lossy()),
+        "--exe".into(),
+        shlex_quote(stem),
+        "--delay".into(),
+        delay.to_string(),
+    ];
+    for dll in UEVR_DLLS {
+        args.push("--dll".into());
+        args.push(shlex_quote(&win_path(&dir.join(dll))));
+    }
+    args.join(" ")
+}
+
+fn route_error(code: &str, detail: impl std::fmt::Display) -> String {
+    format!("{code}: {detail}")
+}
+
+pub fn apply_with(
+    game: &Game,
+    settings: &RouteSettings,
+    p: &EnginePaths,
+) -> Result<(Applied, RouteEnv), String> {
+    let profile_settings = settings_from(settings)?;
+    let extras = extras_from(settings)?;
+    let compatdata = game
+        .install_dir
+        .parent()
+        .and_then(Path::parent)
+        .map(|s| s.join("compatdata"))
+        .ok_or_else(|| {
+            route_error(
+                "not-found",
+                format!(
+                    "game folder {} is not under steamapps/common",
+                    game.install_dir.display()
+                ),
+            )
+        })?;
+    let dir = uevr_dir(p);
+    for dll in UEVR_DLLS {
+        if !dir.join(dll).is_file() {
+            return Err(route_error(
+                "not-found",
+                "UEVR is not fetched; run flat3d-inject setup fetch uevr",
+            ));
+        }
+    }
+    let injector = injector_path(p);
+    if !injector.is_file() {
+        return Err(route_error(
+            "not-found",
+            "flat3d-uevr-inject.exe is not installed; run tools/build-win.sh --install",
+        ));
+    }
+    let profile_dir = profile_dir_for_stem(&compatdata, game.appid, &extras.exe_stem);
+    let profile = profile_dir.join(PROFILE_FILE);
+    let backup = profile_dir.join(BACKUP_FILE);
+    let marker = profile_dir.join(MARKER_FILE);
+    if marker.exists() || backup.exists() {
+        return Err(route_error(
+            "refused",
+            format!(
+                "the UEVR profile for {} is already set up; run flat3d-inject undo {} first",
+                game.appid, game.appid
+            ),
+        ));
+    }
+    let mut record = UndoRecord {
+        appid: game.appid,
+        launch_options_before: String::new(),
+        created: Vec::new(),
+        replaced: Vec::new(),
+    };
+    let full_text = profile_text_full(&profile_settings, &extras);
+    if let Err(error) = write_all_text(
+        &profile_dir,
+        &profile,
+        &backup,
+        &marker,
+        &full_text,
+        &mut record,
+    ) {
+        rollback(&record);
+        return Err(route_error("io", error));
+    }
+    let env = RouteEnv {
+        env: vec![(
+            "PROTON_REMOTE_DEBUG_CMD".into(),
+            debug_cmd(&injector, &extras.exe_stem, extras.delay_s, &dir),
+        )],
+        unset: vec!["XR_RUNTIME_JSON".into()],
+        sidecar: None,
+    };
+    let applied = Applied {
+        record,
+        env: env.env.clone(),
+    };
+    Ok((applied, env))
+}
+
+fn write_all_text(
+    dir: &Path,
+    profile: &Path,
+    backup: &Path,
+    marker: &Path,
+    text: &str,
+    record: &mut UndoRecord,
+) -> Result<(), String> {
+    let io = |what: &str, path: &Path, e: std::io::Error| format!("{what} {}: {e}", path.display());
+    fs::create_dir_all(dir).map_err(|e| io("cannot create", dir, e))?;
+    fs::write(marker, "").map_err(|e| io("cannot write", marker, e))?;
+    record.created.push(marker.to_path_buf());
+    if profile.exists() {
+        let partial = dir.join(BACKUP_PARTIAL_FILE);
+        if let Err(e) = fs::copy(profile, &partial).and_then(|_| fs::rename(&partial, backup)) {
+            let _ = fs::remove_file(&partial);
+            return Err(io("cannot back up to", backup, e));
+        }
+        record.replaced.push(Replaced {
+            path: profile.to_path_buf(),
+            backup: backup.to_path_buf(),
+        });
+    } else {
+        record.created.push(profile.to_path_buf());
+    }
+    fs::write(profile, text).map_err(|e| io("cannot write", profile, e))
 }
 
 /// Write the UEVR profile into the game's Proton prefix and record every change.

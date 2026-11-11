@@ -1,0 +1,10 @@
+'/h/.local/share/flat3d/bin/flat3d-uevr-inject.exe' --exe 'SWZeroCompany' --delay 15 --dll 'Z:\h\.cache\flat3d\uevr\nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d\openxr_loader.dll' --dll 'Z:\h\.cache\flat3d\uevr\nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d\UEVRBackend.dll'
+/h/.local/share/flat3d/bin/flat3d-uevr-inject.exe
+--exe
+SWZeroCompany
+--delay
+15
+--dll
+Z:\h\.cache\flat3d\uevr\nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d\openxr_loader.dll
+--dll
+Z:\h\.cache\flat3d\uevr\nightly-01143-4ee5c6b6162dee2291fc75f9dfc57667f6d45a2d\UEVRBackend.dll

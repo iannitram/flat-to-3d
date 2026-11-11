@@ -15,8 +15,8 @@ if [[ ! -s $snap ]]; then
   gh issue view "$issue" --json body -q .body > "$snap" || { rm -f "$snap"; fail 3 no-snapshot 'run the §0 issue snapshot step'; }
 fi
 dir=$(dirname "$dest")
-mkdir -p "$dir" || fail 4 sha-mismatch "rm \"\$SCRATCH/issues/$issue.md\" and rerun"
-tmp=$(mktemp "$dir/.locked-test.XXXXXX") || fail 4 sha-mismatch "rm \"\$SCRATCH/issues/$issue.md\" and rerun"
+mkdir -p "$dir" || fail 4 dest-unwritable "make $dir writable, then rerun"
+tmp=$(mktemp "$dir/.locked-test.XXXXXX") || fail 4 dest-unwritable "make $dir writable, then rerun"
 cleanup() { rm -f "$tmp"; }
 trap cleanup EXIT
 in_heading=0 in_rust=0
@@ -28,6 +28,8 @@ while IFS= read -r line || [[ -n $line ]]; do
 done < "$snap"
 awk '/^## Tests \(locked\)/{f=1} f&&/^```rust/{g=1;next} g&&/^```/{exit} g' "$snap" > "$tmp"
 actual=$(sha256sum "$tmp" | cut -d' ' -f1)
-[[ $actual == "$expected" ]] || fail 4 sha-mismatch "rm \"\$SCRATCH/issues/$issue.md\" and rerun"
-mv "$tmp" "$dest"
+[[ $actual == "${expected,,}" ]] || fail 4 sha-mismatch "rm \"\$SCRATCH/issues/$issue.md\" and rerun"
+if ! { chmod 644 "$tmp" && mv "$tmp" "$dest"; }; then
+  fail 4 dest-unwritable "make $dir writable, then rerun"
+fi
 printf 'locked-test: ok %s %s\n' "$dest" "$expected"
