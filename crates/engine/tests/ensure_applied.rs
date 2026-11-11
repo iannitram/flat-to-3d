@@ -167,13 +167,25 @@ fn geo11_route_fetches_its_pins_then_applies_or_refuses_cleanly() {
     let settings = BTreeMap::from([("geo11-exe".into(), "Game.exe".into())]);
     let rec = recipe("geo-11");
     let mut runner = FakeRunner::new();
+    // Every path below the game folder with its bytes (None for a directory), so a refusal
+    // or an undo that leaves any file, folder or changed byte behind fails the comparison.
     let game_files = || {
-        let mut names: Vec<_> = fs::read_dir(&game.install_dir)
-            .unwrap()
-            .map(|e| e.unwrap().file_name())
-            .collect();
-        names.sort();
-        names
+        let mut out = Vec::new();
+        let mut dirs = vec![game.install_dir.clone()];
+        while let Some(dir) = dirs.pop() {
+            for entry in fs::read_dir(&dir).unwrap() {
+                let path = entry.unwrap().path();
+                let rel = path.strip_prefix(&game.install_dir).unwrap().to_path_buf();
+                if path.is_dir() {
+                    dirs.push(path);
+                    out.push((rel, None));
+                } else {
+                    out.push((rel, Some(fs::read(&path).unwrap())));
+                }
+            }
+        }
+        out.sort();
+        out
     };
     let before = game_files();
 
