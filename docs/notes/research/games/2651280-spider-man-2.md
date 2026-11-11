@@ -2,7 +2,7 @@
 
 Research date: 2026-11-11. Render machine: the handheld (AMD integrated graphics, SteamOS, Proton). Viewer: Quest 2 over WiVRn.
 
-This note adds to the Spider-Man 2 section of [games_group_b.md](../games_group_b.md) and to the port plan in [PORT-SPIDERMAN2.md](../../../PORT-SPIDERMAN2.md). It does not repeat them. What those two files already settle: the engine is Insomniac's own, the game is DirectX 12 only, Geo-11 cannot work (it is DirectX 11 only), no free 3D Vision fix exists, and R.E.A.L. VR is ruled out by [DECISIONS.md](../../DECISIONS.md) (rulings 8 and 16).
+This note adds to the Spider-Man 2 section of [games_group_b.md](../games_group_b.md) and to the port plan in [spiderman2/plan.md](../../../spiderman2/plan.md). It does not repeat them. What those two files already settle: the engine is Insomniac's own, the game is DirectX 12 only, Geo-11 cannot work (it is DirectX 11 only), no free 3D Vision fix exists, and R.E.A.L. VR is ruled out by [DECISIONS.md](../../DECISIONS.md) (rulings 8 and 16).
 
 Each fact below is marked **observed** (read from the installed copy or from a file in this repo, read-only, on 2026-11-11), **source** (an outside page, linked), or **inferred** (my reasoning from the other two). Nothing here was run: no game was started, no mod was downloaded, and nothing was written into the game folder or the Proton prefix.
 
@@ -170,7 +170,7 @@ This is the route of ruling 17 and of the port plan. This research changes three
 
 1. **The exe is pinned and proven injectable.** HEROVR shows the SpidyVR technique works on exactly this build. Step 2 can start as soon as issue #7 is answered.
 2. **Timing differs from Remastered.** The render memory ring has to be enlarged within seconds of process start. SpidyVR's Linux script attaches at the menu, which is too late. Our loader has to be in the process from the start (the plan's own loader, issue #22, already aims at this; it should say so).
-3. **Hook points to find in our own map**, in the order the port plan uses them: the Direct3D 12 command queue and swap chain (Step 2), the camera and projection update (Step 3, issue #19), the eye job pair and scene submit with its extra argument (Steps 4 and 5), the Steam ticket guard, and the HUD draw. The address map in [spiderman2-address-map.md](../../../spiderman2-address-map.md) stays the only source of addresses.
+3. **Hook points to find in our own map**, in the order the port plan uses them: the Direct3D 12 command queue and swap chain (Step 2), the camera and projection update (Step 3, issue #19), the eye job pair and scene submit with its extra argument (Steps 4 and 5), the Steam ticket guard, and the HUD draw. The address map in [spiderman2/address-map.md](../../../spiderman2/address-map.md) stays the only source of addresses.
 
 Settings for every test: ray tracing off, frame generation off, vsync off, FSR upscaling on, `-nolauncher`, and `-noStreamline`.
 
