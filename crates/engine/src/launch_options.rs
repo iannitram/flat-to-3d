@@ -92,8 +92,70 @@ pub fn add_wrapper(options: &str) -> String {
     words.join(" ")
 }
 
-pub fn add_wrapper_at(options: &str, _wrapper_abs: &str) -> String {
-    add_wrapper(options)
+pub fn add_wrapper_at(options: &str, wrapper_abs: &str) -> String {
+    let tildes = wrapper_abs.matches('~').count();
+    let tilde_ok = tildes == 0 || (tildes == 1 && wrapper_abs.starts_with("~/"));
+    if wrapper_abs.chars().any(|c| {
+        c.is_whitespace()
+            || matches!(
+                c,
+                '"' | '&'
+                    | '\''
+                    | '$'
+                    | ';'
+                    | '`'
+                    | '('
+                    | ')'
+                    | '|'
+                    | '<'
+                    | '>'
+                    | '*'
+                    | '?'
+                    | '['
+                    | ']'
+                    | '{'
+                    | '}'
+                    | '!'
+                    | '#'
+                    | '\\'
+            )
+    }) || !tilde_ok
+        || wrapper_abs.rsplit('/').next() != Some(WRAPPER)
+    {
+        return add_wrapper(options);
+    }
+    let mut words = words(options);
+    if has_wrapper(options) {
+        let end = command_index(&words).unwrap_or(words.len());
+        if let Some(first) = words[..end].iter().position(|word| is_wrapper(word)) {
+            words[first] = wrapper_abs;
+            return words
+                .into_iter()
+                .enumerate()
+                .filter_map(|(index, word)| {
+                    if index >= end || index == first {
+                        Some(word)
+                    } else if is_wrapper(word) {
+                        None
+                    } else {
+                        Some(word)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+        }
+    }
+    let Some(command) = command_index(&words) else {
+        let mut out = vec![wrapper_abs, COMMAND];
+        out.append(&mut words);
+        return out.join(" ");
+    };
+    let at = words[..command]
+        .iter()
+        .position(|w| !is_env_word(w))
+        .unwrap_or(command);
+    words.insert(at, wrapper_abs);
+    words.join(" ")
 }
 
 pub fn remove_wrapper(options: &str) -> String {
