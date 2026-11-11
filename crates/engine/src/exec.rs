@@ -60,14 +60,21 @@ pub struct ProcessRunner {
 impl RelayRunner for ProcessRunner {
     fn run(&mut self, command: &[String]) -> Result<String, String> {
         let Some((program, args)) = command.split_first() else {
-            return Err("Could not run tether command".to_string());
+            return Err("Could not run tether command: empty command".to_string());
         };
         let output = std::process::Command::new(program)
             .args(args)
             .output()
-            .map_err(|_| "Could not run tether command".to_string())?;
+            .map_err(|error| format!("Could not run tether command: {error}"))?;
         if !output.status.success() {
-            return Err("Tether command failed".to_string());
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let tail = tail_lines(&stderr, 4);
+            let mut message = format!("Tether command failed: {}", exit_text(&output.status));
+            if !tail.is_empty() {
+                message.push_str("; ");
+                message.push_str(&tail);
+            }
+            return Err(message);
         }
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
@@ -112,4 +119,27 @@ impl RelayRunner for ProcessRunner {
         }
         Ok(())
     }
+}
+
+fn tail_lines(stderr: &str, n: usize) -> String {
+    let lines: Vec<_> = stderr
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect();
+    lines[lines.len().saturating_sub(n)..].join(" / ")
+}
+
+fn exit_text(status: &std::process::ExitStatus) -> String {
+    if let Some(code) = status.code() {
+        return format!("exit {code}");
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        if let Some(signal) = status.signal() {
+            return format!("exit signal {signal}");
+        }
+    }
+    "exit signal".to_string()
 }
