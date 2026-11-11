@@ -485,7 +485,9 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         if let Some((kind, text)) = tick.toast.clone() {
             self.ring.push(kind, &text);
         }
-        self.heal = tick.heal;
+        if tick.heal.is_some() {
+            self.heal = tick.heal;
+        }
         let snapshot = self.current(now, &tick);
         if let Err(message) = write_snapshot(&self.paths.snapshot(), &snapshot) {
             self.log(now, &format!("state file: {message}"));
@@ -513,6 +515,7 @@ mod service_tests {
         ran: Vec<String>,
         gone: bool,
         fail: Option<String>,
+        relay_up: bool,
     }
 
     impl CommandRunner for Fake {
@@ -532,16 +535,24 @@ mod service_tests {
             if command.iter().any(|word| word == "devices") {
                 return Ok("List of devices attached\nSER\tdevice\n".to_string());
             }
+            if line == "ps -eo pid=,args=" && self.relay_up {
+                return Ok("7 /x/gnirehtet run SER".to_string());
+            }
+            if line.ends_with("ip addr show tun0") {
+                return Ok("    inet 10.0.0.2/30 scope global tun0".to_string());
+            }
             Ok(String::new())
         }
 
         fn start_relay(&mut self, command: &[String], _adb: &str) -> Result<(), String> {
             self.ran.push(format!("relay {}", command.join(" ")));
+            self.relay_up = true;
             Ok(())
         }
 
         fn stop_relay(&mut self) -> Result<(), String> {
             self.ran.push("relay stop".to_string());
+            self.relay_up = false;
             Ok(())
         }
     }
@@ -606,7 +617,11 @@ mod service_tests {
         let first = service.tick(100, &s, None, (false, false));
         assert_eq!(first.state, LinkState::Unauthorised);
         assert!(first.events.is_empty());
-        assert!(fake.borrow().ran.is_empty());
+        assert!(fake
+            .borrow()
+            .ran
+            .iter()
+            .all(|c| c == "adb shell dumpsys battery"));
 
         let second = service.tick(101, &s, None, (false, false));
         assert_eq!(second.state, LinkState::Ready);
@@ -728,7 +743,8 @@ mod service_tests {
         assert!(fake.borrow().ran.iter().any(|line| line == "relay stop"));
 
         fake.borrow_mut().gone = false;
-        let back = service.tick(402, &s, None, (false, false));
+        // Past the health loop's 5s tun0 cadence, so the re-plug tick probes tun0 again.
+        let back = service.tick(410, &s, None, (false, false));
         assert_eq!(back.tether, TetherMode::Own);
         assert!(back.tunnel);
     }
