@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import stat
@@ -11,6 +12,18 @@ import main  # noqa: E402
 
 
 class ShimEnvironmentTest(unittest.IsolatedAsyncioTestCase):
+    async def test_timeout_closes_pipes_held_by_engine_children(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            engine = os.path.join(tmp, "flat3d-inject")
+            with open(engine, "w", encoding="utf-8") as file:
+                file.write("#!/bin/sh\nsleep 5 &\nwait\n")
+            os.chmod(engine, 0o700)
+            with mock.patch.object(main, "ENGINE", engine), mock.patch.object(main, "_MODES_FIXED", False):
+                result = await asyncio.wait_for(main.run_engine("list", timeout=0.1), 2)
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["message"], "timed out after 0.1s")
+
     def test_defaults_and_existing_environment_are_preserved(self):
         keys = ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS", "FLAT3D_SRC_DIR")
         old = {key: os.environ.pop(key, None) for key in keys}
