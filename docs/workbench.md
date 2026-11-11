@@ -9,7 +9,7 @@ Unset `FLAT3D_RE_HOME` means `$HOME/.local/share/flat-to-3d`; unset `FLAT3D_BUIL
 | Ghidra 12.1.4 | `$FLAT3D_RE_HOME/ghidra` | `test -x "$FLAT3D_RE_HOME/ghidra/support/analyzeHeadless"` |
 | JDK 21 | `$FLAT3D_RE_HOME/jdk/current` | `"$FLAT3D_RE_HOME/jdk/current/bin/java" -version` |
 
-Run the Windows DLL build inside the distrobox build container: `tools/build-spidy.sh`. The pinned SpidyVR sources and generated DLLs stay outside the repository's game data.
+Build the Windows DLLs inside the distrobox build container: `distrobox enter "$FLAT3D_BUILD_BOX" -- tools/build-spidy.sh` (output: `~/.cache/flat-to-3d/build-spidy`).
 
 Ghidra analysis uses `tools/ghidra/headless.sh "$FLAT3D_RE_HOME/ghidra-projects" spiderman/sm2 -import "$FLAT3D_RE_HOME/exe/sm2-2.810.0.0/Spider-Man2.exe" -max-cpu 16 -log "$FLAT3D_RE_HOME/logs/sm2-analyze.log"`. Results go in `docs/spiderman2/address-map.md`.
 

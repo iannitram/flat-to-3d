@@ -8,7 +8,7 @@ The deep maps are [Spidy core](spiderman2/spidy-core-map.md) and the [Spider-Man
 
 ## How it fits together
 
-~~~mermaid
+```mermaid
 flowchart TD
     Steam["Steam: Play on a 3D Ready game"] --> Run["flat3d-run %command% (crates/engine/src/bin/flat3d-run.rs)"]
     Run -->|"reads"| State[("$XDG_RUNTIME_DIR/flat3d/link.json")]
@@ -44,7 +44,7 @@ flowchart TD
     Inj -.only if UEVR's 2D screen is flat.-> Layer["layer/ — fixed-screen OpenXR layer"]
     Link --> WiVRn[(WiVRn server + headset app)]
     Tools["tools/ — build-spidy, xmatch, ghidra, research"] --> Games
-~~~
+```
 
 <!-- mv-map -->
 - `inject/**` → `crates/engine/**`
@@ -78,7 +78,7 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `crates/engine/src/install.rs` | present for `unit_text`, `install_plan` and `uninstall_plan` (I1); the file copies, the systemd runs and the `install` / `uninstall` commands still to come (#128) | `install` / `uninstall`: the plan for copying the binaries and tools into place and writing and enabling the user unit | M10, M28 |
 | `crates/engine/src/setup.rs` | present (`packages_command`, `parse_packages`, `Packages`, `missing`, the two package names; running the commands still to come) | first-time setup checks: which Quest apps are installed (WiVRn, gnirehtet client), the install commands | M24 |
 | `crates/engine/src/api.rs` | present | the serialisable types both faces read (`Game`, `Recipe`, `LinkState`, `InjectResult`, errors) and the `--json` output; the app uses them directly, the Decky panel reads the same keys | M9-M12 |
-| `crates/engine/src/cli.rs`, `cli/link.rs`, `cli/view.rs`, `main.rs` | partly present (`cli.rs`: `parse` for `list`, `inject`, `start-3d`, `stop-3d`, `status`, `undo <appid>` (#84, its body wired in `dispatch`), plus `render`, `exit_code`, `execute`, `run` and the `--json` envelope (E1f); `main.rs` calls `cli::run`; `cli/link.rs`: `parse_link` for `watch`, `snapshot`, `switch`, `setting`, `run`, `install`, `uninstall` (E5l), not yet called from `main.rs`, so `watch::run` exists but `flat3d-inject watch` is not a command yet (#120). Still to come: the command bodies (`cli::dispatch` is a stub, #27), the link commands' bodies and wiring (#120), `cli/view.rs` (#121)) | `cli.rs`: `list / inject <appid> / start-3d / stop-3d / status / undo <appid>` (names kept for the locked tests in #63); `cli/link.rs`: `watch / snapshot / switch / setting / run / install / uninstall`; `cli/view.rs`: `view / rows / launch / collection / toasts / logs` (what the faces show); human text by default, `--json` for the Decky panel | M9-M11, M18 |
+| `crates/engine/src/cli.rs`, `crates/engine/src/cli/link.rs`, `crates/engine/src/cli/view.rs`, `crates/engine/src/main.rs` | partly present (`cli.rs`: `parse`, the `COMMANDS` registry, `dispatch`, `render`, `exit_code`, `execute`, `run` and the `--json` envelope; `main.rs` calls `cli::run`; `cli/link.rs`: `parse_link` and `run` for `watch`, `snapshot`, `install`, `uninstall`, `switch`, `setting`, `run`, wired through `dispatch`; `cli/view.rs`: `parse` for `view` and `logs`, `run` still answers `NotBuilt` (WP-28). Still to come: the bodies of the Engine, inject, Setup and Doctor commands, see Commands below) | `cli.rs`: the command line grammar, registry and dispatch (names kept for the locked tests in #63); `cli/link.rs`: `watch / snapshot / install / uninstall / switch / setting / run`; `cli/view.rs`: `view / rows / launch / collection / toasts / logs` (what the faces show); human text by default, `--json` for the Decky panel | M9-M11, M18 |
 | `packaging/` | planned (#127 `build-tools.sh`, #128 install wiring, #129 AppImage, #134 Decky zip) | `flat3d-link.service` (rendered by `install.rs`), `build-tools.sh` (builds adb from Android's open source and the gnirehtet relay, fetches the gnirehtet client APK by checksum into `dist/tools/`; never in git), the AppImage and Decky zip scripts | M10, M28 |
 | `crates/app/` | partly present (#78: the crate, the four tabs with placeholder pages, the `app` CI job; the page state (#116-#118), views (#122) and main wiring (#123) still to come) | native Rust desktop app for Desktop Mode (iced, MIT), a crate that depends on `crates/engine/` by path; Elm-style state and `update` functions are plain Rust and unit-tested in CI; four pages | M24 |
 | `crates/app/src/` | partly present (`lib.rs` (`Tab`, `App`, `Message`, `update`) and `main.rs` (the window), #78; the four page modules, `view_*.rs` and the snapshot subscription still to come) | `lib.rs` (the `App` state, `Message` and `update`), `headset_page.rs`, `games_page.rs`, `setup_page.rs`, `logs_page.rs` (each page's state, messages and pure `update`, returning the engine action to run), `view_*.rs` (iced widgets, no logic), `main.rs` (window, a 2 s snapshot subscription, engine calls on a worker thread). Pages: **Setup** (WiVRn and tunnel apps on the Quest, USB debugging, seated boundary, the adb in use), **Headset** (link state, Start/Stop 3D, Auto 3D and tunnel switches, battery and temperature, throughput, uptime, reconnects, soak log), **Games** (each game with its 3D switch, recipe, Undo), **Logs**; no Library page and no Inject button | M24 |
@@ -87,8 +87,8 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `crates/engine/src/launch_options.rs` | present (`add_wrapper`, `remove_wrapper`, `has_wrapper`, E4b) | the rule the Decky plugin used to carry, now Rust: add and remove the `flat3d-run` word in a launch-option line (keeping `mangohud` and the rest) | M30 |
 | `crates/engine/src/face/collection.rs`, `crates/engine/src/face/toasts.rs` | present (`collection.rs`: `three_d_ready_appids`, `collection_diff`, `COLLECTION_NAME`; `toasts.rs`: `toasts_since`, `ToastBatch`) | the 3D Ready set and the collection diff, which toasts are new | M18, M26, M30 |
 | `crates/engine/src/face/view.rs` | present (`zone_colour`, `HealthView`, `health_view`, `throughput_text`, `uptime_text`; the faces' use of them still to come) | health, speed and uptime wording and zone colours, the one copy both faces read | M26, M27 |
-| `crates/engine/src/cli/view.rs` | planned | the `view` command grammar and dispatch | M11 |
-| `crates/engine/src/face/rows.rs` | stub | shared game rows shown by both faces; WP-03 fills the row builder | M11, M24, M26 |
+| `crates/engine/src/cli/view.rs` | stub (`parse` for `view` and `logs`; `run` answers `NotBuilt`, WP-28) | the `view` command grammar and dispatch | M11 |
+| `crates/engine/src/face/rows.rs` | present (`GameRow`, `game_rows`) | shared game rows shown by both faces: sorted, filtered, with the 3D switch and the reason a game plays flat | M11, M24, M26 |
 | `crates/engine/src/face/link_model.rs` | stub | shared link-view model; WP-28 fills the model | M11, M24, M26 |
 | `crates/engine/src/face/logs.rs` | stub | shared log parsing and filtering; WP-06 fills the helpers | M11, M24, M26 |
 | `crates/engine/src/link/wivrn.rs` | stub | WiVRn install and headset-app detection; WP-12 fills the probes | M10, M18 |
@@ -112,11 +112,11 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `games/spiderman2/` | planned | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `viewer/` | planned | SBS screen viewer: Geo-11's side-by-side picture on the fixed screen over OpenXR. Likely a Windows binary run in the game's Proton session reading Geo-11's shared texture (FlatToDepth / VRScreenCap, MIT, are the references) | M21 |
 | `layer/` | planned, conditional | fixed-screen OpenXR layer, only if UEVR's 2D Screen Mode loses depth (#33, #9) | M15 |
-| `docs/../third_party/SpidyVR` | present (submodule, v0.3.8) | the baseline mod (GPL-3.0) | M1, M3-M8 |
-| `docs/../cmake/clang-cl-xwin.cmake`, `tools/build-spidy.sh` | present | cross-building Windows binaries on Linux in the distrobox build container (`$FLAT3D_BUILD_BOX`) | M3-M8, M21 |
+| `third_party/SpidyVR` | present (submodule, v0.3.8) | the baseline mod (GPL-3.0) | M1, M3-M8 |
+| `cmake/clang-cl-xwin.cmake`, `tools/build-spidy.sh` | present | cross-building Windows binaries on Linux in the distrobox build container (`$FLAT3D_BUILD_BOX`) | M3-M8, M21 |
 | `tools/research/`, `tools/xmatch/`, `tools/ghidra/` | present | Spider-Man 2 discovery: Spidy's tools without hash gates, the Remastered → SM2 matcher, headless Ghidra under a memory guard | M3-M6, M8 |
 | `crates/engine/tests/*.rs` | present | Engine behavior and locked contract tests; inspect the test directory for current coverage | all |
-| `docs/../.github/workflows/check.yml` | partly present (self-hosted Linux runner: the `engine` job's `cargo build`, `cargo test`, `py_compile` of `decky/main.py`, and the `app` job's `cargo test` and `cargo check` of `crates/app/` (#78); no `cargo fmt --check` or `clippy -D warnings` yet, and main fails both, #183; no decky typecheck or build yet) | CI on Linux: engine build + test; grows to the app (`cargo test` and `cargo check` of `crates/app/`) and a TypeScript typecheck and build of `decky/` (no tests: the panel has no logic) | all |
+| `.github/workflows/check.yml` | partly present (self-hosted Linux runner: the `engine` job's `cargo build`, `cargo test`, `py_compile` of `decky/main.py`, and the `app` job's `cargo test` and `cargo check` of `crates/app/` (#78); no `cargo fmt --check` or `clippy -D warnings` yet, and main fails both, #183; no decky typecheck or build yet) | CI on Linux: engine build + test; grows to the app (`cargo test` and `cargo check` of `crates/app/`) and a TypeScript typecheck and build of `decky/` (no tests: the panel has no logic) | all |
 | `docs/` | present | rulings (`notes/DECISIONS.md`), research, the port plan, Step 0 run sheet, maps | all |
 
 ## Commands
@@ -131,15 +131,15 @@ Entries follow `cli::COMMANDS` order.
 | `stop-3d` | Engine | `crates/engine/src/cli/engine.rs` | `LinkReport` | WP-07 |
 | `status` | Engine | `crates/engine/src/cli/engine.rs` | `LinkReport` | WP-07 |
 | `undo` | Engine | `crates/engine/src/cli/undo.rs` | `UndoResult` | — |
-| `watch` | Link | `crates/engine/src/cli/link.rs` | — | WP-08 |
-| `snapshot` | Link | `crates/engine/src/cli/link.rs` | `LinkSnapshot` | WP-08 |
-| `install` | Link | `crates/engine/src/cli/link.rs` | `InstallReport` | WP-08 |
-| `uninstall` | Link | `crates/engine/src/cli/link.rs` | `InstallReport` | WP-08 |
-| `switch get` | Link | `crates/engine/src/cli/link.rs` | `SwitchState` | WP-08 |
-| `switch set` | Link | `crates/engine/src/cli/link.rs` | `SwitchState` | WP-08 |
-| `setting get` | Link | `crates/engine/src/cli/link.rs` | `SettingState` | WP-08 |
-| `setting set` | Link | `crates/engine/src/cli/link.rs` | `SettingState` | WP-08 |
-| `run` | Link | `crates/engine/src/cli/link.rs` | — | WP-08 |
+| `watch` | Link | `crates/engine/src/cli/link.rs` | — | — |
+| `snapshot` | Link | `crates/engine/src/cli/link.rs` | `LinkSnapshot` | — |
+| `install` | Link | `crates/engine/src/cli/link.rs` | `InstallReport` | — |
+| `uninstall` | Link | `crates/engine/src/cli/link.rs` | `InstallReport` | — |
+| `switch get` | Link | `crates/engine/src/cli/link.rs` | `SwitchState` | — |
+| `switch set` | Link | `crates/engine/src/cli/link.rs` | `SwitchState` | — |
+| `setting get` | Link | `crates/engine/src/cli/link.rs` | `SettingState` | — |
+| `setting set` | Link | `crates/engine/src/cli/link.rs` | `SettingState` | — |
+| `run` | Link | `crates/engine/src/cli/link.rs` | — | — |
 | `view` | View | `crates/engine/src/cli/view.rs` | `LinkView` | WP-28 |
 | `rows` | View | `crates/engine/src/cli/view.rs` | `GameRow (array)` | WP-28 |
 | `launch` | View | `crates/engine/src/cli/view.rs` | `LaunchText` | WP-28 |
@@ -172,10 +172,10 @@ Fixed 2026-10-31 when #50 was split (E1d #61 types, E1e #62 envelope, E1f #63 `-
 
 Every `flat3d-inject <command> --json` prints exactly one line holding one JSON object, the envelope `Response<T>`:
 
-~~~json
+```json
 {"ok": true,  "command": "list", "data": [ ... ]}
 {"ok": false, "command": "list", "error": {"code": "not-built", "message": "not built yet: ..."}}
-~~~
+```
 
 `data` is left out on failure and `error` on success. A bad command line gives `"command": ""` and code `usage`. Exit code: 0 ok; 2 for `usage` and `not-built`; 1 for every other error. Without `--json`, results go to stdout as text and errors to stderr as `error: <message>`. `watch` and `run` are not JSON commands: `watch` runs until stopped (the systemd unit), `run` ends by exec-ing the game and prints nothing.
 

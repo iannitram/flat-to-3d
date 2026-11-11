@@ -12,7 +12,7 @@ Every file must give `name` and the eight stereo keys: `stereo-status`, `stereo-
 
 A complete example:
 
-~~~text
+```text
 # Marvel's Spider-Man 2
 name: Marvel's Spider-Man 2
 stereo-status: build
@@ -23,4 +23,4 @@ stereo-mod: none
 stereo-free: "yes"
 stereo-safe: "yes"
 stereo-checked: 2026-10-31
-~~~
+```

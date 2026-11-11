@@ -1,11 +1,8 @@
-- 2026-11-10 Documentation scrub: consolidated the SPEC approval history here and aligned the roadmap, code map and workbench pages with the current tree.
-- 2026-11-01 SPEC approval: Plug in and play, with the current M12 and M17 route wording and the Rust desktop app plus thin TypeScript Decky panel (rulings 24-41).
-- 2026-10-31 SPEC approvals: the five Favorites and gamepad-only scope, including Start 3D/Stop 3D and the SBS viewer; Zero Company first with UEVR then our own hook if needed; WiVRn wired mode.
-- 2026-10-26 Initial SPEC approval: Spider-Man 2 plus Start 3D.
 # Changelog
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-11 Documentation scrub (WP-25b): consolidated the SPEC approval history here and aligned the README, roadmap, code map and workbench page with the current tree.
 - 2026-11-07 Wave 1 merged (PRs #190-#197, main `50c1e49`, 459 engine + 4 app tests): #66, #119, #75, #99, #84, #96, #51 file half, #78. Roadmap and code map synced; next is #183 alone, then wave 2 (#120, #125, #76, #116, #118).
 - 2026-11-07 #78 app crate: `app/` (iced 0.14, linked to `inject/` by path) opens a window with the four tabs (Setup, Headset, Games, Logs) on placeholder text, tested in `lib.rs`; the `app` job in `check.yml` runs its `cargo test` and `cargo check`. The faces stage has started.
 - 2026-11-07 Link stage E2 (WiVRn half) done: `link::stop_3d` closes the WiVRn app, the `adb reverse` and the server unit and reports Stopped, so Start 3D works again (#66, rebuilt after PR #188 was closed unmerged).
@@ -29,3 +26,6 @@ Newest first. One line per change of stage, release or decision that the next se
 - 2026-10-26 Normalized to pipeline v2 at Proposal.
 - 2026-10-26 Project notes brought into the repo.
 - 2026-10-18 Project started: README, GPL-3.0 licence.
+- 2026-11-01 SPEC approval: Plug in and play, with the current M12 and M17 route wording and the Rust desktop app plus thin TypeScript Decky panel (rulings 24-41).
+- 2026-10-31 SPEC approvals: the five Favorites and gamepad-only scope, including Start 3D/Stop 3D and the SBS viewer; Zero Company first with UEVR then our own hook if needed; WiVRn wired mode.
+- 2026-10-26 Initial SPEC approval: Spider-Man 2 plus Start 3D.

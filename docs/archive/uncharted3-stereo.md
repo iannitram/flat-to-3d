@@ -1,5 +1,7 @@
 # Uncharted 3: the PS3 stereo 3D mode in the PS4 remaster
 
+Status: after-1.0 (#13/#4); not on the 1.0 path.
+
 Checked 2026-10-18 against Uncharted 3 from The Nathan Drake Collection (PS4, version 1.02), reading the
 executable statically. Nothing was run. The question was whether the PS3 game's stereoscopic 3D mode is
 still in the remaster's code and could feed Flat to 3D through the owner's own Uncharted PC port

@@ -1,6 +1,6 @@
-# Step 0 run sheet: Spidy on Spider-Man Remastered, Quest 2, target device
+# Step 0 run sheet: Spidy on Spider-Man Remastered, Quest 2, Z13
 
-Goal: prove the whole chain works on this machine before porting anything. That's the target device under Proton, WiVRn over a USB cable, the Quest 2, and Spidy's **GAME SCREEN 3D** mode (the big 3D TV).
+Goal: prove the whole chain works on this machine before porting anything. That's the Z13 under Proton, WiVRn over a USB cable, the Quest 2, and Spidy's **GAME SCREEN 3D** mode (the big 3D TV).
 
 Do this in **Desktop Mode**. WiVRn's window and the scripts need the desktop.
 
@@ -20,7 +20,7 @@ Do this in **Desktop Mode**. WiVRn's window and the scripts need the desktop.
 
 The order matters: Proton connects to VR only when the game starts, so WiVRn must be running first.
 
-1. **You:** plug the Quest 2 into the target device by USB and put it on. Accept "Allow USB debugging" if asked.
+1. **You:** plug the Quest 2 into the Z13 by USB and put it on. Accept "Allow USB debugging" if asked.
 2. **Script:** start the WiVRn server, then connect the headset over the cable:
    ~~~
    adb reverse tcp:9757 tcp:9757

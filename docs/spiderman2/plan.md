@@ -1,6 +1,6 @@
 # Plan: Spider-Man 2 in true 3D, ported from SpidyVR
 
-**Goal.** Play Marvel's Spider-Man 2 on a giant fixed 3D screen in the Quest 2, with a controller, on the target device under Proton. The game itself draws both eyes in the same frame: real stereo, not alternating eyes and not faked depth.
+**Goal.** Play Marvel's Spider-Man 2 on a giant fixed 3D screen in the Quest 2, with a controller, on the Z13 under Proton. The game itself draws both eyes in the same frame: real stereo, not alternating eyes and not faked depth.
 
 **Starting point.** [SpidyVR](https://github.com/IlyaMez/SpidyVR) (GPL-3.0, pinned at v0.3.8, commit `aed5c0c`), a full VR mod for Spider-Man Remastered. Its **GAME SCREEN 3D** mode already does exactly what we want, but only for Remastered. We port only that mode. Swinging, body, punching, gadgets and menus stay behind.
 
@@ -31,7 +31,7 @@ The detailed code map behind this plan is [spidy-core-map.md](spidy-core-map.md)
 
 Another ~40 addresses serve only the swinging and menu features and can be dropped.
 
-**Good news from the Spider-Man 2 exe (checked on the target device, 2026-10-18):**
+**Good news from the Spider-Man 2 exe (checked on the Z13, 2026-10-18):**
 - Version **2.810.0.0**, Steam build 24651585.
 - It contains the same engine system names Spidy relies on: `PlayerModelHudFollower`, `TimeScaleSystem`, `HeroOfferProcessor`, the `uisystemmenu` config. So the internal design matches.
 - It has no packer or protection sections. The code is plain, so injection and hooks should work as they do for Remastered.
@@ -54,7 +54,7 @@ Another ~40 addresses serve only the swinging and menu features and can be dropp
 
 The fastest route is **binary diffing**. Spidy already names hundreds of Remastered functions. Load the Remastered exe and the Spider-Man 2 exe into **Ghidra** (free, from the NSA) and run its **Version Tracking**, which matches functions across two related builds. Each Spidy address in Remastered then points to its Spider-Man 2 counterpart, which we verify by hand. Strings (`Adapted Lum`, `kTaaTarget0`, `RenderAlloc`, `ViewContextManager`, `TemporalAa`, `ScaleformRTTStream`) anchor the matches.
 
-This needs the **Remastered exe** (version 4.630.0.0). Spider-Man Remastered is being installed on the target device for this and for step 0, and on a second machine (2026-10-18 scan leg) for the diff. a second machine (2026-10-18 scan leg)'s Steam copy is 121,901,008 bytes, the exact size of 4.630.0.0. The hash isn't checked yet.
+This needs the **Remastered exe** (version 4.630.0.0). Spider-Man Remastered is being installed on the Z13 for this and for step 0, and on a second machine (2026-10-18 scan leg) for the diff. The second machine's Steam copy is 121,901,008 bytes, the exact size of 4.630.0.0. The hash isn't checked yet.
 
 **Faster first pass (a second machine (2026-10-18 scan leg)):** `tools/xmatch/run_match.py` matches each Spidy function by masked byte windows plus instruction-sequence similarity. It follows calls and global references out of every confident match, matches vtables by RTTI name, and writes a unique pattern scan for each hit. It takes minutes and about 2 GB of memory. Ghidra Version Tracking stays as the cross-check for low-confidence items.
 
@@ -73,7 +73,7 @@ The executable also contains 27,183 C++ type names. The type survey found vtable
 Each step ends in a test that can be checked without guessing.
 
 ### Step 0: Baseline (needs Remastered installed)
-Run unmodified Spidy (official 0.3.8 release) on Spider-Man Remastered on the target device in GAME SCREEN 3D, through WiVRn's wired mode (`adb reverse`) on the USB cable. Quest Tether's internet sharing isn't needed for this.
+Run unmodified Spidy (official 0.3.8 release) on Spider-Man Remastered on the Z13 in GAME SCREEN 3D, through WiVRn's wired mode (`adb reverse`) on the USB cable. Quest Tether's internet sharing isn't needed for this.
 - **Proves:** Proton + WiVRn + Quest 2 + the stereo-screen technique all work on this machine, before we spend weeks porting.
 - **Test:** the Remastered city shows on a 3D screen in the Quest 2 with visible depth, at 30+ fps.
 - Can run in parallel with steps 1–2.
@@ -91,7 +91,7 @@ Adapt `spidy-linux.sh` and the injection scripts to Spider-Man 2: Steam app 2651
 
 ### Step 3: Move the camera
 Find the camera submit, lens builder and pose setter in Spider-Man 2 (Ghidra diff from Remastered). Repeat Spidy's earliest experiment (`game_view.cpp`): shift the game's own camera sideways.
-- **Test:** the picture on the target device's screen visibly slides left and right on command.
+- **Test:** the picture on the Z13's screen visibly slides left and right on command.
 
 ### Step 4: Two eyes
 Find the view manager, the off-screen view creator and the per-frame placement point. Create two eye views and place them every frame.
@@ -126,14 +126,14 @@ Write Spider-Man 2's recipe keys (`stereo-status: works-now`) and wire it to the
 | PSN sign-in required (SM2 ships the PlayStation PC SDK) | Breaks the offline-only rule | Check before step 2. If it's required, stop and ask the owner |
 | Game updates | Fixed addresses break | Pattern scans (step 7); pin the build |
 | Ray tracing tied to the main view | Eyes lack reflections or crash | RT off for the eyes |
-| target device frame rate | Three views (game + 2 eyes) cost a lot | Lower eye resolution, dynamic resolution, skip the main view's full render if possible |
+| Z13 frame rate | Three views (game + 2 eyes) cost a lot | Lower eye resolution, dynamic resolution, skip the main view's full render if possible |
 | Late attach (Linux script attaches at the menu) | Can't enlarge render memory | Launch wrapper that loads early |
 
 **Effort, honestly:** steps 3–5 are reverse-engineering work, measured in weeks of sessions, not days. The binary diff from Remastered is what keeps it from being months. Spidy's author built the original with heavy AI help, and we'd work the same way.
 
 ## Machine rules that apply
 
-- **target device memory:** Ghidra on a 190 MB exe and the game itself are both heavy. Run one heavy job at a time under the 2 GiB watch, and check `$FLAT3D_HEAVY_LOCK` first.
+- **Z13 memory:** Ghidra on a 190 MB exe and the game itself are both heavy. Run one heavy job at a time under the 2 GiB watch, and check `$FLAT3D_HEAVY_LOCK` first.
 - **Commits:** use the project no-reply identity and never force-push.
 - **Licence:** GPL-3.0 throughout. Our port is a derivative of Spidy, so credit Ilya Mezerowsky in the README and file headers.
 
@@ -147,4 +147,4 @@ Settled:
 
 Open:
 - **Contact Spidy's author?** He's asking for ideas for "the next full VR conversion", and a Spider-Man 2 port overlaps with that. Working with him, or at least telling him, could save weeks. A compatibility report after step 0 is a natural first contact.
-- **AER as a fallback?** If the target device can't afford both eyes every frame in Spider-Man 2, alternating eyes is the fallback. the owner has not ruled on whether that still counts as true stereo.
+- **AER as a fallback?** If the Z13 can't afford both eyes every frame in Spider-Man 2, alternating eyes is the fallback. the owner has not ruled on whether that still counts as true stereo.
