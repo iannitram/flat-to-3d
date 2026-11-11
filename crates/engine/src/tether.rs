@@ -142,6 +142,7 @@ impl<R: CommandRunner> Tether<R> {
         let existing = self.adb.run(&adb::reverse_list_command())?;
         let mut start = self.wivrn.clone().unwrap_or_else(link::start_3d_commands);
         if !wivrn {
+            // Keep only the `adb devices` check.
             start.truncate(1);
         }
         for command in start {
@@ -195,6 +196,7 @@ impl<R: CommandRunner> Tether<R> {
             && command.get(1).map(String::as_str) == Some("reverse");
         if reverse {
             for line in existing.lines() {
+                // `adb reverse --list` prints `<device spec> <host spec>`; a serial may come first.
                 let words: Vec<_> = line.split_whitespace().collect();
                 if words.len() >= 2 && words[words.len() - 2] == command[2] {
                     return if words[words.len() - 1] == command[3] {
@@ -273,7 +275,8 @@ impl<R: CommandRunner> Tether<R> {
         }
     }
 
-    /// Tear the tether down on this machine only, for when the headset is already gone.
+    /// Tear the tether down on this machine only, for when the headset is already gone: stop our
+    /// relay (if we own one) and forget the client and reverses, without any device command.
     pub fn drop_local(&mut self) -> Result<(), String> {
         let result = if self.mode == TetherMode::Own {
             self.adb.stop_relay()
