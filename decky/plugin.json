@@ -1,5 +1,6 @@
 {
   "name": "Flat to 3D",
+  "api_version": 1,
   "author": "iannitram",
   "flags": [],
   "publish": {

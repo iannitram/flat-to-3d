@@ -1,0 +1,54 @@
+schema = 1
+name = "z2-uevr"
+title = "Z2 Uevr"
+q = "Q6"
+issues = [32, 51]
+device = ["z13", "quest2"]
+needs = ["WP-14", "WP-15"]
+done_when = "a capture of both eyes shows distant scenery apart and the HUD about 0 apart, or a written finding that UEVR can't do it on UE 5.6, which opens Z2b (`needs-owner-device`).; tests on a fake prefix assert the files written, the env returned and a clean undo; on the device it sets up Zero Company the way #32 found works (`needs-owner-device`)."
+after = ["z1-offline"]
+
+[[step]]
+id = "inject"
+kind = "cmd"
+who = "script"
+text = "Inject the UEVR route."
+run = ["flat3d-inject", "inject", "2075800", "--json"]
+expect_json = { "/ok" = true }
+
+[[step]]
+id = "launch"
+kind = "ask"
+who = "you"
+text = "Launch the game through Steam."
+
+[[step]]
+id = "depth"
+kind = "check"
+who = "you"
+text = "In the headset the game screen shows depth (near objects stand out), and the HUD sits flat."
+gate = true
+
+[[step]]
+id = "capture-method"
+kind = "ask"
+who = "you"
+text = "Record how the eyes were captured, if at all."
+
+[[step]]
+id = "disparity"
+kind = "measure"
+who = "you"
+text = "Optional disparity check on any SBS capture."
+tool = "disparity"
+input = "{state}/captures/2075800-*.png"
+args = ["--layout", "sbs"]
+optional = true
+
+[[step]]
+id = "undo"
+kind = "cmd"
+who = "script"
+text = "Undo injection and clean up."
+run = ["flat3d-inject", "undo", "2075800", "--json"]
+expect_json = { "/ok" = true }

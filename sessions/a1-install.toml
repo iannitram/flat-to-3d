@@ -1,0 +1,20 @@
+schema = 1
+name = "a1-install"
+title = "A1 Install"
+q = "Q8"
+issues = [40]
+device = ["z13"]
+done_when = "AC7 runs offline under Proton on the Z13 (`needs-owner-device`)."
+
+[[step]]
+id = "install-ac7"
+kind = "ask"
+who = "you"
+text = "Install Ace Combat 7 and prepare its offline save."
+
+[[step]]
+id = "offline"
+kind = "check"
+who = "you"
+text = "Ace Combat 7 runs offline under Proton on the Z13."
+gate = true

@@ -22,7 +22,8 @@ PRIVATE = [
 ]
 PATHS_RE = re.compile(r"(?<![\w./-])(?:inject/|app/src\b)")
 USAGE_RE = re.compile(r'usage: flat3d-inject ([^"\\]*)')
-RULING_RE = re.compile(r"\b[Rr]ulings?\s+([0-9]+(?:\s*(?:,|and|-)\s*[0-9]+)*)")
+RULING_RE = re.compile(r"\b[Rr]ulings?\s+([0-9]+(?:\s*(?:,?\s*and|,|-)\s*[0-9]+)*)")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 M_RE = re.compile(r"\bM(\d+)\b")
 
 
@@ -72,7 +73,7 @@ def selected_files(root: Path, args: argparse.Namespace) -> list[Path]:
         if not p.is_file():
             continue
         name = rel(root, p)
-        if name.startswith(("docs/plans/", "third_party/")) or "tests" in Path(name).parts or name in ("Cargo.lock", "pnpm-lock.yaml"):
+        if name.startswith(("docs/plans/", "third_party/")) or "tests" in Path(name).parts or p.name in ("Cargo.lock", "pnpm-lock.yaml"):
             continue
         try:
             p.read_text(encoding="utf-8")
@@ -133,24 +134,37 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                         continue
                     paths = re.findall(r"`([^`]+)`", cells[0])
                     for cellpath in paths:
-                        expanded = re.sub(r"\{([^{}]+)\}", lambda m: "\0".join(m.group(1).split(",")), cellpath).split("\0")
+                        brace = re.search(r"\{([^{}]+)\}", cellpath)
+                        expanded = [cellpath[:brace.start()] + alt + cellpath[brace.end():] for alt in brace.group(1).split(",")] if brace else [cellpath]
                         for item in expanded:
                             if "*" in item:
                                 if not list(root.glob(item)):
                                     add(out, Path("docs/code-map.md"), n + 1, "status", f"path glob has no matches: {item}", "create the path, or mark the row planned")
+                                previous_dir = Path(item.rstrip("/")).parent
                                 continue
-                            if item.endswith("/"):
-                                item = item.rstrip("/")
+                            rooted = "/" in item
+                            item = item.rstrip("/")
                             item_path = Path(item)
-                            target = root / item_path if item_path.is_absolute() or item_path.parts and item_path.parts[0] in ("crates", "tools", "decky", "games", "docs") else root / previous_dir / item_path
-                            if not target.exists():
+                            if not rooted:
+                                resolved = previous_dir / item_path
+                            elif (root / item_path).exists():
+                                resolved = item_path
+                            else:
+                                resolved = previous_dir / item_path
+                                if not (root / resolved).exists():
+                                    resolved = None
+                            if resolved is None:
                                 add(out, Path("docs/code-map.md"), n + 1, "status", f"missing path: {item}", "create the path, or mark the row planned")
-                    if paths:
-                        previous_dir = Path(paths[0]).parent
+                                previous_dir = (previous_dir / item_path).parent
+                                continue
+                            if not (root / resolved).exists():
+                                add(out, Path("docs/code-map.md"), n + 1, "status", f"missing path: {item}", "create the path, or mark the row planned")
+                            previous_dir = resolved.parent
 
     for name, lines in texts.items():
         p = Path(name)
         in_fence = False
+        fence_lang = None
         in_mv_map = False
         for n, line in enumerate(lines, 1):
             if line.strip() == "<!-- mv-map -->":
@@ -158,36 +172,41 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
             elif line.strip() == "<!-- /mv-map -->":
                 in_mv_map = False
             if line.lstrip().startswith("```"):
-                in_fence = not in_fence
+                if in_fence:
+                    in_fence = False
+                    fence_lang = None
+                else:
+                    in_fence = True
+                    fence_lang = line.strip()[3:].strip().lower()
                 continue
             if "links" in rules and p.suffix == ".md" and not in_fence:
                 for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", line):
+                    parts = target.split()
+                    target = parts[0] if parts else ""
                     target = target.split("#", 1)[0].split("?", 1)[0]
-                    if not target or re.match(r"(?:https?://|mailto:|/|#)", target):
+                    if not target or re.match(r"(?:https?://|mailto:|#)", target):
                         continue
-                    if not (root / p.parent / target).exists():
+                    base = root / target.lstrip("/") if target.startswith("/") else root / p.parent / target
+                    if not base.exists():
                         add(out, p, n, "links", f"dead link: {target}", "point the link at an existing file")
             if "paths" in rules and name in ("docs/ROADMAP.md", "docs/code-map.md") and not in_mv_map and not line.strip().startswith("<!-- mv-map -->") and not line.strip().startswith("<!-- /mv-map -->") and PATHS_RE.search(line):
                 add(out, p, n, "paths", "legacy path token", "write the crates/engine/ or crates/app/src path")
-            if "private" in rules:
-                if any(fnmatch.fnmatch(name, glob) and (sub is None or sub in line) for glob, sub in allow):
-                    continue
+            if "private" in rules and not any(
+                fnmatch.fnmatch(name, glob) and (sub is None or sub in line)
+                for glob, sub in allow
+            ):
                 for pat in PRIVATE:
                     if re.search(pat, line, re.IGNORECASE if pat in ("Hyp" + "erion", "qw" + "en", "sand" + "isk", "cra" + "ft-build") else 0):
                         add(out, p, n, "private", "private term", "remove the word, or add an allow line to tools/docs/private-allow.txt")
                         break
             if "mermaid" in rules and p.suffix == ".md":
-                if line.strip().lower() == "```mermaid":
-                    in_fence = True
-                elif in_fence and line.strip().startswith("```"):
-                    in_fence = False
-                elif in_fence:
+                if in_fence and fence_lang == "mermaid":
                     probe = re.sub(r'"[^"]*"', "", line)
                     probe = re.sub(r"\|[^|]*\|", "", probe)
                     probe = re.sub(r"\[[^\]]*\]|\([^)]*\)|\{[^}]*\}", "", probe)
                     probe = probe.replace(" & ", " ")
                     parts = re.split(r"-{2,}>|={2,}>|-\.+->|-{3,}", probe)
-                    if any(len(part.split()) > 1 for part in parts):
+                    if any(len(part.split()) > 1 for part in parts[1:-1]):
                         add(out, p, n, "mermaid", "2 statements on one line", "put one statement per line")
 
     if "usage" in rules and "docs/code-map.md" in names:
@@ -227,10 +246,13 @@ def run(root: Path, files: list[Path], rules: set[str], allow: list[tuple[str, s
                 for mid in M_RE.findall(line):
                     if not re.search(rf"\|\s*M{mid}\s*\|", spec):
                         add(out, Path(name), n, "ids", f"unknown spec item M{mid}", "cite an id that exists in SPEC.md")
-                for group in RULING_RE.findall(line):
-                    nums = [int(x) for x in re.findall(r"\d+", group)]
-                    if "-" in group and len(nums) == 2:
-                        nums = list(range(nums[0], nums[-1] + 1))
+                for group in RULING_RE.findall(DATE_RE.sub("", line)):
+                    nums = []
+                    for lo, hi in re.findall(r"(\d+)(?:\s*-\s*(\d+))?", group):
+                        if hi and 0 <= int(hi) - int(lo) <= 1000:
+                            nums.extend(range(int(lo), int(hi) + 1))
+                        else:
+                            nums.extend(int(x) for x in (lo, hi) if x)
                     for num in nums:
                         if len(str(num)) == 4:
                             continue

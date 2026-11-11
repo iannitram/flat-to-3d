@@ -1,0 +1,31 @@
+schema = 1
+name = "q2"
+title = "Q2"
+q = "Q2"
+issues = []
+device = []
+needs = ["WP-15"]
+done_when = "Injector exe: flat3d/bin/flat3d-uevr-inject.exe exists under XDG_DATA_HOME."
+
+[[step]]
+id = "fetch-sdk"
+kind = "cmd"
+who = "you"
+text = "Owner accepts SDK license and fetches the SDK."
+run = ["bash", "{repo}/tools/build-win.sh", "--fetch-sdk"]
+
+[[step]]
+id = "install"
+kind = "cmd"
+who = "script"
+text = "Build and install the injector."
+run = ["bash", "{repo}/tools/build-win.sh", "--install"]
+timeout = 3600
+
+[[step]]
+id = "installed"
+kind = "cmd"
+who = "script"
+text = "Confirm the injector exists."
+section = "check"
+run = ["test", "-f", "{data}/flat3d/bin/flat3d-uevr-inject.exe"]

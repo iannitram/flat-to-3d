@@ -86,8 +86,25 @@ pub fn start_3d_commands() -> Vec<Vec<String>> {
     ]
 }
 
-pub fn start_3d_commands_with(_s: &WivrnStart) -> Vec<Vec<String>> {
-    start_3d_commands()
+pub fn start_3d_commands_with(s: &WivrnStart) -> Vec<Vec<String>> {
+    let mut commands = start_3d_commands();
+    let mut server = vec![
+        "systemd-run".into(),
+        "--user".into(),
+        "--collect".into(),
+        format!("--unit={WIVRN_UNIT}"),
+        "flatpak".into(),
+        "run".into(),
+    ];
+    if let Some(scope) = s.scope {
+        server.push(scope.flag().into());
+    }
+    server.push("--command=wivrn-server".into());
+    server.push(WIVRN_FLATPAK.into());
+    server.extend(s.flags.iter().cloned());
+    commands[1] = server;
+    *commands[3].last_mut().expect("am start has an app") = s.app.clone();
+    commands
 }
 
 /// The commands Stop 3D runs, in order (pure: tests assert on this list).
@@ -155,9 +172,35 @@ pub fn start_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> 
     Ok(LinkState::Ready)
 }
 
+pub fn start_3d_with(
+    runner: &mut dyn CommandRunner,
+    s: &WivrnStart,
+) -> Result<LinkState, LinkError> {
+    let commands = start_3d_commands_with(s);
+    let devices = run_step(runner, &commands[0])?;
+    match headset_from_adb(&devices.stdout) {
+        Headset::Missing => return Ok(LinkState::NoHeadset),
+        Headset::Unauthorised => return Ok(LinkState::Unauthorised),
+        Headset::Present => {}
+    }
+    for command in &commands[1..] {
+        run_step(runner, command)?;
+    }
+    Ok(LinkState::Ready)
+}
+
 /// Run all of [`stop_3d_commands`] in order, whatever each returns: with the headset
 /// unplugged the two adb steps fail, and the server must still stop. The last command (the
-/// server stop) decides: success is `Stopped`, a failure is a [`LinkError`] naming it.
+/// server stop) decides: success or a narrowly recognized missing unit is `Stopped`;
+/// other failures are a [`LinkError`] naming it.
+fn unit_already_gone(stderr: &str) -> bool {
+    let message = stderr.trim();
+    message == "Unit flat3d-wivrn.service not loaded"
+        || message == "Unit flat3d-wivrn.service not found"
+        || message == "Failed to stop flat3d-wivrn.service: Unit flat3d-wivrn.service not loaded."
+        || message == "Failed to stop flat3d-wivrn.service: Unit flat3d-wivrn.service not found."
+}
+
 pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
     let commands = stop_3d_commands();
     let (last, before) = commands
@@ -166,7 +209,13 @@ pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
     for command in before {
         let _ = runner.run(command);
     }
-    run_step(runner, last)?;
+    let output = runner.run(last);
+    if !output.success && !unit_already_gone(&output.stderr) {
+        return Err(LinkError {
+            command: last.join(" "),
+            message: output.stderr.trim().to_string(),
+        });
+    }
     Ok(LinkState::Stopped)
 }
 
