@@ -58,6 +58,19 @@ pub fn execute(
             ));
         }
     }
+    for path in &plan.dirs {
+        let probe = if path.ends_with('/') {
+            path.clone()
+        } else {
+            format!("{path}/")
+        };
+        if !inside_roots(&probe, &roots) {
+            return Err(crate::api::ApiError::new(
+                "refused",
+                &format!("{path} is outside the install folders; fix: {FIX_PLAN}"),
+            ));
+        }
+    }
     for (src, _) in &plan.copies {
         if Path::new(src)
             .file_name()
@@ -127,9 +140,16 @@ pub fn execute(
             }
         }
         let tmp = format!("{}.tmp", plan.unit_path);
-        fs::write(&tmp, unit_text_with(&UnitSpec::default()))
-            .map_err(|e| io_error(&tmp, &e, IO_INSTALL))?;
-        fs::rename(&tmp, &plan.unit_path).map_err(|e| io_error(&plan.unit_path, &e, IO_INSTALL))?;
+        let placed = fs::write(&tmp, unit_text_with(&UnitSpec::default()))
+            .map_err(|e| io_error(&tmp, &e, IO_INSTALL))
+            .and_then(|()| {
+                fs::rename(&tmp, &plan.unit_path)
+                    .map_err(|e| io_error(&plan.unit_path, &e, IO_INSTALL))
+            });
+        if let Err(error) = placed {
+            let _ = fs::remove_file(&tmp);
+            return Err(error);
+        }
         written.push(plan.unit_path.clone());
         Ok(())
     })();
@@ -140,17 +160,7 @@ pub fn execute(
         return Err(error);
     }
     if !notes.is_empty() {
-        notes.sort_by_key(|n| {
-            ["adb", "gnirehtet", "flat3d-viewer"]
-                .iter()
-                .position(|x| x == n)
-                .unwrap_or(99)
-        });
-        notes.dedup();
-    }
-    if !notes.is_empty() {
-        notes.insert(0, format!("not bundled: {}", notes.join(", ")));
-        notes.truncate(1);
+        notes = vec![format!("not bundled: {}", notes.join(", "))];
     }
     write_manifest(&plan.manifest, &written)?;
     written.push(plan.manifest.clone());
@@ -256,23 +266,44 @@ fn inside_roots(path: &str, roots: &[String]) -> bool {
         && roots.iter().any(|root| path.starts_with(root))
 }
 fn write_manifest(path: &str, files: &[String]) -> Result<(), crate::api::ApiError> {
-    let body = if files.is_empty() {
+    let mut all: Vec<String> = Vec::new();
+    if let Ok(existing) = std::fs::read_to_string(path) {
+        all.extend(
+            existing
+                .lines()
+                .filter(|l| !l.is_empty())
+                .map(str::to_string),
+        );
+    }
+    for file in files {
+        if !all.contains(file) {
+            all.push(file.clone());
+        }
+    }
+    let body = if all.is_empty() {
         String::new()
     } else {
-        format!("{}\n", files.join("\n"))
+        format!("{}\n", all.join("\n"))
     };
     std::fs::write(path, body).map_err(|e| io_error(path, &e, IO_INSTALL))
 }
 fn copy_chmod(src: &str, dst: &str, mode: u32) -> Result<(), crate::api::ApiError> {
-    std::fs::copy(src, dst).map_err(|e| io_error(dst, &e, IO_INSTALL))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(dst, std::fs::Permissions::from_mode(mode))
-            .map_err(|e| io_error(dst, &e, IO_INSTALL))?;
+    let tmp = format!("{dst}.tmp");
+    let result = (|| {
+        std::fs::copy(src, &tmp).map_err(|e| io_error(dst, &e, IO_INSTALL))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(mode))
+                .map_err(|e| io_error(dst, &e, IO_INSTALL))?;
+        }
+        let _ = mode;
+        std::fs::rename(&tmp, dst).map_err(|e| io_error(dst, &e, IO_INSTALL))
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
     }
-    let _ = mode;
-    Ok(())
+    result
 }
 
 pub fn unit_text(exec_start: &str) -> String {

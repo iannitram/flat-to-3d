@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PLAN = ROOT / "docs/plans/roadmap-v2"
-BLOCKED = re.compile(r"[Bb]locked by:?\**\s*(.*)")
+BLOCKED = re.compile(r"[Bb]locked by\**:?\**\s*(.*)")
 WP_RE = re.compile(r"WP-(\d{2}[a-d]?)")
 PATH_HEADS = {"crates", "tools", "packaging", "docs", "decky", "games", "sessions", "recipes", "inject", "app", ".github", ".gitignore", "Cargo.toml", "Cargo.lock", "README.md", "SPEC.md", "PIPELINE.md", "AGENTS.md", "CHANGELOG.md"}
 
@@ -42,10 +42,12 @@ def issue_rows(issues: list[dict], device_label: str) -> list[dict]:
             if not match:
                 continue
             text = match.group(1).strip()
+            if text.lower().startswith("none"):
+                continue
             refs = [int(n) for n in re.findall(r"#(\d+)", text)]
             if refs:
                 blockers.update(n for n in refs if n in open_numbers)
-            elif not text.lower().startswith("none"):
+            else:
                 external.append(text)
         status = "blocked" if blockers else "blocked-external" if external else "ready"
         labels = [label["name"] for label in issue.get("labels", [])]
