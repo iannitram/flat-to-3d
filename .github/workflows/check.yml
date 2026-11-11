@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   rust:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: system dependencies
@@ -45,7 +45,7 @@ jobs:
         run: cargo clippy --locked -p flat3d-uevr-inject --target x86_64-pc-windows-msvc -- -D warnings
 
   py:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,7 +70,7 @@ jobs:
         run: python3 tools/docs/check.py
 
   decky:
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

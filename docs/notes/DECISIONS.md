@@ -55,6 +55,7 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 | 45 | Forza Horizon 6 | **Forza Horizon 6 moves to `after-1.0`** (2026-11-11, question tool: "Move it to after-1.0"). Ruling 7's "not safe" stands. **1.0 is six games:** STAR WARS Zero Company, ACE COMBAT 7, Control, 007 First Light, Marvel's Spider-Man 2 and Alan Wake 2. Its research note is kept. Amends ruling 43. |
 | 46 | Order | **By readiness: Zero Company, ACE COMBAT 7, Control, 007 First Light, Spider-Man 2, Alan Wake 2** (2026-11-11, question tool: "By readiness (Recommended)"). Replaces the order of 2026-10-31. |
 | 47 | Spec approval | **The spec is approved with the six-game list and rulings 43-46** (2026-11-11, question tool: "Approve (Recommended)"). The approval trail is in `SPEC.md`. |
+| 48 | CI runners | **All CI runs on GitHub-hosted runners (`ubuntu-24.04`), not the single self-hosted runner** (2026-11-11). The repo is public, so hosted minutes are free and jobs run in parallel, while the one self-hosted runner took many hours to clear a queue. Asked "check.yml only or everything?", the owner answered "Switch everything": `check.yml` and `appimage.yml` both move. The toolchain pin `dtolnay/rust-toolchain@1.95.0` stays. |
 
 Ruling 14 (where decisions, research and status are kept) is retired: they now live in this repo, under `docs/notes/`.
 

@@ -348,7 +348,7 @@ Untracked `inject/Cargo.lock`, `app/Cargo.lock` and per-crate `target/` are dele
 
 ### CI final shape
 
-**CI final shape (`check.yml`, WP-01).** Every job uses `runs-on: [self-hosted, linux]` (check.yml:18,35) and `dtolnay/rust-toolchain@1.95.0` (host rustc 1.95.0). WP-22's `appimage.yml` uses the same runner and pin. Neither file uses `ubuntu-24.04`, `@stable` or `@master`.
+**CI final shape (`check.yml`, WP-01).** Every job uses `runs-on: ubuntu-24.04` (GitHub-hosted, ruling 48) and `dtolnay/rust-toolchain@1.95.0`. WP-22's `appimage.yml` uses the same runner and pin. Neither file uses `self-hosted`, `@stable` or `@master`.
 - `tools/check.sh` (WP-02) is the only list of CI steps. Each job does its setup, then runs `tools/check.sh --ci --only <job>` (`rust`, `py` or `decky`). `--ci` turns every skip (a tool or target missing on this machine) into a failure. A step whose input file has not landed yet (the file guards below) prints `n/a`, which `--ci` leaves alone.
 - The inline steps below are the wave-1 fallback only. Each sits behind `if: hashFiles('tools/check.sh')==''`, because WP-01 and WP-02 share wave 1; a step's own file guard is added to that one. check.sh runs each of these steps with the same flags and file guards, so the fallback cannot drift from it. check.sh may add steps of its own (WP-02).
 - Setup, never skipped: the apt line, the toolchain pin and `rustup target add x86_64-pc-windows-msvc` (rust); setup-node 22.23.4 and pnpm 10.34.9 (decky). The setup steps carry no `if:`.
