@@ -93,22 +93,38 @@ pub fn add_wrapper(options: &str) -> String {
 }
 
 pub fn add_wrapper_at(options: &str, wrapper_abs: &str) -> String {
-    if wrapper_abs.chars().any(char::is_whitespace)
-        || wrapper_abs.contains('"')
+    let tildes = wrapper_abs.matches('~').count();
+    let tilde_ok = tildes == 0 || (tildes == 1 && wrapper_abs.starts_with("~/"));
+    if wrapper_abs.chars().any(|c| {
+        c.is_whitespace()
+            || matches!(
+                c,
+                '"' | '&'
+                    | '\''
+                    | '$'
+                    | ';'
+                    | '`'
+                    | '('
+                    | ')'
+                    | '|'
+                    | '<'
+                    | '>'
+                    | '*'
+                    | '?'
+                    | '['
+                    | ']'
+                    | '{'
+                    | '}'
+                    | '!'
+                    | '#'
+                    | '\\'
+            )
+    }) || !tilde_ok
         || wrapper_abs.rsplit('/').next() != Some(WRAPPER)
     {
         return add_wrapper(options);
     }
     let mut words = words(options);
-    if words
-        .iter()
-        .any(|word| word.contains(COMMAND) && *word != COMMAND)
-    {
-        words = words
-            .into_iter()
-            .map(|word| word.trim_matches('"'))
-            .collect();
-    }
     if has_wrapper(options) {
         let end = command_index(&words).unwrap_or(words.len());
         if let Some(first) = words[..end].iter().position(|word| is_wrapper(word)) {

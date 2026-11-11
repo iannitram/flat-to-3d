@@ -46,7 +46,7 @@ fn wrapper_can_be_removed_and_quotes_survive() {
         format!("{A} %command% -arg \"a b\"")
     );
     assert_eq!(
-        add_wrapper_at("\"%command% flat3d-run\"", A),
+        add_wrapper_at("%command% flat3d-run", A),
         format!("{A} %command% flat3d-run")
     );
 }
@@ -61,4 +61,35 @@ fn invalid_paths_fall_back_to_bare_wrapper() {
         add_wrapper_at("%command%", "/usr/bin/other"),
         "flat3d-run %command%"
     );
+}
+
+#[test]
+fn user_quotes_are_kept_and_round_trip() {
+    let x = "sh -c \"%command%\"";
+    let added = add_wrapper_at(x, A);
+    assert_eq!(added, format!("{A} %command% sh -c \"%command%\""));
+    assert_eq!(remove_wrapper(&added), x);
+}
+
+#[test]
+fn shell_special_paths_fall_back_to_bare_wrapper() {
+    for bad in [
+        "/h/a&b/flat3d-run",
+        "/h/a'b/flat3d-run",
+        "/h/$x/flat3d-run",
+        "/h/a;b/flat3d-run",
+        "/h/a(b)/flat3d-run",
+        "/h/a*/flat3d-run",
+        "/h/a#b/flat3d-run",
+        "/h/a\\b/flat3d-run",
+        "/h/~x/flat3d-run",
+        "~x/flat3d-run",
+    ] {
+        assert_eq!(
+            add_wrapper_at("%command%", bad),
+            "flat3d-run %command%",
+            "{bad}"
+        );
+    }
+    assert_eq!(add_wrapper_at("%command%", A), format!("{A} %command%"));
 }

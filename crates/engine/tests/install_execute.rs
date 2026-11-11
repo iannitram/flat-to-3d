@@ -130,6 +130,68 @@ fn missing_tools_are_skipped_and_named() {
     assert!(report.summary.contains("not bundled: adb, gnirehtet"));
 }
 #[test]
+fn missing_tools_are_named_in_plan_order() {
+    let (_, home, src) = fixture(
+        "missing-order",
+        &["tools/adb", "tools/gnirehtet.apk", "flat3d-viewer"],
+    );
+    let report = install::execute(&plan(&home, &src), &mut FakeRunner::new()).unwrap();
+    assert_eq!(
+        report.summary,
+        "not bundled: adb, gnirehtet.apk, flat3d-viewer"
+    );
+}
+#[test]
+fn reinstall_keeps_earlier_manifest_entries_and_leaves_no_tmp() {
+    let (_, home, src) = fixture("manifest-union", &[]);
+    let p = plan(&home, &src);
+    install::execute(&p, &mut FakeRunner::new()).unwrap();
+    fs::remove_file(src.join("tools/adb")).unwrap();
+    install::execute(&p, &mut FakeRunner::new()).unwrap();
+    let listed = fs::read_to_string(&p.manifest).unwrap();
+    assert!(listed.contains("/adb\n"));
+    let lines: Vec<&str> = listed.lines().collect();
+    let mut dedup = lines.clone();
+    dedup.sort();
+    dedup.dedup();
+    assert_eq!(lines.len(), dedup.len());
+    let bin = home.join(".local/bin");
+    assert!(fs::read_dir(bin).unwrap().all(|e| !e
+        .unwrap()
+        .file_name()
+        .to_string_lossy()
+        .ends_with(".tmp")));
+}
+#[test]
+fn dirs_outside_the_roots_are_refused() {
+    let (_, home, src) = fixture("bad-dir", &[]);
+    let mut p = plan(&home, &src);
+    p.dirs.push(format!("{}/.config/flat3d", home.display()));
+    let mut runner = FakeRunner::new();
+    err(install::execute(&p, &mut runner), "refused");
+    assert!(runner.ran.is_empty());
+}
+#[test]
+fn file_destination_equal_to_a_root_without_slash_is_refused() {
+    for which in ["unit", "copy"] {
+        let (_, home, src) = fixture(&format!("root-no-slash-{which}"), &[]);
+        let mut p = plan(&home, &src);
+        let h = home.display();
+        if which == "unit" {
+            p.unit_path = format!("{h}/.config/systemd/user");
+        } else {
+            p.copies[0].1 = format!("{h}/.local/bin");
+        }
+        let mut runner = FakeRunner::new();
+        err(install::execute(&p, &mut runner), "refused");
+        assert!(runner.ran.is_empty());
+        assert!(!home.join(".config").exists());
+        assert!(!home.join(".local").exists());
+        assert!(!home.join(".config/systemd/user.tmp").exists());
+        assert!(!home.join(".local/bin.tmp").exists());
+    }
+}
+#[test]
 fn missing_binary_is_io_and_runs_nothing() {
     let (_, home, src) = fixture("missing-bin", &["flat3d-run"]);
     let mut runner = FakeRunner::new();
@@ -198,6 +260,12 @@ fn uninstall_tolerates_missing_unit_and_removes_manifest_files() {
     let (_, home, src) = fixture("uninstall", &[]);
     let p = plan(&home, &src);
     install::execute(&p, &mut FakeRunner::new()).unwrap();
+    let installed: Vec<String> = fs::read_to_string(&p.manifest)
+        .unwrap()
+        .lines()
+        .map(str::to_string)
+        .collect();
+    assert!(!installed.is_empty());
     let mut r = FakeRunner::new().fail(&["systemctl", "--user", "disable"], "boom\n");
     let report =
         install::execute_uninstall(&install::uninstall_plan(home.to_str().unwrap()), &mut r)
@@ -210,6 +278,10 @@ fn uninstall_tolerates_missing_unit_and_removes_manifest_files() {
         &vec!["systemctl", "--user", "daemon-reload"]
     );
     assert!(!PathBuf::from(&p.manifest).exists());
+    assert!(!PathBuf::from(&p.unit_path).exists());
+    for listed in &installed {
+        assert!(!PathBuf::from(listed).exists(), "{listed}");
+    }
 }
 #[test]
 fn uninstall_keeps_config_and_state() {
