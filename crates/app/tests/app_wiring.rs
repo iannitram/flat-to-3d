@@ -144,6 +144,14 @@ fn setup_run_is_busy_and_results_live_in_page_state() {
         update(&mut app, Message::Setup(setup_page::Msg::Done(Ok(())))),
         vec![Effect::ReadPackages]
     );
+    assert!(!app.setup.busy);
+    assert_eq!(
+        update(
+            &mut app,
+            Message::Setup(setup_page::Msg::RunPressed(setup_page::SetupKind::Packages))
+        ),
+        vec![Effect::RunSetup(setup_page::SetupKind::Packages)]
+    );
     update(
         &mut app,
         Message::Setup(setup_page::Msg::Packages(Ok(Packages {
@@ -323,6 +331,75 @@ fn effect_argv_matches_the_registered_cli_grammar() {
     }
 }
 
+/// Names of forbidden `std` modules imported through a `std::{..}` group, including nested
+/// items such as `std::{fs::File, io}` or `std::{io, thread::{self, spawn}}`.
+fn forbidden_std_group_members(source: &str) -> Vec<String> {
+    const FORBIDDEN: [&str; 4] = ["fs", "process", "net", "thread"];
+    let compact: String = source.chars().filter(|c| !c.is_whitespace()).collect();
+    let mut found = Vec::new();
+    let mut from = 0;
+    while let Some(at) = compact[from..].find("std::{") {
+        let start = from + at + "std::{".len();
+        let mut depth = 1;
+        let mut end = compact.len();
+        for (i, c) in compact[start..].char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = start + i;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let body = &compact[start..end];
+        let mut depth = 0;
+        let mut item_start = 0;
+        for (i, c) in body
+            .char_indices()
+            .chain(std::iter::once((body.len(), ',')))
+        {
+            match c {
+                '{' => depth += 1,
+                '}' => depth -= 1,
+                ',' if depth == 0 => {
+                    let head: String = body[item_start..i]
+                        .chars()
+                        .take_while(|c| c.is_alphanumeric() || *c == '_')
+                        .collect();
+                    if FORBIDDEN.contains(&head.as_str()) {
+                        found.push(format!("std::{head}"));
+                    }
+                    item_start = i + 1;
+                }
+                _ => {}
+            }
+        }
+        from = start;
+    }
+    found
+}
+
+#[test]
+fn std_group_scanner_sees_grouped_and_nested_imports() {
+    assert_eq!(
+        forbidden_std_group_members("use std::{fs, thread};"),
+        ["std::fs", "std::thread"]
+    );
+    assert_eq!(
+        forbidden_std_group_members("use std::{\n    io::{self, Read},\n    process::Command,\n};"),
+        ["std::process"]
+    );
+    assert_eq!(
+        forbidden_std_group_members("use std::{collections::{BTreeMap}, fs::File};"),
+        ["std::fs"]
+    );
+    assert!(forbidden_std_group_members("use std::{path::Path, io};").is_empty());
+}
+
 #[test]
 fn app_sources_keep_io_in_engine_only() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
@@ -348,6 +425,13 @@ fn app_sources_keep_io_in_engine_only() {
                 path.display()
             );
         }
+        let grouped = forbidden_std_group_members(&source);
+        assert!(
+            grouped.is_empty(),
+            "{} uses {} in a use group; return an Action; engine.rs does the I/O",
+            path.display(),
+            grouped.join(", ")
+        );
     }
 }
 

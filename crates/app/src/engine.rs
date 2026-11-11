@@ -206,19 +206,7 @@ pub fn off_thread<T: Send + 'static>(
 /// Execute one effect on a worker and translate its result back into a UI message.
 pub fn perform(effect: Effect) -> Message {
     use crate::{games_page, headset_page, logs_page, setup_page};
-    let fail = |text: String| match &effect {
-        Effect::ReadSnapshot => Message::Headset(headset_page::Msg::Snapshot(Err(text))),
-        Effect::Request(_) | Effect::SetSetting { .. } => {
-            Message::Headset(headset_page::Msg::Done(Err(text)))
-        }
-        Effect::LoadRows { .. } => Message::Games(games_page::Msg::Rows(Err(text))),
-        Effect::SetSwitch { .. } => Message::SwitchSaved(Err(text)),
-        Effect::Undo(_) => Message::Games(games_page::Msg::UndoDone(Err(text))),
-        Effect::ReadPackages => Message::Setup(setup_page::Msg::Packages(Err(text))),
-        Effect::RunSetup(_) => Message::Setup(setup_page::Msg::Done(Err(text))),
-        Effect::LoadLogs => Message::Logs(logs_page::Msg::Failed(text)),
-        Effect::Copy(_) => unreachable!("Copy is handled on the UI thread"),
-    };
+    let fail = |text: String| error_message(&effect, text);
     let p = match paths() {
         Ok(p) => p,
         Err(e) => return fail(error_text(&e)),
@@ -285,21 +273,26 @@ pub fn perform(effect: Effect) -> Message {
     }
 }
 
-pub fn worker_stopped(effect: &Effect) -> Message {
-    let text = "worker stopped".to_string();
+/// The message that reports `text` as the failure of `effect`.
+fn error_message(effect: &Effect, text: String) -> Message {
+    use crate::{games_page, headset_page, logs_page, setup_page};
     match effect {
-        Effect::ReadSnapshot => Message::Headset(crate::headset_page::Msg::Snapshot(Err(text))),
+        Effect::ReadSnapshot => Message::Headset(headset_page::Msg::Snapshot(Err(text))),
         Effect::Request(_) | Effect::SetSetting { .. } => {
-            Message::Headset(crate::headset_page::Msg::Done(Err(text)))
+            Message::Headset(headset_page::Msg::Done(Err(text)))
         }
-        Effect::LoadRows { .. } => Message::Games(crate::games_page::Msg::Rows(Err(text))),
+        Effect::LoadRows { .. } => Message::Games(games_page::Msg::Rows(Err(text))),
         Effect::SetSwitch { .. } => Message::SwitchSaved(Err(text)),
-        Effect::Undo(_) => Message::Games(crate::games_page::Msg::UndoDone(Err(text))),
-        Effect::ReadPackages => Message::Setup(crate::setup_page::Msg::Packages(Err(text))),
-        Effect::RunSetup(_) => Message::Setup(crate::setup_page::Msg::Done(Err(text))),
-        Effect::LoadLogs => Message::Logs(crate::logs_page::Msg::Failed(text)),
+        Effect::Undo(_) => Message::Games(games_page::Msg::UndoDone(Err(text))),
+        Effect::ReadPackages => Message::Setup(setup_page::Msg::Packages(Err(text))),
+        Effect::RunSetup(_) => Message::Setup(setup_page::Msg::Done(Err(text))),
+        Effect::LoadLogs => Message::Logs(logs_page::Msg::Failed(text)),
         Effect::Copy(_) => unreachable!("Copy is handled on the UI thread"),
     }
+}
+
+pub fn worker_stopped(effect: &Effect) -> Message {
+    error_message(effect, "worker stopped".to_string())
 }
 
 fn cli_result(effect: &Effect) -> Result<Value, String> {

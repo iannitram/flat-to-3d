@@ -1,4 +1,5 @@
-//! Pure application state and message routing for the desktop app.
+//! Desktop app state and message routing. The `view_*` modules build iced widgets; `update` stays
+//! pure (no I/O) and returns `Effect`s for `engine` to perform.
 
 pub mod engine;
 pub mod games_page;
