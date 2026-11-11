@@ -63,7 +63,7 @@ pub fn undo_actions(record: &UndoRecord) -> Vec<UndoAction> {
 }
 
 /// Escape `\`, newline and tab so one value stays on one line.
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
@@ -78,7 +78,7 @@ fn escape(s: &str) -> String {
 
 /// Reverse [`escape`]: `\n` and `\t` come back as themselves, and a backslash followed by
 /// any other character gives that character.
-fn unescape(s: &str) -> String {
+pub(crate) fn unescape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut chars = s.chars();
     while let Some(c) = chars.next() {
@@ -192,6 +192,64 @@ pub fn data_dir(xdg_data_home: Option<&str>, home: &str) -> PathBuf {
 
 fn io_error(what: &str, path: &Path, e: &io::Error) -> ApiError {
     ApiError::new("io", &format!("{} {}: {}", what, path.display(), e))
+}
+
+/// Persist an undo record atomically, refusing to replace an existing recovery point.
+pub fn save_record(data_dir: &Path, rec: &UndoRecord) -> Result<PathBuf, ApiError> {
+    let path = record_path(data_dir, rec.appid);
+    fs::create_dir_all(path.parent().expect("record path has parent"))
+        .map_err(|e| io_error("cannot create", path.parent().unwrap(), &e))?;
+    if path.exists() {
+        return Err(ApiError::new(
+            "refused",
+            &format!(
+                "an undo record for {} already exists; run flat3d-inject undo {} first",
+                rec.appid, rec.appid
+            ),
+        ));
+    }
+    crate::fsx::write_atomic(&path, rec.to_text().as_bytes())
+        .map_err(|e| io_error("cannot write", &path, &e))?;
+    Ok(path)
+}
+
+/// Attempt every file restoration step and collect a line describing each outcome.
+pub fn put_back(rec: &UndoRecord) -> Vec<String> {
+    let mut restored = Vec::new();
+    for action in undo_actions(rec) {
+        match action {
+            UndoAction::RemoveFile(file) => match fs::remove_file(&file) {
+                Ok(()) => restored.push(format!("removed {}", file.display())),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    restored.push(format!("already gone {}", file.display()))
+                }
+                Err(e) => restored.push(format!("failed to remove {}: {}", file.display(), e)),
+            },
+            UndoAction::RestoreFile { backup, path } => match fs::copy(&backup, &path) {
+                Ok(_) => match fs::remove_file(&backup) {
+                    Ok(()) => restored.push(format!(
+                        "restored {} from {}",
+                        path.display(),
+                        backup.display()
+                    )),
+                    Err(e) => {
+                        restored.push(format!("failed to remove {}: {}", backup.display(), e))
+                    }
+                },
+                Err(e) if e.kind() == io::ErrorKind::NotFound && !backup.exists() => {
+                    restored.push(format!("already restored {}", path.display()))
+                }
+                Err(e) => restored.push(format!(
+                    "failed to restore {} from {}: {}",
+                    path.display(),
+                    backup.display(),
+                    e
+                )),
+            },
+            UndoAction::SetLaunchOptions(_) => {}
+        }
+    }
+    restored
 }
 
 /// Put a game back to flat from its undo record (`undo <appid>`).
