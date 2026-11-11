@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Flat to 3D
+Comment=Play flat PC games in 3D on a Quest
+Exec=flat3d-app
+Icon=flat3d
+Terminal=false
+Categories=Game;Utility;
