@@ -1,0 +1,8 @@
+docs/notes/DECISIONS.md
+docs/notes/**
+tools/docs/private-allow.txt
+decky/plugin.json	"author"
+.github/ISSUE_TEMPLATE/issue.md	Qwen brief
+AGENTS.md	Qwen brief
+docs/workbench.md	craft-build
+*	FLAT3D_BUILD_BOX
