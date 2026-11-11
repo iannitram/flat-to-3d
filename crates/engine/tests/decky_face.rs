@@ -24,20 +24,35 @@ fn sample_argv() -> Vec<(&'static str, Vec<&'static str>, Vec<&'static str>)> {
         (
             "setSwitch",
             vec!["switch", "set", "5", "on"],
-            vec!["switch", "set"],
+            vec!["switch", "set", "on"],
         ),
         (
             "setSetting",
             vec!["setting", "set", "tunnel", "off"],
-            vec!["setting", "set"],
+            vec!["setting", "set", "on"],
         ),
         (
             "launch",
             vec!["launch", "add", "--json", "--options", "%command% -dx11"],
             vec!["launch", "--json", "--options"],
         ),
+        (
+            "launch",
+            vec!["launch", "remove", "--json", "--options", "%command% -dx11"],
+            vec!["launch", "--json", "--options"],
+        ),
         ("doctor", vec!["doctor"], vec!["doctor"]),
         ("collection", vec!["collection"], vec!["collection"]),
+        (
+            "collection",
+            vec!["collection", "--current", "1,2"],
+            vec!["collection", "--current"],
+        ),
+        (
+            "collection",
+            vec!["collection", "--current", ""],
+            vec!["collection", "--current"],
+        ),
         ("toasts", vec!["toasts", "7"], vec!["toasts"]),
         (
             "logs",
@@ -75,13 +90,21 @@ fn every_decky_wrapper_is_listed_and_dispatches_with_main_json() {
                 | AnyCommand::Engine(_)
                 | AnyCommand::Doctor(_)
         ));
-        let line = source
-            .lines()
-            .find(|line| {
-                line.trim_start()
-                    .starts_with(&format!("export const {name} "))
-            })
-            .unwrap();
+        assert!(
+            cli::COMMANDS
+                .iter()
+                .any(|spec| spec.id == parsed.command.id()),
+            "{name}: id {:?} is not a COMMANDS row",
+            parsed.command.id()
+        );
+        let start = source
+            .find(&format!("export const {name} "))
+            .unwrap_or_else(|| panic!("{name} not exported"));
+        let after = start + "export const ".len();
+        let end = source[after..]
+            .find("export")
+            .map_or(source.len(), |offset| after + offset);
+        let line = &source[start..end];
         let mut at = 0;
         for literal in literals {
             let quoted = format!("\"{literal}\"");

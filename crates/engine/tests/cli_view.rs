@@ -285,20 +285,44 @@ fn view_registry_rows_match_parser_and_read_only_effects() {
         ("toasts", &["toasts", "7"]),
         ("logs", &["logs", "--limit", "3"]),
     ];
+    // Row -> parser: every View-group row parses to its own variant.
+    let mut row_ids = Vec::new();
     for spec in cli::COMMANDS.iter().filter(|spec| spec.group == "View") {
-        let (_, sample) = samples.iter().find(|(id, _)| *id == spec.id).unwrap();
-        let parsed = cli::parse_any(&words(sample)).unwrap();
-        assert!(matches!(parsed.command, AnyCommand::View(_)), "{}", spec.id);
-        assert_eq!(spec.effects, &[cli::SideEffect::ReadOnly]);
+        let (_, sample) = samples
+            .iter()
+            .find(|(id, _)| *id == spec.id)
+            .unwrap_or_else(|| panic!("no sample for row {}", spec.id));
+        let command = view(sample);
+        let matches = match spec.id {
+            "view" => matches!(command, ViewCommand::View),
+            "rows" => matches!(command, ViewCommand::Rows { .. }),
+            "launch" => matches!(command, ViewCommand::Launch { .. }),
+            "collection" => matches!(command, ViewCommand::Collection { .. }),
+            "toasts" => matches!(command, ViewCommand::Toasts { .. }),
+            "logs" => matches!(command, ViewCommand::Logs { .. }),
+            other => panic!("unexpected view row {other}"),
+        };
+        assert!(matches, "{}: wrong variant {command:?}", spec.id);
+        assert_eq!(command_id(sample), spec.id);
+        row_ids.push(spec.id);
     }
-    let variants = ["view", "rows", "launch", "collection", "toasts", "logs"];
-    for id in variants {
-        assert_eq!(
-            cli::COMMANDS.iter().filter(|spec| spec.id == id).count(),
-            1,
-            "{id}"
-        );
+    // Variant -> row: every ViewCommand variant has exactly one row, read-only.
+    for id in samples.iter().map(|(id, _)| *id) {
+        let rows: Vec<_> = cli::COMMANDS.iter().filter(|spec| spec.id == id).collect();
+        assert_eq!(rows.len(), 1, "{id}");
+        assert_eq!(rows[0].group, "View", "{id}");
+        assert_eq!(rows[0].effects, &[cli::SideEffect::ReadOnly], "{id}");
+        assert!(row_ids.contains(&id), "{id}");
     }
+    assert_eq!(row_ids.len(), samples.len());
+    // The bare forms parse too.
+    for bare in [&["rows"][..], &["collection"][..], &["logs"][..]] {
+        view(bare);
+    }
+}
+
+fn command_id(args: &[&str]) -> &'static str {
+    cli::parse_any(&words(args)).unwrap().command.id()
 }
 
 fn files(root: &std::path::Path) -> std::collections::BTreeMap<std::path::PathBuf, Vec<u8>> {
