@@ -28,27 +28,30 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-21 | 2 | done | `v2/wp-21-decky-scaffold` | [#221](https://github.com/iannitram/flat-to-3d/pull/221) | Head b9fc03da1b5519ba5ed4cbb535cd7baece936166 integrated at f15b43a05c2a7051e8ba3cf0c0bd1ad85527f34b. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux branch check repeated with 14 passed, 0 skipped, 2 n/a. Offline pnpm 9.15.9. Q14 pending. |
 | WP-22 | 2 | done | `v2/wp-22-packaging-scripts` | [#222](https://github.com/iannitram/flat-to-3d/pull/222) | Head a809d5f3d90b60e3f3faa6d21a06ec444d23965e integrated at 4f8467961bc6c274e007751a5b70a93e7e71e847. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux branch check passed (Ran 27 tests in 0.554s in packaging/tests). Q1, Q14 and Q16 pending. |
 | WP-23 | 2 | done | `v2/wp-23-app-games-page` | [#230](https://github.com/iannitram/flat-to-3d/pull/230) | Head 6ba8bc617a15f8ac619a4dce902244679eb48120 integrated at 6138e8dd40c478ce92ed660f10955940230a3cd2. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux branch done-check passed (9 focused tests, 14 gate steps, 0 skipped, 2 n/a). Locked #117 test matched before format. |
-| WP-24 | 2 | done | `v2/wp-24-session-runner-stereo-gates` | [#231](https://github.com/iannitram/flat-to-3d/pull/231) | Head cbac0b42ce3939a9f64ab9fefa72a148a5226b7c integrated at 921320c2224a9772148a3e67504bd39d364f03a7. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux branch check passed (14 gate steps, 0 skipped, 2 n/a). All 23 physical sessions pending. Issue #7 has no labeled Done when; its explicit offline verification sentence was used verbatim. |
-| WP-25b | 2 | running | `v2/wp-25b-docs-scrub-contradictions` | - | Assigned to Luna from verified v2/integration at 6138e8d. |
-| WP-08 | 3 | todo | - | - | |
-| WP-10 | 3 | todo | - | - | Roadmap helper lists it ready before wave 2 settles. Held for wave 3. |
-| WP-15 | 3 | todo | - | - | |
-| WP-19 | 3 | todo | - | - | |
-| WP-26 | 3 | todo | - | - | WP-13 cleared on isolated Linux. Eligible after wave 2 settles. |
+| WP-24 | 2 | done | `v2/wp-24-session-runner-stereo-gates` | [#231](https://github.com/iannitram/flat-to-3d/pull/231) | Head 9b13b0dded9378670204b9acb19400a7c5f58f6b integrated at 62f4644f555000b4063b8bd19d11bf48d306f249. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux correction branch gate passed (12 session and 4 stereo tests, 14 gate steps, 0 skipped, 2 n/a). Interactive answer substitution, escaped braces, measure args and background cleanup covered. All 23 physical sessions pending. Issue #7 used its explicit offline verification sentence since no labeled Done when exists. PR body predates this correction. |
+| WP-25b | 2 | blocked | `v2/wp-25b-docs-scrub-contradictions` | [#232](https://github.com/iannitram/flat-to-3d/pull/232) | Draft PR #232 head 3e9ad0c. Exact Linux done-check exited 1 at python3 tools/docs/check.py. Outside-scope findings: .github/ISSUE_TEMPLATE/issue.md:18; decky/README.md:8; decky/pnpm-lock.yaml:386,391; packaging/build-tools.sh:65; tools/check.sh:50. Later chain commands did not run. Focused docs and scope checks passed. No integration merge attempted. |
+| WP-08 | 3 | done | `v2/wp-08-link-commands-wiring` | [#233](https://github.com/iannitram/flat-to-3d/pull/233) | Head 10b53353ab37f072577a9fda837fcff73265e355 integrated at e32ea2e22aee5914e95c34cab8ab895404ef3a20. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux branch done-check passed (14 gate steps, 0 skipped, 2 n/a). Q3 pending. |
+| WP-10 | 3 | blocked | `v2/wp-10-tether-plans-runner-errors` | [#235](https://github.com/iannitram/flat-to-3d/pull/235) | Draft PR #235 head 971d2f9. Exact Linux done-check passed first command (50 focused tests), then cargo test --locked -p flat3d-inject tether exited 101 at watch/service.rs:654 and :720. The existing service fake returns no relay in ps output, so required CheckRelayAlive leaves tether mode Off. Service file is outside WP-10 scope. The chain stopped before tools/check.sh. No merge attempted. Q3 pending. |
+| WP-15 | 3 | done | `v2/wp-15-uevr-injector-build-win` | [#236](https://github.com/iannitram/flat-to-3d/pull/236) | Head 5c52a3cff525a61c8fa2082728d2c05fd1ef27c4 integrated at 90932ba5a467bd160d5d86bcb3e5e50e479d976d. Linux integration 13 pass, 0 skip, 3 n/a. Exact branch check passed (13 focused tests, 14 gate steps, 0 skip, 2 n/a). Offline MSVC cross-link with staged installed SDK produced MZ SHA-256 668b41dbf307a3349d23a95c5e46bf04d126126efdb07ac9011a730170f25f7a at final head. PR body records the earlier build hash and puts stack info under Stack. GitHub reports DIRTY against main. Q2 install and Q6 live injection pending. |
+| WP-19 | 3 | done | `v2/wp-19-viewer-openxr-main` | [#234](https://github.com/iannitram/flat-to-3d/pull/234) | Head 741f8bd30ed57fbc2b673b5dd8db55c305fc7c5c integrated at d7d442a787674874ce01bb1dddf5ea42060b39dc. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Pinned Windows xr Clippy/tests and exact Linux xr,capture branch gate passed (14 gate steps, 0 skipped, 2 n/a). Q10 runtime/headset, per-eye quads, DMA-BUF and portal capture, recenter and until-pid exit pending. |
+| WP-26 | 3 | done | `v2/wp-26-recipe-seeds-repo-lint` | [#237](https://github.com/iannitram/flat-to-3d/pull/237) | Head e36883535199bc2c14686fdc5ec9cdeb57198af5 integrated at 2bdf6db8461367535d1dfa9ef065214975de58ed. Linux integration check.sh: 13 passed, 0 skipped, 3 n/a, 0 failed. Exact Linux branch done-check passed (12 loader, 7 seed, 3 repo tests; 14 gate steps, 0 skipped, 2 n/a). No device check for this WP. PR stack line names its integration base but abbreviates the earlier package list. |
 | WP-27 | 3 | skipped | - | - | waits on WP-07 |
 | WP-28 | 3 | skipped | - | - | waits on WP-07 |
-| WP-30 | 3 | todo | - | - | |
-| WP-09 | 4 | skipped | - | - | waits on WP-11 |
+| WP-30 | 3 | skipped | - | - | waits on WP-25b |
+| WP-09 | 4 | skipped | - | - | waits on WP-10, WP-11 |
 | WP-29 | 4 | skipped | - | - | waits on WP-27 |
 | WP-31 | 4 | skipped | - | - | waits on WP-27 |
 | WP-32 | 4 | skipped | - | - | waits on WP-28 |
 | WP-33 | 4 | skipped | - | - | waits on WP-28 |
-| WP-34 | 5 | skipped | - | - | waits on WP-07 |
+| WP-34 | 5 | skipped | - | - | waits on WP-07, WP-09, WP-10, WP-11, WP-25b, WP-27, WP-28, WP-29, WP-30, WP-31, WP-32, WP-33 |
 
 ## Resume notes
 
 - Restored from published checkpoint 42d63c1 and verified local tip a6bf462. The coordinator progress matched the checkpoint. The first-parent merge history identifies the exact tested head for each completed WP. Published heads have since advanced for WP-01a, WP-01b, WP-01c, WP-01d, WP-02, WP-14, WP-16, WP-18, WP-20 and WP-25a. The verified integration keeps its original versions. WP-22 was still awaiting integration and its newer PR head was verified before merging.
 - Roadmap helper lists blocked WP-07, WP-11 and WP-13 as ready and lists future-wave packages before wave 2 settles. Use the status table and wave order.
 
+- At the final tip the roadmap helper still lists WP-07, WP-11, WP-25b, WP-10 as ready. Their blocking gate results are recorded in the status table.
+
 Run log (one line per stop: time, reason, tip of `v2/integration`):
 - 2026-11-10 17:53:27 -07:00 | Owner asked to stop after current builders. WP-21 and WP-22 passed their branch done-checks and await integration gates. No new build started by coordinator. | a6bf4626a445b68438f308bf0a07ba1400adf407
+- 2026-11-10 21:12:20 -07:00 | Runbook stop. Every package is settled (26 done, 4 blocked, 9 skipped). Independent work exhausted. | 2bdf6db8461367535d1dfa9ef065214975de58ed
