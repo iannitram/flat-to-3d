@@ -101,7 +101,6 @@ cp "$FIXTURES/${url##*/}" "$destination"
 """,
         "cmake": "#!/bin/sh\nexit 0\n",
         "pkg-config": "#!/bin/sh\nexit 0\n",
-        "unzip": "#!/bin/sh\nexit 0\n",
         "ninja": """#!/bin/sh
 set -eu
 mkdir -p build
@@ -206,6 +205,19 @@ class PackagingTests(unittest.TestCase):
             for name in ("adb", "gnirehtet", "gnirehtet.apk"):
                 self.assertIn(name, sums)
             self.assertIn("--set-rpath $ORIGIN/lib", log.read_text())
+
+    @unittest.skipUnless(shutil.which("shellcheck"), "shellcheck is not installed")
+    def test_shellcheck_clean(self) -> None:
+        files = [f"packaging/{name}" for name in ("lib.sh", "build-tools.sh", "build-appimage.sh", "build-decky.sh", "AppRun")]
+        result = subprocess.run(
+            ["shellcheck", "-x", *files],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_tools_bad_archive_hash_exits_four(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -128,7 +128,7 @@ check_sha256 "$APPIMAGETOOL_SHA" "$appimagetool" appimagetool.sha256
 run chmod +x "$appimagetool"
 run curl -fL --proto '=https' --tlsv1.2 --retry 3 -o "$runtime" "$RUNTIME_URL"
 check_sha256 "$RUNTIME_SHA" "$runtime" appimage-runtime.sha256
-run mkdir -p "$(dirname "$out_abs")"
-run env APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 "$appimagetool" --runtime-file "$runtime" "$appdir" "$out_abs"
 bundled_lib=$(find "$appdir" -type f -name '*.so*' ! -path "$appdir/usr/tools/lib/*" -print -quit)
 final_check test -z "$bundled_lib"
+run mkdir -p "$(dirname "$out_abs")"
+run env APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 "$appimagetool" --runtime-file "$runtime" "$appdir" "$out_abs"
