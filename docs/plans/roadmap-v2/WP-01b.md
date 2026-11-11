@@ -26,7 +26,7 @@
   - Engine `src/`: `lib.rs` (six `pub mod` lines), `link.rs` (the runner types move out; one re-export line), `tether/adb.rs`, `state.rs`, `switches.rs`, `recipes.rs`, the `watch/` file that holds the private `read_settings` and its callers, `injectors.rs` (one retag), `cli.rs` (one interim retag and its unit-test string).
   - Viewer `src/`: `frame.rs`, `source.rs`, `spec.rs` (empty skeletons from WP-01a, written in full here).
 - **Not edited:** `Cargo.*`, `check.yml`, any moved test file. **There is no `mod.rs` anywhere and no `x/x.rs`.**
-- **Ownership after this part:** `exec.rs`: WP-01 owns it because it holds the trait split. WP-36 later folds the relay methods out of it (WP-10 is dropped, ruling 42). `paths.rs`, `testing.rs` and the viewer `frame`/`source`/`spec` are frozen (§0 "Frozen after wave 1", `00-run-the-pass.md`).
+- **Ownership after this part:** `exec.rs`: WP-01 owns it because it holds the trait split. WP-36 later folds the relay methods out of it (WP-10, merged #253, is superseded by ruling 42). `paths.rs`, `testing.rs` and the viewer `frame`/`source`/`spec` are frozen (§0 "Frozen after wave 1", `00-run-the-pass.md`).
 
 ---
 

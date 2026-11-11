@@ -1,0 +1,24 @@
+[package]
+name = "flat3d-uevr-inject"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "flat3d_uevr_inject"
+path = "src/lib.rs"
+
+[[bin]]
+name = "flat3d-uevr-inject"
+path = "src/main.rs"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+  "Win32_System_Diagnostics_ToolHelp", "Win32_System_Memory", "Win32_System_Threading",
+  "Win32_System_LibraryLoader", "Win32_Foundation", "Win32_System_Diagnostics_Debug",
+  "Win32_Security",
+] }
+
+[lints]
+workspace = true

@@ -34,7 +34,7 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-36 | 2b | todo | - | - | |
 | WP-37 | 2b | todo | - | - | |
 | WP-08 | 3 | todo | - | - | |
-| WP-10 | - | dropped (ruling 42) | - | - | |
+| WP-10 | 3 | done (#253; superseded by ruling 42) | - | - | |
 | WP-15 | 3 | todo | - | - | |
 | WP-19 | 3 | todo | - | - | |
 | WP-26 | 3 | todo | - | - | |

@@ -1,0 +1,14 @@
+# Seed (OD6): untested until sessions/g4-control.toml passes; real recipe lands in recipes/ at works-now.
+name: Control
+stereo-status: untested
+stereo-route: geo-11 + sbs viewer
+stereo-engine: northlight
+stereo-api: dx11
+stereo-mod: https://helixmod.blogspot.com/2019/10/control-3d-vision-ready-fix-losti-v100.html
+stereo-free: yes
+stereo-safe: yes
+stereo-checked: 2026-11-08
+geo11-fix: control-fix
+geo11-exe: Control_DX11.exe
+geo11-layout: sbs
+geo11-remove-first: dxgi.dll

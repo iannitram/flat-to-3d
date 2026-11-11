@@ -1,0 +1,28 @@
+[package]
+name = "flat3d-inject"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+description = "Flat to 3D engine: installed games, recipes, stereo routes, the link service and the launch wrapper"
+publish = false
+
+[lib]
+name = "flat3d_inject"
+path = "src/lib.rs"
+
+[[bin]]
+name = "flat3d-inject"
+path = "src/main.rs"
+
+[[bin]]
+name = "flat3d-run"
+path = "src/bin/flat3d-run.rs"
+
+# serde + serde_json: the JSON shape both faces read (src/api.rs).
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+flat3d-viewer = { workspace = true }
+
+[lints]
+workspace = true

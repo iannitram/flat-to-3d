@@ -1,0 +1,95 @@
+schema = 1
+name = "g2-viewer"
+title = "G2 Viewer"
+q = "Q10"
+issues = [44]
+device = ["build-box", "z13", "quest2"]
+needs = ["WP-17", "WP-18", "WP-19"]
+done_when = "Planet of Lana's Geo-11 picture shows on a still screen in the headset with depth, head movement not steering it (`needs-owner-device`)."
+after = ["g1-geo11"]
+
+[[step]]
+id = "build"
+kind = "cmd"
+who = "script"
+text = "Build viewer with capture and OpenXR."
+run = ["distrobox", "enter", "{build_box}", "--", "cargo", "build", "--locked", "--release", "--manifest-path", "{repo}/Cargo.toml", "-p", "flat3d-viewer", "--features", "xr,capture"]
+timeout = 3600
+
+[[step]]
+id = "still-depth"
+kind = "check"
+who = "you"
+text = "The screen is still and has visible depth."
+gate = true
+
+[[step]]
+id = "head-fixed"
+kind = "check"
+who = "you"
+text = "Head movement does not steer the screen."
+gate = true
+
+[[step]]
+id = "overlay-in-capture"
+kind = "ask"
+who = "you"
+text = "Does gamescope capture include the Steam overlay?"
+
+[[step]]
+id = "portal-window-kde"
+kind = "ask"
+who = "you"
+text = "Does portal window capture work under KDE?"
+
+[[step]]
+id = "portal-restore-token"
+kind = "ask"
+who = "you"
+text = "Does a second start reuse the saved token without a picker?"
+
+[[step]]
+id = "xr-runtime-found"
+kind = "ask"
+who = "you"
+text = "Is the runtime found without XR_RUNTIME_JSON?"
+
+[[step]]
+id = "quad-shows"
+kind = "ask"
+who = "you"
+text = "Does the session reach READY and the quad show in the headset?"
+
+[[step]]
+id = "eyes-left-right"
+kind = "ask"
+who = "you"
+text = "Does the left half reach the left eye and the right half the right eye?"
+
+[[step]]
+id = "dmabuf-import"
+kind = "ask"
+who = "you"
+text = "Does a gamescope frame import and portal path work?"
+
+[[step]]
+id = "recenter-works"
+kind = "ask"
+who = "you"
+text = "Does recenter work?"
+
+[[step]]
+id = "exits-with-game"
+kind = "ask"
+who = "you"
+text = "Does the viewer exit when the game exits?"
+
+[[step]]
+id = "disparity"
+kind = "measure"
+who = "you"
+text = "Optional viewer disparity capture."
+tool = "disparity"
+input = "{state}/captures/viewer-*.png"
+args = ["--layout", "sbs"]
+optional = true

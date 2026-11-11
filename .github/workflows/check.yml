@@ -10,52 +10,79 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  engine:
-    # The project is SteamOS-only (Linux): the engine and the Decky plugin run there; the game
-    # DLLs build on the owner's Z13 (ruling 21). So CI runs on Linux only.
-    # Self-hosted Linux runner (R29): an actions-runner Ubuntu 24.04 container
-    # with fewer preinstalled tools than ubuntu-latest, so install the C toolchain rustc links with.
-    runs-on: [self-hosted, linux]
+  rust:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - env:
+      - name: system dependencies
+        env:
           DEBIAN_FRONTEND: noninteractive
-        run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates
+        run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev libpipewire-0.3-dev libspa-0.2-dev libclang-dev clang shellcheck libarchive-tools
       - uses: dtolnay/rust-toolchain@1.95.0
         with: { components: "clippy, rustfmt" }
-      - name: fmt
+      - run: rustup target add x86_64-pc-windows-msvc
+      - name: rust gate
+        if: hashFiles('tools/check.sh')!=''
+        run: tools/check.sh --ci --only rust
+      - name: fmt fallback
+        if: hashFiles('tools/check.sh')==''
         run: |
-          cargo fmt --manifest-path inject/Cargo.toml --check \
-            || { echo "::error::FAIL fmt: fix: cargo fmt --manifest-path inject/Cargo.toml"; exit 1; }
-      - name: clippy
+          cargo fmt --all --check \
+            || { echo "::error::FAIL fmt: fix: cargo fmt --all"; exit 1; }
+      - name: clippy fallback
+        if: hashFiles('tools/check.sh')==''
         run: |
-          cargo clippy --manifest-path inject/Cargo.toml --all-targets -- -D warnings \
-            || { echo "::error::FAIL clippy: fix: run cargo clippy --manifest-path inject/Cargo.toml --all-targets -- -D warnings and fix each lint it names"; exit 1; }
-      - run: cargo build --manifest-path inject/Cargo.toml
-      - run: cargo test --manifest-path inject/Cargo.toml
+          cargo clippy --locked --workspace --all-targets -- -D warnings \
+            || { echo "::error::FAIL clippy: fix: run cargo clippy --workspace --all-targets -- -D warnings and fix each lint it names"; exit 1; }
+      - name: viewer clippy fallback
+        if: hashFiles('tools/check.sh')==''
+        run: cargo clippy --locked -p flat3d-viewer --all-targets --features xr,capture -- -D warnings
+      - name: test fallback
+        if: hashFiles('tools/check.sh')==''
+        run: XDG_RUNTIME_DIR=$(mktemp -d) cargo test --locked --workspace
+      - name: UEVR Windows clippy fallback
+        if: hashFiles('tools/check.sh')==''
+        run: cargo clippy --locked -p flat3d-uevr-inject --target x86_64-pc-windows-msvc -- -D warnings
+
+  py:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python3 -m py_compile decky/main.py
+      - name: python gate
+        if: hashFiles('tools/check.sh')!=''
+        run: tools/check.sh --ci --only py
+      - name: py_compile fallback
+        if: hashFiles('tools/check.sh')==''
+        run: python3 -W error -m py_compile $(git ls-files '*.py')
+      - name: unittest fallback
+        if: hashFiles('tools/check.sh')==''
+        run: for d in $(git ls-files '*test_*.py'|xargs -n1 dirname|sort -u|grep -vx 'decky/tests'); do python3 -m unittest discover -s "$d" -p 'test_*.py'||exit 1; done
+      - name: Decky unittest fallback
+        if: hashFiles('tools/check.sh')=='' && hashFiles('decky/tests/test_*.py')!=''
+        run: cd decky && python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: documentation fallback
+        if: hashFiles('tools/check.sh')=='' && hashFiles('docs/workbench.md')!=''
+        run: python3 tools/docs/check.py
 
-  app:
-    # The desktop app (iced, Desktop Mode): a crate that links the engine by path. The system
-    # libraries iced needs are installed first on this Ubuntu 24.04 runner. No WebKitGTK, no Node.
-    runs-on: [self-hosted, linux]
+  decky:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - env:
-          DEBIAN_FRONTEND: noninteractive
-        run: SUDO=$(command -v sudo || true); $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev
-      - uses: dtolnay/rust-toolchain@1.95.0
-        with: { components: "clippy, rustfmt" }
-      - name: fmt
-        run: |
-          cargo fmt --manifest-path app/Cargo.toml --check \
-            || { echo "::error::FAIL fmt: fix: cargo fmt --manifest-path app/Cargo.toml"; exit 1; }
-      - name: clippy
-        run: |
-          cargo clippy --manifest-path app/Cargo.toml --all-targets -- -D warnings \
-            || { echo "::error::FAIL clippy: fix: run cargo clippy --manifest-path app/Cargo.toml --all-targets -- -D warnings and fix each lint it names"; exit 1; }
-      - run: cargo test --manifest-path app/Cargo.toml
-      - run: cargo check --manifest-path app/Cargo.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+      - name: Decky gate
+        if: hashFiles('tools/check.sh')!=''
+        run: tools/check.sh --ci --only decky
+      - name: Decky fallback
+        if: hashFiles('tools/check.sh')=='' && hashFiles('decky/package.json')!=''
+        working-directory: decky
+        run: pnpm i --frozen-lockfile && pnpm run typecheck && pnpm run build

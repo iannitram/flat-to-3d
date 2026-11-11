@@ -1,0 +1,29 @@
+schema = 1
+name = "g3-lana"
+title = "G3 Lana"
+q = "Q11"
+issues = [45, 48]
+device = ["z13", "quest2"]
+done_when = "a level plays at 30+ fps with depth (`needs-owner-device`).; `flat3d-inject list` shows it as works-now, and the locked test loads the file."
+after = ["g1-geo11"]
+evidence_only = [48]
+
+[vars]
+appid = "1608230"
+
+[[step]]
+id = "depth"
+kind = "check"
+who = "you"
+text = "Planet of Lana runs with stereo depth."
+gate = true
+
+[[step]]
+id = "fps-30"
+kind = "measure"
+who = "you"
+text = "Record 30+ fps."
+tool = "fps"
+input = "{state}/mangohud/*.csv"
+args = ["--min", "30"]
+optional = false

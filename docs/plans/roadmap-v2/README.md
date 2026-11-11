@@ -26,7 +26,7 @@ History only (a builder does not need this): old line numbers (`L1969`, `roadmap
 | [WP-07.md](WP-07.md) | 1841-1931 | WP-07: list and status commands, catalog join (#27a part) |
 | [WP-08.md](WP-08.md) | 1932-2001 | WP-08: Link commands wiring (#120) |
 | [WP-09.md](WP-09.md) | 2002-2068 | WP-09: Watch service correctness (3D half) |
-| [WP-10.md](WP-10.md) | 2069-2171 | WP-10: Tether plans, runner errors, Wi-Fi sync (dropped 2026-11-10) |
+| [WP-10.md](WP-10.md) | 2069-2171 | WP-10: Tether plans, runner errors, Wi-Fi sync (merged #253; superseded 2026-11-10 by ruling 42) |
 | [WP-11.md](WP-11.md) | 2172-2282 | WP-11: Headset health loop (#125, cut back) |
 | [WP-12.md](WP-12.md) | 2283-2385 | WP-12: Link stop idempotence + WiVRn detection |
 | [WP-13.md](WP-13.md) | 2386-2487 | WP-13: Pinned fetch (`fetch.rs`) |

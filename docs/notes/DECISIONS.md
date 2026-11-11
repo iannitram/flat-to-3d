@@ -12,11 +12,11 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 |---|---|---|
 | 1 | Render machine | **Z13 only.** |
 | 2 | Operating system | **SteamOS only**, games through Proton. No Windows dual-boot. |
-| 3 | What counts as depth | **True stereo only** (two cameras). Depth-buffer reprojection (SuperDepth3D-style) does not count. Whether alternate-eye rendering (AER) counts is **not yet ruled**. Since ruling 16 it matters only as a fallback for our own builds. |
+| 3 | What counts as depth | *(Amended 2026-11-11 by ruling 44: alternate-eye rendering is now ruled.)* **True stereo only** (two cameras). Depth-buffer reprojection (SuperDepth3D-style) does not count. Alternate-eye rendering (AER) counts as true stereo for 1.0, per game, only when no two-real-views route exists for that game, and the 30 fps bar then applies per eye. (Wording before the amendment: whether AER counts was "not yet ruled"; since ruling 16 it mattered only as a fallback for our own builds.) |
 | 4 | Experience | **Giant 3D TV.** A fixed screen, no head-steered camera. |
 | 5 | Headset link | *(Ruling 30 superseded this on 2026-11-01; ruling 42 of 2026-11-10 supersedes ruling 30, so the link-layer sentence below is current again, with one change: Flat to 3D never starts, stops or heals Quest Tether.)* **Quest Tether** (SteamOS port + Decky plugin) stays the USB link layer, and a Decky "Start 3D" button comes in the build phase. Research picked **WiVRn** as the streamer: its wired mode (`adb reverse tcp:9757`) runs alongside Quest Tether's internet sharing. Steam Link VR is the fallback. |
 | 6 | Frame rate | **A steady 30+ fps** is fine. Lower resolution and settings are acceptable. |
-| 7 | Online / anti-cheat | **Offline and single-player only.** Any game with anti-cheat or always-online play is marked "not safe" and skipped. Forza Horizon 6 is not safe. |
+| 7 | Online / anti-cheat | **Offline and single-player only.** Any game with anti-cheat or always-online play is marked "not safe" and skipped. Forza Horizon 6 is not safe. *(2026-11-11: ruling 43 put Forza Horizon 6 in the 1.0 list for a few hours; ruling 45 moved it to `after-1.0` the same day. This ruling stands.)* |
 | 8 | Money | **Free only.** Existing open-source VR mods for specific games are the baseline: keep their injection method, switch the output to a 3D screen. |
 | 9 | Build vs adopt | Adopt existing tools and build the glue. Where no path exists for a game with a **real 3D world**, we **build our own** stereo. Flat 2D-art games (Hades, Hades II) are marked "won't work", and that is fine. |
 | 10 | End product | A **Rai Pal-style app**: a command-line engine plus a **Decky plugin** in Game Mode. It detects installed games and shows an **Inject** button. |
@@ -51,6 +51,12 @@ Play installed games in **true stereoscopic 3D**: the game draws two separate ca
 | 40 | Decky plugin | **A Rust backend and a thin TypeScript panel** (2026-11-01, question tool: "Rust backend, thin TS panel (Recommended)"). No Python backend: the backend is the engine binary (the PowerTools way). The panel has no logic: it draws the engine's `--json` and calls Steam's client API (launch options, `collectionStore`, toasts) only because only JavaScript can. The logic that was planned for `ui-shared/` (status labels and colours, sort, link wording, launch-option compose and remove, collection diff, toast selection) lives in Rust in `inject/` and reaches the panel through `--json`. The `ui-shared/` package is dropped. |
 | 41 | Other languages | **The Spider-Man 2 port stays C++ on SpidyVR and the research tools stay Python** (2026-11-01, question tool: "Leave them as is (Recommended)"). |
 | 42 | Separate apps | **Flat to 3D and Quest Tether stay separate apps** (2026-11-10, the owner). Reason: the owner plans to buy stereoscopic glasses, so a wired-Quest internet tether compiled into the 3D app makes no sense; Flat to 3D should not own the headset's internet link. **Supersedes rulings 30 and 33; rewords 31, 34, 35 and 36.** (1) The built-in tether is deleted: the gnirehtet relay, `tun0`, the Wi-Fi move, the heal ladder, step-aside and the connect and disconnect plans. Only the adb choice that WiVRn's wired mode needs stays (it moves to `link/adb.rs`). (2) When Quest Tether is installed, Flat to 3D may show its state read-only (`quest-tether status --json`); it never starts, stops or heals that link, no decision in Flat to 3D depends on it, and there is no connect button. (3) The 1.0 promise that the internet tunnel comes up by itself is dropped; 1.0 promises the 3D picture over WiVRn only. (4) Flat to 3D works with a Quest that has no Quest Tether: it ships its own udev rule and its own adb, and gnirehtet leaves its packaging, Setup and doctor. (5) The battery and temperature toasts stay (ruling 32), from Flat to 3D's own adb poll; the health loop loses its tunnel, heal, throughput and soak parts. |
+| 43 | 1.0 games | **The 1.0 games are the owner's seven Steam Favorites** (2026-11-11, the owner, looking at his Steam Favorites: "This is the 1.0 list."): STAR WARS Zero Company, ACE COMBAT 7, Control, Marvel's Spider-Man 2, 007 First Light, Alan Wake 2 and Forza Horizon 6. **Supersedes the five-game list of 2026-10-31.** What follows from it (the recorder's reading, not the owner's words): (1) Planet of Lana leaves 1.0 and becomes `after-1.0`; its research and its recipe seed stay. (2) The four games that stay keep their routes and their order: Zero Company, ACE COMBAT 7, Control, Spider-Man 2. (3) The three new games have no route yet: research picks one each, and nothing here invents one. (4) Control is now the only Geo-11 game in 1.0, so it takes the first Geo-11 test (G1) that Planet of Lana had. *(Amended the same day: ruling 45 takes Forza Horizon 6 out, so the list is six; ruling 46 sets the order; research has since recommended routes for 007 First Light and Alan Wake 2.)* (Number 42 is the Quest Tether ruling of 2026-11-10.) |
+| 44 | Alternate-eye rendering | **Alternate-eye rendering counts as true stereo for 1.0, per game, only when no two-real-views route exists for that game; the 30 fps bar then applies per eye** (2026-11-11, question tool: "Yes, where nothing better exists (Recommended)"). Amends ruling 3. First use: Alan Wake 2. |
+| 45 | Forza Horizon 6 | **Forza Horizon 6 moves to `after-1.0`** (2026-11-11, question tool: "Move it to after-1.0"). Ruling 7's "not safe" stands. **1.0 is six games:** STAR WARS Zero Company, ACE COMBAT 7, Control, 007 First Light, Marvel's Spider-Man 2 and Alan Wake 2. Its research note is kept. Amends ruling 43. |
+| 46 | Order | **By readiness: Zero Company, ACE COMBAT 7, Control, 007 First Light, Spider-Man 2, Alan Wake 2** (2026-11-11, question tool: "By readiness (Recommended)"). Replaces the order of 2026-10-31. |
+| 47 | Spec approval | **The spec is approved with the six-game list and rulings 43-46** (2026-11-11, question tool: "Approve (Recommended)"). The approval trail is in `SPEC.md`. |
+| 48 | CI runners | **All CI runs on GitHub-hosted runners (`ubuntu-24.04`), not the single self-hosted runner** (2026-11-11). The repo is public, so hosted minutes are free and jobs run in parallel, while the one self-hosted runner took many hours to clear a queue. Asked "check.yml only or everything?", the owner answered "Switch everything": `check.yml` and `appimage.yml` both move. The toolchain pin `dtolnay/rust-toolchain@1.95.0` stays. |
 
 Ruling 14 (where decisions, research and status are kept) is retired: they now live in this repo, under `docs/notes/`.
 
@@ -78,16 +84,18 @@ Each game's notes also carry a `## 3D (stereo)` section. The per-game records th
 
 ## Favorites and verdicts
 
-| Game | Verdict | Route |
-|---|---|---|
-| Marvel's Spider-Man 2 | build (first trial) | port SpidyVR's stereo screen |
-| ACE COMBAT 7 | likely, best candidate | UEVR (not mounted right now) |
-| Control | likely | Geo-11 + the community Control fix, DX11 mode |
-| Planet of Lana | likely | Geo-11 fix |
-| STAR WARS Zero Company | likely, uncertain | UEVR nightly (UE 5.6) |
-| 007 First Light | build, strong lead | its own dormant stereo mode |
-| Alan Wake 2 | build, later | our own DX12 hook |
-| Forza Horizon 6 | not safe | none |
-| Hades, Hades II | won't work | none |
+The verdicts and routes are the research verdicts of 2026-10-18. The last column is the 1.0 list of 2026-11-11 (rulings 43 and 45) with the routes planned since; all of those routes are untested.
 
-Open questions: does AER count as true stereo (fallback for our own builds)? Should I contact SpidyVR's author about the Spider-Man 2 port? Go-ahead to register REA in Claude Code's config.
+| Game | Verdict | Route | In 1.0 |
+|---|---|---|---|
+| Marvel's Spider-Man 2 | build (first trial) | port SpidyVR's stereo screen | yes |
+| ACE COMBAT 7 | likely, best candidate | UEVR (not mounted right now) | yes |
+| Control | likely | Geo-11 + the community Control fix, DX11 mode | yes |
+| Planet of Lana | likely | Geo-11 fix | no, moved out 2026-11-11 (`after-1.0`) |
+| STAR WARS Zero Company | likely, uncertain | UEVR nightly (UE 5.6) | yes (first) |
+| 007 First Light | build, strong lead | its own dormant stereo mode | yes, new; planned: a proxy DLL switches on that mode, into the SBS viewer |
+| Alan Wake 2 | build, later | our own DX12 hook | yes, new; planned: our own alternate-eye camera hook, into the SBS viewer (ruling 44) |
+| Forza Horizon 6 | not safe | none | no, moved to `after-1.0` 2026-11-11 (ruling 45) |
+| Hades, Hades II | won't work | none | no |
+
+Open questions: how does a non-Steam game (Alan Wake 2, Epic through Heroic) get a recipe and the launch wrapper? Should I contact SpidyVR's author about the Spider-Man 2 port? Go-ahead to register REA in Claude Code's config.

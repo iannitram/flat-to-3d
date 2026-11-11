@@ -21,7 +21,7 @@
 | T16 | view cmds `view rows launch collection toasts logs` (WP-28, `crates/engine/src/cli/view.rs`) + `crates/engine/tests/decky_face.rs` (WP-28) | #121; decky_face.rs runs each `decky/src/engine.ts` wrapper's sample argv, with the trailing `--json`, through `cli::parse_any`, and checks the TS ErrorCode union and the types.ts mirror keys | yes |
 | T17 | `list status inject undo` (WP-07, WP-27, `crates/engine/src/cli/{engine,inject,undo}.rs`) | #27a | fake prefix |
 | T18 | `packaging/build-tools.sh` (WP-22) | pins → `dist/tools/{adb,lib/}` (no gnirehtet, ruling 42) | dry-run |
-| T19 | `packaging/build-appimage.sh` + `.github/workflows/appimage.yml` (WP-22; `[self-hosted, linux]`, `rust-toolchain@1.95.0`) | → `dist/Flat_to_3D-x86_64.AppImage` | dispatch run |
+| T19 | `packaging/build-appimage.sh` + `.github/workflows/appimage.yml` (WP-22; `ubuntu-24.04`, `rust-toolchain@1.95.0`) | → `dist/Flat_to_3D-x86_64.AppImage` | dispatch run |
 | T20 | `packaging/build-decky.sh` (WP-22) | → `dist/flat-to-3d.zip` | zip listing |
 | T21 | `crates/engine/tests/recipes_repo.rs` + `crates/engine/tests/recipe_seeds.rs` (WP-26) | recipes lint + route keys ⇒ pin keys | yes |
 | T22 | `tools/build-win.sh` (WP-15) | xwin SDK at `~/.local/share/flat-to-3d/xwin` → `dist/tools/flat3d-uevr-inject.exe` | shellcheck; owner run |
@@ -52,7 +52,7 @@
 
 - Every session TOML carries `q = "Qn"`, and `session.py check` rejects an unknown Q id.
 - Each deferred device claim maps to a session step:
-  - link-smoke (Q3): unplug/replug and sleep/wake heal (WP-09); the tun0, gnirehtet package and Wi-Fi-back steps are void (WP-10 dropped, ruling 42); `stop-3d` twice, then status shows stopped, plus a Quest app version check (WP-12); `list --json` (WP-07).
+  - link-smoke (Q3): unplug/replug and sleep/wake heal (WP-09); the tun0, gnirehtet package and Wi-Fi-back steps are void (WP-10 superseded, ruling 42); `stop-3d` twice, then status shows stopped, plus a Quest app version check (WP-12); `list --json` (WP-07).
   - decky (Q14): `launch-opts-persist`, `collection-save-persist`, `toast-shows`, `xdg-runtime-set` (WP-32), plus the Game Mode gates (the QAM panel renders, the plugin survives a Game Mode restart).
   - g2-viewer (Q10): ask steps `overlay-in-capture`, `portal-window-kde` and `portal-restore-token` (WP-18), and `xr-runtime-found`, `quad-shows`, `eyes-left-right`, `dmabuf-import`, `recenter-works` and `exits-with-game` (WP-19). WP-24's Session index row has the wording of each.
 - **Closing (rulings D1, D5):** the rule lives in `01-new-bones.md` §2 "PR and issue rules" (Refs vs Closes) and §0 "PR body" (`## Verified` / `## Not verified`). In short, a WP named under "Needs WPs" writes `Refs #N`, lists the Q row under `## Not verified`, and the owner or PM closes the issue when its session passes.
@@ -104,7 +104,7 @@ Owner rulings, 2026-11-09 (section D of the Craft review; full text in `rulings-
 - **D4 doctor:** a red report exits 1 and still prints the full report.
 - **D5 issue closing:** a WP that has a device Q row uses `Refs #N`. The issue is closed when its device session passes (§5).
 - **D6 error codes:** closed at 8 for this pass (`ERROR_CODES` in api.rs; the locked `api_response.rs` pins 8). No WP adds a code. A new failure maps to an existing code with a specific message.
-- **Ruling 42 (2026-11-10):** Flat to 3D and Quest Tether stay separate apps. The built-in tether (gnirehtet relay, tun0, Wi-Fi move, heal ladder) is removed; only the adb choice WiVRn needs stays (`link/adb.rs`). Quest Tether's state may be shown read-only, never started, stopped or healed. 1.0 promises the 3D picture over WiVRn only. WP-10 is dropped; WP-35..39 are added. Supersedes rulings 30 and 33, and D3 above; full text in `docs/notes/DECISIONS.md`.
+- **Ruling 42 (2026-11-10):** Flat to 3D and Quest Tether stay separate apps. The built-in tether (gnirehtet relay, tun0, Wi-Fi move, heal ladder) is removed; only the adb choice WiVRn needs stays (`link/adb.rs`). Quest Tether's state may be shown read-only, never started, stopped or healed. 1.0 promises the 3D picture over WiVRn only. WP-10 (merged #253) is superseded and its code removed by WP-36; WP-35..39 are added. Supersedes rulings 30 and 33, and D3 above; full text in `docs/notes/DECISIONS.md`.
 
 Resolved without the owner:
 - D4: `*_with` + follow-up.

@@ -27,7 +27,7 @@
   - `docs/code-map.md` (stub rows only).
 - **Not edited:** `Cargo.*`, `check.yml`, `cli.rs`, any moved test file. **There is no `mod.rs` anywhere and no `x/x.rs`.**
 - **Ownership after this WP:**
-  - `exec.rs`: WP-01 owns it because it holds the trait split. WP-36 later folds the relay methods out of it (WP-10 is dropped, ruling 42).
+  - `exec.rs`: WP-01 owns it because it holds the trait split. WP-36 later folds the relay methods out of it (WP-10, merged #253, is superseded by ruling 42).
   - `link.rs`: WP-12 owns the bodies, and the WP-01 facade lines stay.
   - `crates/app/src/lib.rs`: WP-33 owns it from wave 4.
   - Everything else in §0 "Frozen after wave 1" (`00-run-the-pass.md`) is frozen.

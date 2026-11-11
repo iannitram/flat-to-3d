@@ -1,0 +1,39 @@
+schema = 1
+name = "tools-build"
+title = "Tools Build"
+q = "Q1"
+issues = [127]
+device = ["build-box"]
+needs = ["WP-22"]
+done_when = "the script runs on a clean Deck and the three files exist and run `--version`; the owner picks the gnirehtet APK source (needs-owner-device, owner decision)."
+
+[[step]]
+id = "build"
+kind = "cmd"
+who = "script"
+text = "Build pinned Android tools."
+run = ["distrobox", "enter", "{build_box}", "--", "{repo}/packaging/build-tools.sh"]
+timeout = 3600
+
+[[step]]
+id = "adb-version"
+kind = "cmd"
+who = "script"
+text = "Check adb version."
+run = ["{repo}/dist/tools/adb", "version"]
+expect = "37\\.0\\.0"
+
+[[step]]
+id = "gnirehtet"
+kind = "cmd"
+who = "script"
+text = "Check gnirehtet usage."
+run = ["{repo}/dist/tools/gnirehtet"]
+expect = "usage"
+
+[[step]]
+id = "checksums"
+kind = "cmd"
+who = "script"
+text = "Confirm pinned outputs are recorded."
+run = ["grep", "-E", "adb|gnirehtet", "{repo}/dist/tools/SHA256SUMS"]

@@ -215,7 +215,7 @@ Nothing changes behaviour in this part. It makes these text edits:
   - Rows 56, 59 and 70 (as at 2812f64) are written exactly as ``| `crates/engine/src/recipes.rs` | present |``, ``| `crates/engine/src/link.rs` | present |`` and ``| `crates/engine/src/api.rs` | present |``. The locked tests read these cells.
   - WP-01d adds the rows for the new stub files.
 - **`.github/workflows/check.yml`:** exactly bones §2 "CI final shape".
-  - Every job uses `runs-on: [self-hosted, linux]` and `dtolnay/rust-toolchain@1.95.0`.
+  - Every job uses `runs-on: ubuntu-24.04` and `dtolnay/rust-toolchain@1.95.0`.
   - **One gate (Craft review A2):** each job does its setup, then runs `tools/check.sh --ci --only <job>` (`rust`, `py` or `decky`). That step carries `if: hashFiles('tools/check.sh')!=''`. `--ci` turns every skip for a missing tool or target into a failure. A step whose input file has not landed yet still skips.
   - **Setup, never skipped:** the apt line, the toolchain pin and `rustup target add x86_64-pc-windows-msvc` (rust); setup-node 22.23.4 and pnpm 10.34.9 (decky). The setup steps carry no `if:`.
   - Actions: every job starts with `actions/checkout@v4`. The `py` job keeps today's `actions/setup-python@v5` with `python-version: "3.12"`. The `decky` job uses `actions/setup-node@v4` with `node-version: 22.23.4` and `pnpm/action-setup@v4` with `version: 10.34.9`. The two old jobs (`engine`, `app`) are replaced by `rust`, `py` and `decky`.

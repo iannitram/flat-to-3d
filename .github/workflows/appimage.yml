@@ -1,0 +1,25 @@
+name: AppImage
+
+on:
+  workflow_dispatch:
+
+jobs:
+  appimage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          SUDO=$(command -v sudo || true)
+          $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev libpipewire-0.3-dev libspa-0.2-dev libclang-dev clang desktop-file-utils
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Build AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: packaging/build-appimage.sh --no-tools
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Flat_to_3D-x86_64.AppImage
+          path: dist/Flat_to_3D-x86_64.AppImage

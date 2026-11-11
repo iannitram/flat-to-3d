@@ -1,0 +1,70 @@
+schema = 1
+name = "decky"
+title = "Decky"
+q = "Q14"
+issues = [130, 131, 132, 133, 134]
+device = ["z13"]
+done_when = "`tsc --noEmit` passes in CI; whether Decky can run the binary with no Python launcher is unverified, and a tiny launcher may still be needed (needs-owner-device, owner decision).; `tsc --noEmit` passes; the panel renders on the owner's Deck in Game Mode (needs-owner-device).; `tsc --noEmit` passes; options change on a real library entry (needs-owner-device).; `tsc --noEmit` passes; the collection and a toast show on the owner's Deck (needs-owner-device).; the zip lists the expected files; installs on the owner's Deck (needs-owner-device)."
+
+[[step]]
+id = "build"
+kind = "cmd"
+who = "script"
+text = "Build Decky package."
+run = ["bash", "{repo}/packaging/build-decky.sh"]
+timeout = 3600
+
+[[step]]
+id = "archive"
+kind = "cmd"
+who = "script"
+text = "Inspect package."
+run = ["unzip", "-l", "{repo}/dist/flat-to-3d.zip"]
+
+[[step]]
+id = "install"
+kind = "ask"
+who = "you"
+text = "Install Decky package on Z13 Game Mode."
+
+[[step]]
+id = "qam-panel-renders"
+kind = "check"
+who = "you"
+text = "QAM panel renders."
+gate = true
+
+[[step]]
+id = "launch-opts-persist"
+kind = "check"
+who = "you"
+text = "Launch options persist on a real library entry."
+gate = true
+
+[[step]]
+id = "collection-save-persist"
+kind = "check"
+who = "you"
+text = "Collection save persists."
+gate = true
+
+[[step]]
+id = "toast-shows"
+kind = "check"
+who = "you"
+text = "Toast appears."
+gate = true
+
+[[step]]
+id = "xdg-runtime-set"
+kind = "check"
+who = "you"
+text = "main.py _env sets XDG_RUNTIME_DIR."
+gate = true
+
+[[step]]
+id = "survives-gamemode-restart"
+kind = "check"
+who = "you"
+text = "Plugin survives Game Mode restart."
+gate = true
