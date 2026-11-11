@@ -1,0 +1,13 @@
+# Seed (OD6): untested until sessions/g3-lana.toml passes; real recipe lands in recipes/ at works-now.
+name: Planet of Lana
+stereo-status: untested
+stereo-route: geo-11 + sbs viewer
+stereo-engine: unity
+stereo-api: dx11
+stereo-mod: https://helixmod.blogspot.com/2025/12/planet-of-lana-geo-11-fix.html
+stereo-free: yes
+stereo-safe: yes
+stereo-checked: 2026-11-08
+geo11-fix: lana-fix
+geo11-exe: Planet of Lana.exe
+geo11-layout: sbs
