@@ -411,7 +411,17 @@ fn nested_remove_and_copy_do_not_touch_top_level_namesakes() {
         from: cache.join("nest-fix/bin/d3dx.ini"),
         to: game.join("bin/d3dx.ini"),
     }));
-    geo11::apply(&cache, &game, 7, &m, &viewer_exe(&r)).unwrap();
+    // Copies come before Writes.
+    let first_write = steps
+        .iter()
+        .position(|s| matches!(s, FileStep::Write { .. }))
+        .unwrap();
+    assert!(steps[first_write..]
+        .iter()
+        .all(|s| matches!(s, FileStep::Write { .. })));
+    let (_, env) = geo11::apply(&cache, &game, 7, &m, &viewer_exe(&r)).unwrap();
+    // Only a dxgi.dll next to the exe adds dxgi to the override.
+    assert_eq!(env.env[0].1, "d3d11,nvapi64=n,b");
     assert_eq!(fs::read(game.join("dxgi.dll")).unwrap(), b"top dxgi");
     assert_eq!(fs::read(game.join("bin/dxgi.dll")).unwrap(), b"new nested");
 }

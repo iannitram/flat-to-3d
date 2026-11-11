@@ -552,8 +552,10 @@ pub fn plan_files(
         FileStep::Remove(p) => p.clone(),
         _ => unreachable!(),
     });
+    // Copies sorted by destination, then Writes sorted by destination.
     rest.sort_by_key(|s| match s {
-        FileStep::Copy { to, .. } | FileStep::Write { to, .. } => to.clone(),
+        FileStep::Copy { to, .. } => (false, to.clone()),
+        FileStep::Write { to, .. } => (true, to.clone()),
         _ => unreachable!(),
     });
     Ok(steps)
@@ -723,9 +725,12 @@ pub fn apply(
         .to_args(),
     );
     let env_value = if steps.iter().any(|s| match s {
-        FileStep::Copy { to, .. } | FileStep::Write { to, .. } => to
-            .file_name()
-            .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case("dxgi.dll")),
+        FileStep::Copy { to, .. } | FileStep::Write { to, .. } => {
+            to.parent() == Some(e.as_path())
+                && to
+                    .file_name()
+                    .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case("dxgi.dll"))
+        }
         _ => false,
     }) {
         "d3d11,nvapi64,dxgi=n,b"
