@@ -172,6 +172,26 @@ fn dirs_outside_the_roots_are_refused() {
     assert!(runner.ran.is_empty());
 }
 #[test]
+fn file_destination_equal_to_a_root_without_slash_is_refused() {
+    for which in ["unit", "copy"] {
+        let (_, home, src) = fixture(&format!("root-no-slash-{which}"), &[]);
+        let mut p = plan(&home, &src);
+        let h = home.display();
+        if which == "unit" {
+            p.unit_path = format!("{h}/.config/systemd/user");
+        } else {
+            p.copies[0].1 = format!("{h}/.local/bin");
+        }
+        let mut runner = FakeRunner::new();
+        err(install::execute(&p, &mut runner), "refused");
+        assert!(runner.ran.is_empty());
+        assert!(!home.join(".config").exists());
+        assert!(!home.join(".local").exists());
+        assert!(!home.join(".config/systemd/user.tmp").exists());
+        assert!(!home.join(".local/bin.tmp").exists());
+    }
+}
+#[test]
 fn missing_binary_is_io_and_runs_nothing() {
     let (_, home, src) = fixture("missing-bin", &["flat3d-run"]);
     let mut runner = FakeRunner::new();

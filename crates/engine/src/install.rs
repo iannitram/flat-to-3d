@@ -50,7 +50,15 @@ pub fn execute(
         .chain(plan.trees.iter().map(|(_, d)| d))
         .chain(std::iter::once(&plan.unit_path))
         .chain(std::iter::once(&plan.manifest));
-    for path in destinations.chain(plan.dirs.iter()) {
+    for path in destinations {
+        if !inside_roots(path, &roots) {
+            return Err(crate::api::ApiError::new(
+                "refused",
+                &format!("{path} is outside the install folders; fix: {FIX_PLAN}"),
+            ));
+        }
+    }
+    for path in &plan.dirs {
         let probe = if path.ends_with('/') {
             path.clone()
         } else {
