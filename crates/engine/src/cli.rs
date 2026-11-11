@@ -2,13 +2,20 @@
 //! an optional `--json` that prints exactly one `Response` object on one line. Human text is the
 //! default. The Decky backend (decky/main.py) calls these same commands with `--json`.
 
+pub mod doctor;
+pub mod engine;
+pub mod inject;
 pub mod link;
+pub mod setup;
+pub mod setup_fetch;
+pub mod undo;
+pub mod view;
 
 use crate::api::{ApiError, Response};
-use crate::undo;
-use crate::NotBuilt;
+use crate::exec::{CommandRunner, ProcessRunner, RelayRunner, SystemRunner};
+use crate::paths::EnginePaths;
 use serde_json::Value;
-use std::path::PathBuf;
+use std::collections::BTreeMap;
 
 /// A parsed command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,8 +58,8 @@ pub struct Cli {
 /// The usage line for any bad command line.
 pub const USAGE: &str =
     "usage: flat3d-inject list | inject <appid> | start-3d | stop-3d | status [--json]";
-const INJECT_USAGE: &str = "usage: flat3d-inject inject <appid> [--json]";
-const UNDO_USAGE: &str = "usage: flat3d-inject undo <appid> [--json]";
+pub const INJECT_USAGE: &str = "usage: flat3d-inject inject <appid> [--json]";
+pub const UNDO_USAGE: &str = "usage: flat3d-inject undo <appid> [--json]";
 
 /// Parse the arguments after the program name. `--json` may stand anywhere. `Err` carries a
 /// one-line usage message.
@@ -132,34 +139,446 @@ pub fn render(command: &str, result: Result<Value, ApiError>, json: bool) -> Out
     }
 }
 
-/// The engine's data directory, from the environment (`XDG_DATA_HOME`, `HOME`).
-fn engine_data_dir() -> PathBuf {
-    let xdg = std::env::var("XDG_DATA_HOME").ok();
-    let home = std::env::var("HOME").unwrap_or_default();
-    undo::data_dir(xdg.as_deref(), &home)
+// The shared command model is expanded below; the locked parser/render functions above remain stable.
+
+pub struct Ctx<'a> {
+    pub paths: &'a EnginePaths,
+    pub runner: &'a mut dyn CommandRunner,
+    pub relay: &'a mut dyn RelayRunner,
+    pub json: bool,
 }
 
-/// Run one command. `undo` is wired here (#84); every other command body is still #27.
-fn dispatch(command: &Command) -> Result<Value, ApiError> {
-    match command {
-        Command::Undo { appid } => {
-            let result = undo::undo_game(&engine_data_dir(), *appid)?;
-            serde_json::to_value(result)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnyCli {
+    pub command: AnyCommand,
+    pub json: bool,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AnyCommand {
+    Engine(Command),
+    Link(link::LinkCommand),
+    View(ViewCommand),
+    Setup(SetupCommand),
+    Doctor(DoctorCommand),
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ViewCommand {
+    View,
+    Rows { filter: String },
+    Launch { add: bool, options: String },
+    Collection { current: Option<Vec<u32>> },
+    Toasts { last_seq: u64 },
+    Logs { limit: usize },
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SetupCommand {
+    Packages,
+    InstallApps,
+    LaunchEnv { appid: Option<u32> },
+    Fetch { key: String },
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DoctorCommand {
+    Run,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SideEffect {
+    ReadOnly,
+    Probes,
+    WritesFiles,
+    RunsCommands,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandSpec {
+    pub id: &'static str,
+    pub group: &'static str,
+    pub args: &'static str,
+    pub output: &'static str,
+    pub effects: &'static [SideEffect],
+}
+
+const RO: &[SideEffect] = &[SideEffect::ReadOnly];
+const PROBE: &[SideEffect] = &[SideEffect::Probes];
+const WRITE: &[SideEffect] = &[SideEffect::WritesFiles];
+const WRUN: &[SideEffect] = &[SideEffect::WritesFiles, SideEffect::RunsCommands];
+pub static COMMANDS: &[CommandSpec] = &[
+    CommandSpec {
+        id: "list",
+        group: "Engine",
+        args: "",
+        output: "Game (array)",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "inject",
+        group: "Engine",
+        args: "<appid>",
+        output: "InjectResult",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "start-3d",
+        group: "Engine",
+        args: "",
+        output: "LinkReport",
+        effects: WRITE,
+    },
+    CommandSpec {
+        id: "stop-3d",
+        group: "Engine",
+        args: "",
+        output: "LinkReport",
+        effects: WRITE,
+    },
+    CommandSpec {
+        id: "status",
+        group: "Engine",
+        args: "",
+        output: "LinkReport",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "undo",
+        group: "Engine",
+        args: "<appid>",
+        output: "UndoResult",
+        effects: WRITE,
+    },
+    CommandSpec {
+        id: "watch",
+        group: "Link",
+        args: "",
+        output: "",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "snapshot",
+        group: "Link",
+        args: "",
+        output: "LinkSnapshot",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "install",
+        group: "Link",
+        args: "",
+        output: "InstallReport",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "uninstall",
+        group: "Link",
+        args: "",
+        output: "InstallReport",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "switch get",
+        group: "Link",
+        args: "<appid>",
+        output: "SwitchState",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "switch set",
+        group: "Link",
+        args: "<appid> on|off",
+        output: "SwitchState",
+        effects: WRITE,
+    },
+    CommandSpec {
+        id: "setting get",
+        group: "Link",
+        args: "<key>",
+        output: "SettingState",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "setting set",
+        group: "Link",
+        args: "<key> on|off",
+        output: "SettingState",
+        effects: WRITE,
+    },
+    CommandSpec {
+        id: "run",
+        group: "Link",
+        args: "<appid> -- <command...>",
+        output: "",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "view",
+        group: "View",
+        args: "",
+        output: "LinkView",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "rows",
+        group: "View",
+        args: "[--filter <status>|all]",
+        output: "GameRow (array)",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "launch",
+        group: "View",
+        args: "add|remove --options <options>",
+        output: "LaunchText",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "collection",
+        group: "View",
+        args: "[--current <appids>]",
+        output: "CollectionPlan",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "toasts",
+        group: "View",
+        args: "<last_seq>",
+        output: "ToastBatch",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "logs",
+        group: "View",
+        args: "[--limit <n>]",
+        output: "LogLines",
+        effects: RO,
+    },
+    CommandSpec {
+        id: "setup packages",
+        group: "Setup",
+        args: "",
+        output: "{wivrn,gnirehtet,missing}",
+        effects: PROBE,
+    },
+    CommandSpec {
+        id: "setup install-apps",
+        group: "Setup",
+        args: "",
+        output: "SetupReport",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "setup launch-env",
+        group: "Setup",
+        args: "[<appid>]",
+        output: "LaunchText",
+        effects: PROBE,
+    },
+    CommandSpec {
+        id: "setup fetch",
+        group: "Setup",
+        args: "<key>",
+        output: "SetupReport",
+        effects: WRUN,
+    },
+    CommandSpec {
+        id: "doctor",
+        group: "Doctor",
+        args: "",
+        output: "DoctorReport",
+        effects: PROBE,
+    },
+];
+
+impl AnyCommand {
+    pub fn id(&self) -> &'static str {
+        match self {
+            Self::Engine(c) => c.name(),
+            Self::Link(c) => match c {
+                link::LinkCommand::Watch => "watch",
+                link::LinkCommand::Snapshot => "snapshot",
+                link::LinkCommand::Install => "install",
+                link::LinkCommand::Uninstall => "uninstall",
+                link::LinkCommand::SwitchGet { .. } => "switch get",
+                link::LinkCommand::SwitchSet { .. } => "switch set",
+                link::LinkCommand::SettingGet { .. } => "setting get",
+                link::LinkCommand::SettingSet { .. } => "setting set",
+                link::LinkCommand::Run { .. } => "run",
+            },
+            Self::View(c) => match c {
+                ViewCommand::View => "view",
+                ViewCommand::Rows { .. } => "rows",
+                ViewCommand::Launch { .. } => "launch",
+                ViewCommand::Collection { .. } => "collection",
+                ViewCommand::Toasts { .. } => "toasts",
+                ViewCommand::Logs { .. } => "logs",
+            },
+            Self::Setup(c) => match c {
+                SetupCommand::Packages => "setup packages",
+                SetupCommand::InstallApps => "setup install-apps",
+                SetupCommand::LaunchEnv { .. } => "setup launch-env",
+                SetupCommand::Fetch { .. } => "setup fetch",
+            },
+            Self::Doctor(_) => "doctor",
+        }
+    }
+}
+
+/// Whether `--json` stands before any `--` separator.
+fn json_before_separator(args: &[String]) -> bool {
+    let sep = args.iter().position(|x| x == "--").unwrap_or(args.len());
+    args[..sep].iter().any(|x| x == "--json")
+}
+
+pub fn parse_any(args: &[String]) -> Result<AnyCli, ApiError> {
+    let sep = args.iter().position(|x| x == "--").unwrap_or(args.len());
+    let mut head: Vec<String> = args[..sep]
+        .iter()
+        .filter(|x| x.as_str() != "--json")
+        .cloned()
+        .collect();
+    let json = json_before_separator(args);
+    let mut full = head.clone();
+    if sep < args.len() {
+        full.push("--".into());
+        full.extend(args[sep + 1..].iter().cloned());
+    }
+    if let Some(result) = link::parse_link(&full) {
+        return result
+            .map(|c| AnyCli {
+                command: AnyCommand::Link(c),
+                json,
+            })
+            .map_err(|e| ApiError::new("usage", &e));
+    }
+    if let Some(result) = view::parse(&full) {
+        return result
+            .map(|c| AnyCli {
+                command: AnyCommand::View(c),
+                json,
+            })
+            .map_err(|e| ApiError::new("usage", &e));
+    }
+    let setup = match head.as_slice() {
+        [a,b] if a=="setup" && b=="packages" => Some(Ok(SetupCommand::Packages)),
+        [a,b] if a=="setup" && b=="install-apps" => Some(Ok(SetupCommand::InstallApps)),
+        [a,b] if a=="setup" && b=="launch-env" => Some(Ok(SetupCommand::LaunchEnv{appid:None})),
+        [a,b,n] if a=="setup" && b=="launch-env" => Some(n.parse::<u32>().map(|appid|SetupCommand::LaunchEnv{appid:Some(appid)}).map_err(|_|"usage: flat3d-inject setup launch-env [<appid>]".to_string())),
+        [a,b,key] if a=="setup" && b=="fetch" => Some(Ok(SetupCommand::Fetch{key:key.clone()})),
+        [a,b] if a=="setup" && b=="fetch" => Some(Err("usage: flat3d-inject setup fetch <key>".into())),
+        [a,..] if a=="setup" => Some(Err("usage: flat3d-inject setup packages | setup install-apps | setup launch-env [<appid>] | setup fetch <key>".into())),
+        _ => None,
+    };
+    if let Some(result) = setup {
+        return result
+            .map(|c| AnyCli {
+                command: AnyCommand::Setup(c),
+                json,
+            })
+            .map_err(|e| ApiError::new("usage", &e));
+    }
+    if head.as_slice() == ["doctor"] {
+        return Ok(AnyCli {
+            command: AnyCommand::Doctor(DoctorCommand::Run),
+            json,
+        });
+    }
+    if head.first().is_some_and(|x| x == "doctor") {
+        return Err(ApiError::new("usage", "usage: flat3d-inject doctor"));
+    }
+    head.extend(if sep < args.len() {
+        let mut x = vec!["--".to_string()];
+        x.extend(args[sep + 1..].iter().cloned());
+        x
+    } else {
+        vec![]
+    });
+    parse(&head)
+        .map(|c| AnyCli {
+            command: AnyCommand::Engine(c.command),
+            json: json || c.json,
+        })
+        .map_err(|e| ApiError::new("usage", &e))
+}
+
+pub fn ok_exit(cmd: &AnyCommand, data: &serde_json::Value) -> i32 {
+    if matches!(cmd, AnyCommand::Doctor(DoctorCommand::Run))
+        && data.get("ok") == Some(&serde_json::Value::Bool(false))
+    {
+        1
+    } else {
+        0
+    }
+}
+
+fn dispatch(cmd: &AnyCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, ApiError> {
+    match cmd {
+        AnyCommand::Engine(c @ (Command::List | Command::Status)) => engine::run(c, ctx),
+        AnyCommand::Engine(c @ Command::Inject { .. }) => inject::run(c, ctx),
+        AnyCommand::Engine(c @ Command::Undo { .. }) => undo::run(c, ctx),
+        AnyCommand::Engine(Command::Start3d) => {
+            let report = link::request_3d(
+                crate::state::Request::Start3d,
+                ctx.paths,
+                crate::sys::unix_now(),
+            )?;
+            serde_json::to_value(report)
                 .map_err(|e| ApiError::new("command-failed", &e.to_string()))
         }
-        _ => Err(NotBuilt("cli::engine::run (WP-07)").into()),
+        AnyCommand::Engine(Command::Stop3d) => {
+            let report = link::request_3d(
+                crate::state::Request::Stop3d,
+                ctx.paths,
+                crate::sys::unix_now(),
+            )?;
+            serde_json::to_value(report)
+                .map_err(|e| ApiError::new("command-failed", &e.to_string()))
+        }
+        AnyCommand::Link(c) => link::run(c, ctx),
+        AnyCommand::View(c) => view::run(c, ctx),
+        AnyCommand::Setup(c) => setup::run(c, ctx),
+        AnyCommand::Doctor(c) => doctor::run(c, ctx),
     }
 }
 
-/// Parse and run a command line without printing.
-pub fn execute(args: &[String]) -> Output {
-    match parse(args) {
-        Ok(cli) => render(cli.command.name(), dispatch(&cli.command), cli.json),
-        Err(usage) => {
-            let json = args.iter().any(|a| a == "--json");
-            render("", Err(ApiError::new("usage", &usage)), json)
+pub fn execute_with(args: &[String], ctx: &mut Ctx<'_>) -> Output {
+    match parse_any(args) {
+        Ok(parsed) => {
+            let name = match &parsed.command {
+                AnyCommand::Engine(c) => c.name(),
+                _ => parsed.command.id().split_whitespace().next().unwrap_or(""),
+            };
+            let result = dispatch(&parsed.command, ctx);
+            let hook = result
+                .as_ref()
+                .ok()
+                .map(|data| ok_exit(&parsed.command, data));
+            let mut out = render(name, result, parsed.json);
+            if let Some(code) = hook {
+                out.code = code;
+            }
+            out
         }
+        Err(e) => render("", Err(e), json_before_separator(args)),
     }
+}
+
+pub fn execute(args: &[String]) -> Output {
+    let parsed = match parse_any(args) {
+        Ok(p) => p,
+        Err(e) => return render("", Err(e), json_before_separator(args)),
+    };
+    let env: BTreeMap<String, String> = std::env::vars().collect();
+    let paths = match EnginePaths::from_env(&env, crate::sys::current_uid()) {
+        Ok(p) => p,
+        Err(e) => return render("", Err(e), parsed.json),
+    };
+    let mut runner = SystemRunner;
+    let mut relay = ProcessRunner::default();
+    let mut ctx = Ctx {
+        paths: &paths,
+        runner: &mut runner,
+        relay: &mut relay,
+        json: parsed.json,
+    };
+    execute_with(args, &mut ctx)
 }
 
 /// Run a command line: print its output and return the process exit code.
@@ -198,13 +617,91 @@ mod tests {
     }
 
     #[test]
-    fn execute_human_not_built_goes_to_stderr() {
-        let out = execute(&["list".to_string()]);
+    fn human_not_built_result_goes_to_stderr() {
+        let error = crate::NotBuilt("cli::engine::run (WP-07)").into();
+        let out = render("list", Err(error), false);
+
         assert_eq!(out.code, 2);
-        assert_eq!(out.stdout, "");
+        assert!(out.stdout.is_empty());
         assert_eq!(
             out.stderr,
             "error: not built yet: cli::engine::run (WP-07)\n"
+        );
+    }
+
+    #[test]
+    fn dispatch_routes_each_family() {
+        let rows: &[&[&str]] = &[
+            &["list"],
+            &["status"],
+            &["inject", "5"],
+            &["undo", "5"],
+            &["start-3d"],
+            &["stop-3d"],
+            &["snapshot"],
+            &["view"],
+            &["setup", "packages"],
+            &["doctor"],
+        ];
+        let home = std::env::temp_dir().join(format!("flat3d-cli-dispatch-{}", std::process::id()));
+        std::fs::create_dir_all(&home).unwrap();
+        for row in rows {
+            let av: Vec<String> = row.iter().map(|s| (*s).to_owned()).collect();
+            let cmd = parse_any(&av).unwrap().command;
+            let mut env = BTreeMap::new();
+            env.insert("HOME".to_string(), home.display().to_string());
+            env.insert("XDG_RUNTIME_DIR".to_string(), home.display().to_string());
+            let paths = EnginePaths::from_env(&env, 1).unwrap();
+            let mut runner = crate::testing::FakeRunner::new();
+            let mut relay = ProcessRunner::default();
+            let mut ctx = Ctx {
+                paths: &paths,
+                runner: &mut runner,
+                relay: &mut relay,
+                json: false,
+            };
+            let outcome = dispatch(&cmd, &mut ctx);
+            if let Err(err) = outcome {
+                if err.code == "not-built" {
+                    let expected = match cmd {
+                        AnyCommand::Engine(Command::Start3d | Command::Stop3d) => {
+                            "cli::link::request_3d"
+                        }
+                        AnyCommand::Engine(Command::List | Command::Status) => "cli::engine::run",
+                        AnyCommand::Engine(Command::Inject { .. }) => "cli::inject::run",
+                        AnyCommand::Link(_) => "cli::link::run",
+                        AnyCommand::View(_) => "cli::view::run",
+                        AnyCommand::Setup(_) => "cli::setup::run",
+                        AnyCommand::Doctor(_) => "cli::doctor::run",
+                        AnyCommand::Engine(Command::Undo { .. }) => {
+                            panic!("undo is already implemented")
+                        }
+                    };
+                    assert!(err.message.contains(expected), "{row:?}: {}", err.message);
+                }
+            }
+        }
+        let _ = std::fs::remove_dir_all(&home);
+        assert_eq!(
+            ok_exit(
+                &AnyCommand::Doctor(DoctorCommand::Run),
+                &serde_json::json!({"ok":false})
+            ),
+            1
+        );
+        assert_eq!(
+            ok_exit(
+                &AnyCommand::Doctor(DoctorCommand::Run),
+                &serde_json::json!({"ok":true})
+            ),
+            0
+        );
+        assert_eq!(
+            ok_exit(
+                &AnyCommand::Engine(Command::List),
+                &serde_json::json!({"ok":false})
+            ),
+            0
         );
     }
 }

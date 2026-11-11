@@ -74,6 +74,64 @@ pub struct UndoResult {
     pub summary: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct LinkView {
+    pub state: LinkState,
+    pub label: String,
+    pub hint: String,
+    pub start: bool,
+    pub stop: bool,
+    pub health: crate::face::view::HealthView,
+    pub rx: String,
+    pub tx: String,
+    pub uptime: String,
+    pub tether: TetherMode,
+    pub tunnel: bool,
+    pub auto_3d: bool,
+    pub adb_source: AdbSource,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LaunchText {
+    pub options: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionPlan {
+    pub name: String,
+    pub wanted: Vec<u32>,
+    pub add: Vec<u32>,
+    pub remove: Vec<u32>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LogLines {
+    pub lines: Vec<String>,
+    pub text: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DoctorCheck {
+    pub name: String,
+    pub ok: bool,
+    pub detail: String,
+    pub fix: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DoctorReport {
+    pub ok: bool,
+    pub checks: Vec<DoctorCheck>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SetupReport {
+    pub steps: Vec<String>,
+    pub summary: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Toast {
+    pub title: String,
+    pub body: String,
+}
+
+pub const TOAST_TITLE: &str = "Flat to 3D";
+
 pub const ERROR_CODES: [&str; 8] = [
     "usage",
     "not-built",
@@ -84,6 +142,38 @@ pub const ERROR_CODES: [&str; 8] = [
     "command-failed",
     "io",
 ];
+
+pub fn error_help(code: &str) -> (bool, &'static str) {
+    match code {
+        "usage" => (
+            false,
+            "check the command against the usage line in the message",
+        ),
+        "not-built" => (
+            false,
+            "this part is not built yet; the message names the work package that builds it",
+        ),
+        "not-found" => (
+            false,
+            "check the name or path in the message; flat3d-inject list shows the installed games",
+        ),
+        "bad-recipe" => (false, "fix the recipe file named in the message"),
+        "refused" => (
+            false,
+            "do what the message names first, then run the command again",
+        ),
+        "link-not-ready" => (true, "systemctl --user restart flat3d-link.service"),
+        "command-failed" => (
+            true,
+            "check the command named in the message, then run it again",
+        ),
+        "io" => (
+            true,
+            "check the path in the message, then run the command again",
+        ),
+        _ => (false, ""),
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApiError {
@@ -103,6 +193,18 @@ impl ApiError {
 impl From<crate::NotBuilt> for ApiError {
     fn from(e: crate::NotBuilt) -> Self {
         ApiError::new("not-built", &e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod error_help_tests {
+    use super::{error_help, ERROR_CODES};
+
+    #[test]
+    fn every_error_code_has_help() {
+        for code in ERROR_CODES {
+            assert!(!error_help(code).1.is_empty(), "{code}");
+        }
     }
 }
 
