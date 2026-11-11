@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build upstream SpidyVR's Windows DLLs on Linux (run inside the craft-build distrobox).
+# Build upstream SpidyVR's Windows DLLs on Linux (run inside the distrobox build container (`$FLAT3D_BUILD_BOX`, default craft-build)).
 # 1. Fetches Spidy's pinned dependencies (same repos and commits as its tools/bootstrap.ps1).
 # 2. Configures with clang-cl + xwin and builds.
 # Usage: tools/build-spidy.sh [build-dir]

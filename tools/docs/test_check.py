@@ -113,6 +113,19 @@ class CheckerTests(unittest.TestCase):
         code, out = self.findings("usage", "docs/code-map.md")
         self.assertEqual((code, out), (0, ""))
 
+    def test_usage_alternatives_inside_brackets_and_subverbs(self):
+        real = '"usage: flat3d-inject view | rows [--filter <status>|all] | launch add|remove --options <string> | collection [--current <appids>] | toasts <last_seq> | logs [--limit <n>]"\n'
+        self.put("crates/engine/src/cli.rs", real)
+        rows = "".join(f"| `{c}` | x |\n" for c in ("view", "rows", "launch", "collection", "toasts", "logs"))
+        self.put("docs/code-map.md", "## Commands\n" + rows)
+        self.assertEqual(self.findings("usage", "docs/code-map.md"), (0, ""))
+        self.put("docs/code-map.md", "## Commands\n" + rows.replace("| `launch` | x |\n", ""))
+        code, out = self.findings("usage", "docs/code-map.md")
+        self.assertEqual(code, 1)
+        self.assertIn("launch", out)
+        self.assertNotIn("all]", out)
+        self.assertNotIn("remove", out)
+
     def test_paths_exemption(self):
         self.put("docs/code-map.md", "inject/old\n<!-- mv-map -->\ninject/allowed\n<!-- /mv-map -->\ncrates/engine/src/a.rs\n")
         code, out = self.findings("paths", "docs/code-map.md")

@@ -97,7 +97,7 @@ Sources: [Helix Mod: Alan Wake 2 NoMoreFlat + VRto3D](https://helixmod.blogspot.
 
 ### Recommended: our own Northlight view hook, alternate-eye, SBS out
 
-The same shape as the Spider-Man 2 port ([PORT-SPIDERMAN2.md](../../../PORT-SPIDERMAN2.md)): a DLL inside the game that moves the camera per eye and hands two images to the viewer. It is free, it needs no SteamVR and no OpenXR bridge, and the DX12 capture and SBS packing code is shared with Spider-Man 2.
+The same shape as the Spider-Man 2 port ([spiderman2/plan.md](../../../spiderman2/plan.md)): a DLL inside the game that moves the camera per eye and hands two images to the viewer. It is free, it needs no SteamVR and no OpenXR bridge, and the DX12 capture and SBS packing code is shared with Spider-Man 2.
 
 Hook points, in order:
 

@@ -15,7 +15,7 @@ import struct
 import sys
 
 # Capstone 5.0.6: SpidyVR vendors it in third_party/python; here use any install
-# (e.g. ~/.local/share/flat-to-3d/venv).
+# (e.g. $FLAT3D_RE_HOME/venv).
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64
 from inspect_game import PE
 
