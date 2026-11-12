@@ -104,6 +104,30 @@ Every game-specific item on Spidy's GAME SCREEN 3D path ([spidy-core-map.md](spi
 | component registry | data | `0x7a44320` | - | pending | - | pending | - |
 | component registry 2 | data | `0x7a44340` | - | pending | - | pending | - |
 
+### Checked against HEROVR's list
+
+Checklist derived from peer [lecutis7of9/HEROVR](https://github.com/lecutis7of9/HEROVR/blob/82f3ffe4e4dc65d9f0df3b29918af2ccb7fc9859/BUILD-SM2.md) (GPL-3.0, commit `82f3ffe4e4dc65d9f0df3b29918af2ccb7fc9859`, `BUILD-SM2.md`). Per ruling 2026-10-31: learn only, keep our port. No addresses or code are copied (HEROVR's addresses come from the closed SM2VR mod). Every address in our port must be found by our own analysis tools (Ghidra Version Tracking and matcher, session Q12). For clean-eye findings (TAA/FXAA/CAS and RT settings), see [clean eyes note](../notes/sm2-clean-eyes.md).
+
+The list acts as a checklist for what our analysis must locate across port steps 2–5 (#18–#21):
+- #18 (Step 2: Get inside the game): H1 runtime queue discovery
+- #19 (Step 3: Move the camera): H5 pose setter
+- #20 (Step 4: Two eyes): H7 eye-job offset in copyJob
+- #21 (Step 5: Same-frame pairs and clean images): H2 render memory ring, H3 scene submit, H4 display setup, H8 buffer-set sizes, H9 tone map exposure copy, H10 temporal AA target kinds
+
+| HEROVR item | Our row | Check | Evidence |
+|---|---|---|---|
+| H1 Runtime D3D12/DXGI queue discovery | - | runtime | `render_probe` |
+| H2 512 MB render memory ring allocator | RenderAlloc ring create | pending | pending Q12 analysis |
+| H3 Scene submit (5th argument) | SubmitScene (shadows) | pending | pending Q12 analysis |
+| H4 Display setup (5th argument) | display setup | pending | pending Q12 analysis |
+| H5 Pose setter (3 arguments) | pose setter | pending | pending Q12 analysis |
+| H6 Game view retention (flag 32 omitted) | - | no-row | - |
+| H7 Eye-job offset in copyJob | copy view into render job | pending | pending Q12 analysis |
+| H8 Buffer-size hook and output sizing | buffer-set sizes | pending | pending Q12 analysis |
+| H9 Tone map exposure copy | tone map | pending | pending Q12 analysis |
+| H10 Temporal AA offscreen target kinds | TemporalAa | pending | pending Q12 analysis |
+| H11 Steam ticket guard on menu exit | - | off-path | - |
+
 <!-- END GENERATED -->
 
 ## Next leg: exact steps

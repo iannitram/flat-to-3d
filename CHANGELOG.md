@@ -2,6 +2,8 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-12 HEROVR checklist and clean-eye findings (#37): added HEROVR's documented hook list as an address map checklist (docs/spiderman2/address-map.md) for #18-#21, and recorded clean-eye findings (FXAA 3.11 + CAS on offscreen views, RT reflections and interiors off) as input to Step 5 (docs/notes/sm2-clean-eyes.md). Docs only.
+
 - 2026-11-11 Roadmap, code map and roadmap-v2 progress brought up to date with main (`3e5ea15`): 34 of 44 work packages merged; next WP-35 → WP-36 → WP-37, then WP-31 and WP-30; the follow-ups found in review (WP-14 profile pin, WP-16 stale cache, WP-27 empty folders, WP-11 clock step) are recorded. Docs only.
 - 2026-11-11 Documentation scrub (WP-25b): consolidated the SPEC approval history here and aligned the README, roadmap, code map and workbench page with the current tree.
 - 2026-11-11 Spec re-approved by the owner ("Approve (Recommended)", ruling 47) with a six-game 1.0: Zero Company, ACE COMBAT 7, Control, 007 First Light, Spider-Man 2, Alan Wake 2, in that order ("By readiness (Recommended)", ruling 46). Ruling 43 ("This is the 1.0 list.") brought in 007 First Light, Alan Wake 2 and Forza Horizon 6 and moved Planet of Lana to after-1.0; ruling 45 ("Move it to after-1.0") took Forza Horizon 6 out again; ruling 44 ("Yes, where nothing better exists (Recommended)") lets alternate-eye rendering count where no two-real-views route exists, at 30 fps per eye. SPEC M23 and M33 moved out, M31 and M32 added with planned, untested routes; Control takes the first Geo-11 test (G1, #43); the SBS viewer stays in 1.0 for Control, 007 First Light and Alan Wake 2 (#256).

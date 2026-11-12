@@ -152,7 +152,7 @@ Sources: the [SpidyVR repo](https://github.com/IlyaMez/SpidyVR), its `docs/LINUX
 
 ### How far HEROVR goes
 
-Sources: the [HEROVR repo](https://github.com/lecutis7of9/HEROVR), its `BUILD-SM2.md` and `CREDITS.md`, and its issue 9. PEERS.md and issue #37 hold this project's standing rule on it: learn from it, copy nothing.
+Sources: the [HEROVR repo](https://github.com/lecutis7of9/HEROVR), its `BUILD-SM2.md` and `CREDITS.md`, and its issue 9. PEERS.md and issue #37 hold this project's standing rule on it: learn from it, copy nothing. See the checklist in [address-map.md](../../../spiderman2/address-map.md#checked-against-herovrs-list) and clean-eye findings in [sm2-clean-eyes.md](../../sm2-clean-eyes.md).
 
 - It is a full head-tracked VR port of SpidyVR to Spider-Man 2. It refuses any exe other than 2.810.0.0 with the SHA-256 above.
 - Its own words: experimental, works "decent" in free roam, story mode has faults (progression, objectives, chases). Other listed faults: flickering building windows, late texture sharpening, aliasing.

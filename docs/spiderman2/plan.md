@@ -98,7 +98,7 @@ Find the view manager, the off-screen view creator and the per-frame placement p
 - **Test (no headset):** a Spider-Man 2 version of Spidy's `probe_game_screen.py --stereo` captures both eyes. Distant buildings differ by tens of pixels between the eyes; HUD text differs by about 0.
 
 ### Step 5: Same-frame pairs and clean images
-Port the render-job tagging and GPU pairing. Get each eye its own anti-aliasing history, matching brightness and correct tone mapping. Ray-traced reflections off for the eyes, upscaler bypassed.
+Port the render-job tagging and GPU pairing. Get each eye its own anti-aliasing history, matching brightness and correct tone mapping. Ray-traced reflections off for the eyes, upscaler bypassed. Findings from peer HEROVR on off-screen anti-aliasing (FXAA + CAS) and ray tracing configuration are in [sm2-clean-eyes.md](../notes/sm2-clean-eyes.md).
 - **Test:** every shown pair has matching frame numbers; both eyes are equally bright; no shimmering edges.
 
 ### Step 6: In the headset
