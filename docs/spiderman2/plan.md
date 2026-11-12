@@ -60,6 +60,8 @@ This needs the **Remastered exe** (version 4.630.0.0). Spider-Man Remastered is 
 
 **REA** ([morluto/rea](https://github.com/morluto/rea), MIT) lets the agent drive Ghidra directly: decompile, follow cross-references, search strings, and keep evidence for each conclusion. the owner approved it in principle for steps 3–5 and for later performance work, such as skipping work the game's own main view does while both eyes render. Registering it in the Script Code's config needs owner approval first.
 
+**Research first, then hooks (ruling 52, 2026-11-12).** Finding these addresses is its own step, Step 2r below, done on the installed game before any step hooks it. Its output is the address map with how each address was found; Spidy's and peers' addresses are a checklist to verify, not a source.
+
 **Survive patches.** Spidy breaks on every game update. Our port should find each address by **byte-pattern search** at startup, with the fixed address as a fallback. Then a small Spider-Man 2 patch doesn't break everything.
 
 ## What the file lists already show
@@ -89,12 +91,18 @@ Run unmodified Spidy (official 0.3.8 release) on Spider-Man Remastered on the Z1
 Adapt `spidy-linux.sh` and the injection scripts to Spider-Man 2: Steam app 2651280, `Spider-Man2.exe`, its size constant. Load only `render_probe`, which finds the game's GPU queue.
 - **Test:** the game keeps running and the log names its D3D12 queue.
 
+### Step 2r: Hook-point research (ruling 52, issue #283)
+On the installed `Spider-Man2.exe`, find every hook, call, global and layout the 3D-screen path needs (the counts above) with our own tools: Ghidra Version Tracking from Remastered 4.630.0.0, the xmatch matcher, RTTI and string references. Spidy's Remastered addresses, HEROVR's list (#37) and anything that came from SM2VR are a checklist to verify, never the source of a row.
+- **Output:** [address-map.md](address-map.md), with the exe's SHA-256, file version and Steam build id at the top, and for each row the address (RVA), a unique byte pattern, how it was found (tool, method, date) and its status (`verified` or `lead`); the checklist columns say `agrees` or `differs`.
+- **Test:** every address that Steps 3 and 4 hook is `verified` in the map; no code uses a `lead`.
+- Before Step 3, the first step that hooks the game. Runs on the Windows desktop with the RTX 3090 Ti, where the game and the tools are installed (ruling 51).
+
 ### Step 3: Move the camera
-Find the camera submit, lens builder and pose setter in Spider-Man 2 (Ghidra diff from Remastered). Repeat Spidy's earliest experiment (`game_view.cpp`): shift the game's own camera sideways.
+Take the camera submit, lens builder and pose setter from the Step 2r map. Repeat Spidy's earliest experiment (`game_view.cpp`): shift the game's own camera sideways.
 - **Test:** the picture on the Z13's screen visibly slides left and right on command.
 
 ### Step 4: Two eyes
-Find the view manager, the off-screen view creator and the per-frame placement point. Create two eye views and place them every frame.
+Take the view manager, the off-screen view creator and the per-frame placement point from the Step 2r map. Create two eye views and place them every frame.
 - **Test (no headset):** a Spider-Man 2 version of Spidy's `probe_game_screen.py --stereo` captures both eyes. Distant buildings differ by tens of pixels between the eyes; HUD text differs by about 0.
 
 ### Step 5: Same-frame pairs and clean images
@@ -135,7 +143,7 @@ Write Spider-Man 2's recipe keys (`stereo-status: works-now`) and wire it to the
 
 - **Z13 memory:** Ghidra on a 190 MB exe and the game itself are both heavy. Run one heavy job at a time under the 2 GiB watch, and check `$FLAT3D_HEAVY_LOCK` first.
 - **Commits:** use the project no-reply identity and never force-push.
-- **Licence:** GPL-3.0 throughout. Our port is a derivative of Spidy, so credit Ilya Mezerowsky in the README and file headers.
+- **Licence:** GPL-3.0 throughout. Our port is a derivative of Spidy, so credit Ilya Mezerowsky in the README and file headers. A licence is not a blocker for using or porting Spidy's code in this personal-use project (ruling 50, 2026-11-12); the credit and the provenance notes stay.
 
 ## Decisions
 
@@ -144,7 +152,8 @@ Settled:
 2. DLLs build in the distrobox build container (`$FLAT3D_BUILD_BOX`, see ../workbench.md) with clang-cl and xwin; `cmake/clang-cl-xwin.cmake` and `tools/build-spidy.sh` provide the build path.
 3. REA is approved in principle for reverse-engineering; registering it in the agent configuration needs owner approval.
 4. **No paywalled tools**, so this port is built from SpidyVR, not from R.E.A.L. VR.
+5. **Spidy's author is not contacted** (ruling 49, 2026-11-12: "We're not going to hear back from Spidys author.").
+6. **Hook points come from Step 2r**, research on the installed game, before the steps that hook it (ruling 52).
 
 Open:
-- **Contact Spidy's author?** He's asking for ideas for "the next full VR conversion", and a Spider-Man 2 port overlaps with that. Working with him, or at least telling him, could save weeks. A compatibility report after step 0 is a natural first contact.
 - **AER as a fallback?** If the Z13 can't afford both eyes every frame in Spider-Man 2, alternating eyes is the fallback. the owner has not ruled on whether that still counts as true stereo.
