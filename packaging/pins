@@ -64,7 +64,7 @@ ac7-profile.version: TBD-at-pin
 ac7-profile.url: TBD-at-pin
 ac7-profile.size: TBD-at-pin
 ac7-profile.sha256: TBD-at-pin
-ac7-profile.license: unstated
+ac7-profile.license: MIT
 ac7-profile.page: https://github.com/keton/ace-combat-uevr
 
 wivrn-apk.fetch: auto

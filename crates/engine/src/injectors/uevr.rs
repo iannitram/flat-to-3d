@@ -1,4 +1,4 @@
-use crate::injectors::RouteEnv;
+use crate::injectors::{fetch, uevr_profile, RouteEnv};
 use crate::paths::EnginePaths;
 use crate::recipes::RouteSettings;
 use crate::steam::Game;
@@ -205,13 +205,47 @@ fn route_error(code: &str, detail: impl std::fmt::Display) -> String {
     format!("{code}: {detail}")
 }
 
+/// Apply the UEVR route. When the recipe names a profile pin (`uevr-profile`), that pin must be
+/// fetched; its files go into the profile folder and our keys are merged into its `config.txt`.
 pub fn apply_with(
     game: &Game,
     settings: &RouteSettings,
     p: &EnginePaths,
 ) -> Result<(Applied, RouteEnv), String> {
+    let extras = extras_from(settings)?;
+    let fetched = match &extras.profile {
+        None => None,
+        Some(key) => {
+            let pin = fetch::pin(key).map_err(|e| {
+                let e = crate::api::ApiError::from(e);
+                format!("{}: {}", e.code, e.message)
+            })?;
+            if !fetch::is_fetched(&pin, p) {
+                return Err(route_error(
+                    "not-found",
+                    format!("the UEVR profile {key} is not fetched; run flat3d-inject setup fetch {key}"),
+                ));
+            }
+            Some(fetch::cache_dir(&pin, p))
+        }
+    };
+    apply_with_profile(game, settings, p, fetched.as_deref())
+}
+
+/// [`apply_with`] with the fetched profile folder given directly (`None`: no profile).
+#[doc(hidden)]
+pub fn apply_with_profile(
+    game: &Game,
+    settings: &RouteSettings,
+    p: &EnginePaths,
+    fetched_profile: Option<&Path>,
+) -> Result<(Applied, RouteEnv), String> {
     let profile_settings = settings_from(settings)?;
     let extras = extras_from(settings)?;
+    let profile_pin = fetched_profile
+        .map(uevr_profile::read)
+        .transpose()
+        .map_err(|e| route_error("refused", e))?;
     let compatdata = game
         .install_dir
         .parent()
@@ -261,13 +295,19 @@ pub fn apply_with(
         created: Vec::new(),
         replaced: Vec::new(),
     };
-    let full_text = profile_text_full(&profile_settings, &extras);
+    let ours = profile_text_full(&profile_settings, &extras);
+    let full_text = match &profile_pin {
+        Some(pin) => uevr_profile::merge_config(&pin.config, &ours),
+        None => ours,
+    };
+    let files = profile_pin.as_ref().map_or(&[][..], |pin| &pin.files[..]);
     if let Err(error) = write_all_text(
         &profile_dir,
         &profile,
         &backup,
         &marker,
         &full_text,
+        files,
         &mut record,
     ) {
         rollback(&record);
@@ -288,18 +328,26 @@ pub fn apply_with(
     Ok((applied, env))
 }
 
+/// Suffix of the backup made of a prefix file a profile file replaces.
+pub const FILE_BACKUP_SUFFIX: &str = ".flat3d-backup";
+
+#[allow(clippy::too_many_arguments)]
 fn write_all_text(
     dir: &Path,
     profile: &Path,
     backup: &Path,
     marker: &Path,
     text: &str,
+    files: &[uevr_profile::ProfileFile],
     record: &mut UndoRecord,
 ) -> Result<(), String> {
     let io = |what: &str, path: &Path, e: std::io::Error| format!("{what} {}: {e}", path.display());
     fs::create_dir_all(dir).map_err(|e| io("cannot create", dir, e))?;
     fs::write(marker, "").map_err(|e| io("cannot write", marker, e))?;
     record.created.push(marker.to_path_buf());
+    for file in files {
+        copy_over(&file.src, &dir.join(&file.rel), record)?;
+    }
     if profile.exists() {
         let partial = dir.join(BACKUP_PARTIAL_FILE);
         if let Err(e) = fs::copy(profile, &partial).and_then(|_| fs::rename(&partial, backup)) {
@@ -381,6 +429,60 @@ fn write_all(
         record.created.push(profile.to_path_buf());
     }
     fs::write(profile, profile_text(settings)).map_err(|e| io("cannot write", profile, e))
+}
+
+/// Copy one profile file into place. A file already there is moved to its backup first and
+/// recorded in `replaced`; a new one is recorded in `created`. The copy goes to a staging name
+/// and is renamed into place only once it is whole.
+fn copy_over(src: &Path, target: &Path, record: &mut UndoRecord) -> Result<(), String> {
+    let io = |what: &str, path: &Path, e: std::io::Error| format!("{what} {}: {e}", path.display());
+    let with_suffix = |suffix: &str| {
+        let mut name = target.as_os_str().to_owned();
+        name.push(suffix);
+        PathBuf::from(name)
+    };
+    let staging = with_suffix(".flat3d-new");
+    let backup = with_suffix(FILE_BACKUP_SUFFIX);
+    if backup.exists() {
+        return Err(format!(
+            "{} is left from an earlier setup; run flat3d-inject undo first",
+            backup.display()
+        ));
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| io("cannot create", parent, e))?;
+    }
+    if let Err(e) = fs::copy(src, &staging) {
+        let _ = fs::remove_file(&staging);
+        return Err(io("cannot write", target, e));
+    }
+    if target.is_dir() {
+        let _ = fs::remove_file(&staging);
+        return Err(format!("{} is a folder in the prefix", target.display()));
+    }
+    let existed = target.exists();
+    if existed {
+        if let Err(e) = fs::rename(target, &backup) {
+            let _ = fs::remove_file(&staging);
+            return Err(io("cannot back up", target, e));
+        }
+    }
+    if let Err(e) = fs::rename(&staging, target) {
+        let _ = fs::remove_file(&staging);
+        if existed {
+            let _ = fs::rename(&backup, target);
+        }
+        return Err(io("cannot write", target, e));
+    }
+    if existed {
+        record.replaced.push(Replaced {
+            path: target.to_path_buf(),
+            backup,
+        });
+    } else {
+        record.created.push(target.to_path_buf());
+    }
+    Ok(())
 }
 
 /// Undo a half-finished apply: put back replaced files, remove created ones.
