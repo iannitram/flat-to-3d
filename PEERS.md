@@ -6,13 +6,13 @@ Projects doing parts of what this one does, approved by the owner on 2026-10-31 
 
 - **Nobody does the whole thing.** No project runs true stereo on a fixed 3D TV on Linux from Game Mode. The Linux, Decky, Start 3D and fixed-screen pieces are still ours to build.
 - **Spider-Man 2 stereo exists on Windows:** HEROVR ported SpidyVR to Spider-Man 2. Its addresses come from a closed mod (SM2VR), so we learn from it and keep our own port and address map (ruling 2026-10-31: "Learn only, keep our port").
-- **SpidyVR now runs under Proton + WiVRn** (its `docs/LINUX.md`), which helps Step 0 and the OpenXR worker.
+- **SpidyVR's `docs/LINUX.md` already gave the Proton + WiVRn launch options at v0.3.8**, and v0.7.0 keeps them; this helps Step 0 and the OpenXR worker. The decision on the pin is in the [version note](docs/spiderman2/spidy-core-map.md#version-note-spidyvr-v038-and-v070-issue-38).
 - **Kaon** already manages UEVR under Proton on Linux: the reference for Zero Company and for the engine's Steam scan.
 - **No verified report** of UEVR under Proton with WiVRn was found. Zero Company's Z2 will be one of the first.
 
 ## Approved peers
 
-peer: IlyaMez/SpidyVR | GPL-3.0 | our upstream; v0.7.0 documents Proton + WiVRn wired (docs/LINUX.md, tools/spidy-wivrn.sh); watch releases, eye-pair and swapchain code
+peer: IlyaMez/SpidyVR | GPL-3.0 | our upstream; pinned v0.3.8 (aed5c0c), read v0.7.0 (57537585), whose docs/LINUX.md and tools/spidy-wivrn.sh give the Proton + WiVRn path; watch releases, eye-pair and swapchain code
 peer: lecutis7of9/HEROVR | GPL-3.0 | SpidyVR ported to Spider-Man 2 on Windows: render probe, eye hooks, FXAA/CAS on the eyes, RT off; learn only (ruling 2026-10-31), its addresses come from the closed SM2VR mod
 peer: LorenDB/kaon | GPL-3.0 | Linux UEVR manager for Proton: Steam scan, UEVR + .NET install, launch options; reference for Zero Company Z2 and the Inject engine
 peer: WiVRn/WiVRn | GPL-3.0 | our streamer; wired mode and the dashboard's adb automation are what Start 3D wraps

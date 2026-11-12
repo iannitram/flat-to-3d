@@ -2,6 +2,33 @@
 
 Repo: [IlyaMez/SpidyVR](https://github.com/IlyaMez/SpidyVR) at v0.3.8 (GPL-3.0). All paths below are relative to it. Read-only analysis; nothing built or run.
 
+## Version note: SpidyVR v0.3.8 and v0.7.0 (issue #38)
+
+Read on 2026-11-12 from public pages at pinned commits, nothing cloned or built. Our pin is v0.3.8, commit [`aed5c0c`](https://github.com/IlyaMez/SpidyVR/commit/aed5c0c5f4584d7bc231b90fd1200b3ea85728c9) ("Release Spidy 0.3.8"). The newest release is v0.7.0, commit [`57537585`](https://github.com/IlyaMez/SpidyVR/commit/57537585fb3dea806cf426705a5770b860cc1436) ("Release Spidy 0.7.0"), 66 commits ahead. The licence is GPL-3.0 at both ([LICENSE](https://github.com/IlyaMez/SpidyVR/blob/57537585fb3dea806cf426705a5770b860cc1436/LICENSE)).
+
+**Decision: Step 0 and this map stay on v0.3.8. The submodule is not bumped here.** Reasons:
+
+- The Step 0 plan ([plan.md](plan.md)) asks for the official 0.3.8 release, and every line number in this map is a v0.3.8 line. A bump would need a fresh pass over the map first.
+- The Proton + WiVRn launch path does not need v0.7.0. The v0.3.8 `docs/LINUX.md` already gives the same WiVRn launch options and the same start order, so the run sheet works on either pin.
+- The stereo-screen files are all still present at v0.7.0, but upstream changed behaviour on that path in between (below). Those changes are unread at file level, so a bump now would be a guess.
+
+**What moved on the launch path (v0.3.8 → v0.7.0).** `docs/LINUX.md` is byte-identical at the two commits (same blob, so the WiVRn launch options, the start order, the Proton Experimental note (a tested setup, not a stated requirement) and the known limits are unchanged). `tools/spidy-wivrn.sh` is the same wrapper at both pins: it sets the WiVRn runtime and hands off to `tools/spidy-linux.sh`. The launcher changed in one place: v0.7.0 adds persisted VR settings (`PERSISTED_ARGS` loaded from `tools/vr_settings_persist.py`, the session's `VR settings from the headset` line saved on exit) and pipes the session output through `tee`. Its start-order and launch-option warnings (the `PRESSURE_VESSEL_*` checks) are present at v0.3.8 too.
+
+**What moved on the stereo-screen path.** Compared by file name in the two git trees and by commit title. I did not open the changed contents, so none of our line citations are re-checked at v0.7.0.
+
+- Still present at v0.7.0 (no rename or removal seen): `src/stereo_probe.cpp`, `src/game_xr.cpp`, `src/native_eye_gpu.cpp`, `src/native_hud.cpp`, `include/spidy/presentation_gate.hpp`, `include/spidy/native_eye_frame.hpp`, `include/spidy/native_eye_history.hpp`, `tools/probe_game_screen.py`, `tools/probe_stereo.py`, `tools/probe_stereo_gpu.py`, `tools/capture_stereo.py`.
+- New files near the path at v0.7.0: `include/spidy/vd_eyes.hpp`, `include/spidy/native_stream.hpp`, `tools/probe_streaming.py`, `include/spidy/recording_fov.hpp`.
+- Commits whose titles touch the path (most relevant first):
+  - `3c0e1b08`: closing a menu no longer ends VR while the last eye pair still shows (#36). Touches the gate and the eye-pair hand-off that §1.5 cites.
+  - `85501e29`: eye tracking and streaming data in VR. Touches where the eye distance comes from (§1.3, `presentation_gate.hpp`).
+  - `3ce3baa`: "What the eyes draw counts as on screen". Touches the on-screen test that §1.5 gates on (`native_hud::onScreen`).
+  - `7eafac2`: the city at the flat game's distances. Relevance unclear; it may touch distances the screen uses.
+- Commits that are not on the path: the phone, the web and swing mechanics, the recording FOV, body haptics, the launcher and the Linux phone-screen fix.
+
+**What this means for the map.** Sections §1.3 and §1.5 cite v0.3.8 lines and gate rules that the three commits above may have changed. Before any port work, redo those citations at the chosen pin. If the owner wants v0.7.0 for Step 0, that is a separate decision, and the Step 0 result should name the Spidy version that was run.
+
+The submodule's row in the code map is in [code-map.md](../code-map.md).
+
 ## 0. What the feature actually is (correcting one assumption)
 
 - `VR VIEW: GAME SCREEN` = `Values::flatScreen` (`include/spidy/vr_settings.hpp:32-38`, row `src/vr_settings.cpp:143-144`, toggled via the pause menu's first page, `src/game_menu.cpp:72,362,709`). The launcher does **not** persist it: "Each session starts in VR" (`vr_settings.hpp:35`). So in the shipped code the only way into it is the in-game SPIDY VR tab, which is `game_menu.cpp` (11 Scaleform hooks).
