@@ -1,7 +1,7 @@
 //! Locked tests for E6b: AdbRunner rewrites `adb ...` commands.
 
+use flat3d_inject::link::adb::AdbRunner;
 use flat3d_inject::link::{CommandOutput, CommandRunner};
-use flat3d_inject::tether::adb::AdbRunner;
 
 struct Fake {
     ran: Vec<Vec<String>>,

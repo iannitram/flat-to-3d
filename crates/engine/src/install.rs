@@ -335,7 +335,7 @@ pub struct InstallPlan {
 
 pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
     let bin_dir = bin_dir(home);
-    let tools_dir = crate::tether::adb::tools_dir(home);
+    let tools_dir = crate::link::adb::tools_dir(home);
     let copies = [
         ("flat3d-inject", format!("{bin_dir}/flat3d-inject")),
         ("flat3d-run", format!("{bin_dir}/flat3d-run")),
@@ -401,7 +401,7 @@ pub struct UninstallPlan {
 
 pub fn uninstall_plan(home: &str) -> UninstallPlan {
     let bin_dir = bin_dir(home);
-    let tools_dir = crate::tether::adb::tools_dir(home);
+    let tools_dir = crate::link::adb::tools_dir(home);
     UninstallPlan {
         before: vec![vec!["systemctl", "--user", "disable", "--now", UNIT_NAME]
             .into_iter()

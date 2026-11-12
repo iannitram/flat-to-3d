@@ -1,5 +1,6 @@
 use flat3d_inject::api::TetherMode;
-use flat3d_inject::tether::adb::{choose_adb, CommandRunner};
+use flat3d_inject::exec::RelayRunner as CommandRunner;
+use flat3d_inject::link::adb::choose_adb;
 use flat3d_inject::tether::Tether;
 use std::collections::BTreeMap;
 
