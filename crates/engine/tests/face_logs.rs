@@ -132,8 +132,8 @@ fn log_lines_matches_newest_first() {
 #[test]
 fn is_error_line_words() {
     for line in [
-        "Tether command failed: exit 1",
-        "Could not run tether command",
+        "Command failed: exit 1",
+        "Could not run command",
         "exec: No such file",
     ] {
         assert!(logs::is_error_line(line));

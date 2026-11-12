@@ -44,32 +44,28 @@ impl CommandRunner for SystemRunner {
     }
 }
 
-/// Process operations used by the tether; tests supply a recording runner.
-pub trait RelayRunner {
+/// Process operations used by the link service; tests supply a recording runner.
+pub trait LinkRunner {
     fn run(&mut self, command: &[String]) -> Result<String, String>;
-    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String>;
-    fn stop_relay(&mut self) -> Result<(), String>;
 }
 
-/// The real runner owns only the relay it starts.
+/// The real runner: one process per command, waiting for the exit.
 #[derive(Default)]
-pub struct ProcessRunner {
-    relay: Option<std::process::Child>,
-}
+pub struct ProcessRunner;
 
-impl RelayRunner for ProcessRunner {
+impl LinkRunner for ProcessRunner {
     fn run(&mut self, command: &[String]) -> Result<String, String> {
         let Some((program, args)) = command.split_first() else {
-            return Err("Could not run tether command: empty command".to_string());
+            return Err("Could not run command: empty command".to_string());
         };
         let output = std::process::Command::new(program)
             .args(args)
             .output()
-            .map_err(|error| format!("Could not run tether command: {error}"))?;
+            .map_err(|error| format!("Could not run command: {error}"))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let tail = tail_lines(&stderr, 4);
-            let mut message = format!("Tether command failed: {}", exit_text(&output.status));
+            let mut message = format!("Command failed: {}", exit_text(&output.status));
             if !tail.is_empty() {
                 message.push_str("; ");
                 message.push_str(&tail);
@@ -77,47 +73,6 @@ impl RelayRunner for ProcessRunner {
             return Err(message);
         }
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-    }
-
-    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String> {
-        let Some((program, args)) = command.split_first() else {
-            return Err("Could not start tether relay".to_string());
-        };
-        let mut child = std::process::Command::new(program)
-            .args(args)
-            .env("ADB", adb)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .map_err(|_| "Could not start tether relay".to_string())?;
-        match child.try_wait() {
-            Ok(None) => {
-                self.relay = Some(child);
-                Ok(())
-            }
-            Ok(Some(_)) => Err("Tether relay exited during startup".to_string()),
-            Err(_) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                Err("Could not check tether relay".to_string())
-            }
-        }
-    }
-
-    fn stop_relay(&mut self) -> Result<(), String> {
-        if let Some(child) = self.relay.as_mut() {
-            if child
-                .try_wait()
-                .map_err(|_| "Could not check tether relay")?
-                .is_none()
-            {
-                child.kill().map_err(|_| "Could not stop tether relay")?;
-            }
-            child.wait().map_err(|_| "Could not reap tether relay")?;
-            self.relay = None;
-        }
-        Ok(())
     }
 }
 

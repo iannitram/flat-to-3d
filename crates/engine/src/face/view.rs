@@ -41,23 +41,3 @@ pub fn health_view(h: Option<&Health>) -> HealthView {
         },
     }
 }
-
-pub fn throughput_text(bytes_per_second: u64) -> String {
-    if bytes_per_second < 1_000 {
-        format!("{bytes_per_second} B/s")
-    } else if bytes_per_second < 1_000_000 {
-        format!("{:.1} KB/s", bytes_per_second as f64 / 1_000.0)
-    } else {
-        format!("{:.1} MB/s", bytes_per_second as f64 / 1_000_000.0)
-    }
-}
-
-pub fn uptime_text(seconds: u64) -> String {
-    if seconds < 60 {
-        format!("{seconds}s")
-    } else if seconds < 3_600 {
-        format!("{}m {}s", seconds / 60, seconds % 60)
-    } else {
-        format!("{}h {}m", seconds / 3_600, (seconds % 3_600) / 60)
-    }
-}

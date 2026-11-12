@@ -24,7 +24,6 @@ fn games() -> Vec<Game> {
 fn settings(off: &[u32]) -> Settings {
     Settings {
         auto_3d: true,
-        tunnel: true,
         off: BTreeSet::from_iter(off.iter().copied()),
     }
 }

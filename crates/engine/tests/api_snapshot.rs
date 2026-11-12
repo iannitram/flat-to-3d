@@ -7,8 +7,6 @@ fn full() -> LinkSnapshot {
     LinkSnapshot {
         state: LinkState::Ready,
         message: "ok".into(),
-        tether: TetherMode::QuestTether,
-        tunnel: true,
         auto_3d: true,
         adb: "/usr/bin/adb".into(),
         adb_source: AdbSource::Running,
@@ -17,12 +15,6 @@ fn full() -> LinkSnapshot {
             status: "Discharging".into(),
             temp_c: Some(36.5),
             zone: Zone::Green,
-        }),
-        stats: Some(Stats {
-            rx_bytes_s: 1000,
-            tx_bytes_s: 20,
-            uptime_s: 61,
-            reconnects: 2,
         }),
         events: vec![LinkEvent {
             seq: 4,
@@ -36,10 +28,9 @@ fn full() -> LinkSnapshot {
 #[test]
 fn a_snapshot_has_exactly_these_keys() {
     let want = json!({
-        "state": "ready", "message": "ok", "tether": "quest-tether", "tunnel": true, "auto_3d": true,
+        "state": "ready", "message": "ok", "auto_3d": true,
         "adb": "/usr/bin/adb", "adb_source": "running",
         "health": {"battery": 80, "status": "Discharging", "temp_c": 36.5, "zone": "green"},
-        "stats": {"rx_bytes_s": 1000, "tx_bytes_s": 20, "uptime_s": 61, "reconnects": 2},
         "events": [{"seq": 4, "kind": "late-plug", "text": "t"}],
         "updated": 77
     });
@@ -61,7 +52,6 @@ fn the_enums_use_these_strings() {
         (EventKind::AllowDebugging, "allow-debugging"),
         (EventKind::Warm, "warm"),
         (EventKind::Hot, "hot"),
-        (EventKind::TetherError, "tether-error"),
     ];
     for (k, s) in kinds {
         assert_eq!(serde_json::to_value(k).unwrap(), json!(s));
@@ -70,7 +60,6 @@ fn the_enums_use_these_strings() {
         serde_json::to_value(Zone::Unknown).unwrap(),
         json!("unknown")
     );
-    assert_eq!(serde_json::to_value(TetherMode::Off).unwrap(), json!("off"));
     assert_eq!(
         serde_json::to_value(AdbSource::Bundled).unwrap(),
         json!("bundled")
@@ -80,7 +69,6 @@ fn the_enums_use_these_strings() {
 #[test]
 fn a_bad_enum_string_does_not_read() {
     assert!(serde_json::from_value::<Zone>(json!("orange")).is_err());
-    assert!(serde_json::from_value::<TetherMode>(json!("Own")).is_err());
 }
 
 #[test]
@@ -115,8 +103,8 @@ fn the_small_reports_have_these_keys() {
 #[test]
 fn stopped_is_the_documented_snapshot() {
     let want = json!({
-        "state": "stopped", "message": "Link service is not running.", "tether": "off", "tunnel": false,
-        "auto_3d": false, "adb": "", "adb_source": "missing", "health": null, "stats": null,
+        "state": "stopped", "message": "Link service is not running.",
+        "auto_3d": false, "adb": "", "adb_source": "missing", "health": null,
         "events": [], "updated": 5
     });
     assert_eq!(

@@ -26,7 +26,6 @@ pub mod stats;
 pub mod status;
 pub mod steam;
 pub mod switches;
-pub mod tether;
 
 pub mod undo;
 

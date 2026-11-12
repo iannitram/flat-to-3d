@@ -8,7 +8,6 @@ use flat3d_inject::watch::{
 fn inputs() -> Inputs {
     Inputs {
         auto_3d: false,
-        tunnel_on: true,
         game_3d_running: false,
         game_flat_running: false,
     }
@@ -41,7 +40,7 @@ fn start_with_no_headset_or_when_up_does_nothing() {
 }
 
 #[test]
-fn stop_takes_the_link_down_and_keeps_the_tether() {
+fn stop_takes_the_link_down() {
     assert_eq!(
         run(Phase::Up, Event::StopRequested),
         (Phase::Plugged, vec![Effect::StopLink])
@@ -77,13 +76,7 @@ fn link_effects_run_these_commands() {
 
 #[test]
 fn the_other_effects_run_no_link_commands() {
-    for e in [
-        Effect::StartTether,
-        Effect::StopTether,
-        Effect::Notify(Note::Ready),
-    ] {
-        assert!(link_commands(&e).is_empty());
-    }
+    assert!(link_commands(&Effect::Notify(Note::Ready)).is_empty());
 }
 
 #[test]

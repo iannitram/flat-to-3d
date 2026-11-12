@@ -57,14 +57,14 @@ fn setting_get_and_set() {
         }
     );
     assert_eq!(
-        ok(&["setting", "set", "tunnel", "off"]),
+        ok(&["setting", "set", "auto-3d", "off"]),
         LinkCommand::SettingSet {
-            key: SettingKey::Tunnel,
+            key: SettingKey::Auto3d,
             on: false
         }
     );
     assert_eq!(SettingKey::Auto3d.as_str(), "auto-3d");
-    assert_eq!(SettingKey::Tunnel.as_str(), "tunnel");
+    assert!(usage(&["setting", "set", "tunnel", "off"]).contains("setting set"));
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn bad_arguments_give_a_usage_message() {
     assert!(usage(&["switch", "get"]).contains("switch get"));
     assert!(usage(&["switch"]).contains("switch"));
     assert!(usage(&["setting", "get", "volume"]).contains("setting"));
-    assert!(usage(&["setting", "set", "tunnel"]).contains("setting set"));
+    assert!(usage(&["setting", "set", "volume"]).contains("setting set"));
     assert!(usage(&["run", "5", "game"]).contains("run"));
     assert!(usage(&["run", "5", "--"]).contains("run"));
     assert!(usage(&["run", "x", "--", "game"]).contains("run"));

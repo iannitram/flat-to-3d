@@ -28,11 +28,11 @@ fn run(
     command: Command,
 ) -> Result<serde_json::Value, flat3d_inject::api::ApiError> {
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     let mut ctx = Ctx {
         paths,
         runner: &mut runner,
-        relay: &mut relay,
+        process: &mut process,
         json: true,
     };
     engine::run(&command, &mut ctx)
@@ -249,17 +249,17 @@ fn list_and_status_are_read_only_and_the_registry_says_read_only() {
     let before_runtime = tree_bytes(runtime);
 
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     let mut ctx = Ctx {
         paths: &paths,
         runner: &mut runner,
-        relay: &mut relay,
+        process: &mut process,
         json: true,
     };
     engine::run(&Command::List, &mut ctx).unwrap();
     engine::run(&Command::Status, &mut ctx).unwrap();
     assert!(runner.ran.is_empty());
-    assert!(relay.ran.is_empty());
+    assert!(process.ran.is_empty());
     assert_eq!(tree_bytes(&paths.home), before_home);
     assert_eq!(tree_bytes(runtime), before_runtime);
 

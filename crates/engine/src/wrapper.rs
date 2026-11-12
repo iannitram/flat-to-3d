@@ -107,10 +107,12 @@ fn valid_settings(text: &str) -> bool {
     let mut lines = text.lines();
     lines.next() == Some("flat3d-settings 1")
         && lines.all(|line| match line.split_once('\t') {
-            Some(("auto-3d" | "tunnel", "on" | "off")) => true,
+            Some(("auto-3d", "on" | "off")) => true,
             Some(("game-off", value)) => value.parse::<u32>().is_ok(),
-            Some(("auto-3d" | "tunnel", _)) => false,
-            _ => !matches!(line, "auto-3d" | "tunnel" | "game-off"),
+            Some(("auto-3d", _)) => false,
+            // An old `tunnel` line is ignored, so it stays valid whatever its value.
+            Some(("tunnel", _)) => true,
+            _ => !matches!(line, "auto-3d" | "game-off"),
         })
 }
 

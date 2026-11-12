@@ -1,7 +1,7 @@
-//! Locked tests for E9c: health, speed and uptime wording. Pure.
+//! Locked tests for E9c: health wording. Pure.
 
 use flat3d_inject::api::{Health, Zone};
-use flat3d_inject::view::{health_view, throughput_text, uptime_text, zone_colour, HealthView};
+use flat3d_inject::view::{health_view, zone_colour, HealthView};
 
 fn h(battery: Option<u8>, temp_c: Option<f64>, zone: Zone) -> Health {
     Health {
@@ -46,26 +46,4 @@ fn missing_data_says_unknown() {
     let unknown = v("unknown", "unknown", Zone::Unknown, "#b0b0b0");
     assert_eq!(health_view(None), unknown);
     assert_eq!(health_view(Some(&h(None, None, Zone::Unknown))), unknown);
-}
-
-#[test]
-fn throughput_picks_the_unit() {
-    assert_eq!(throughput_text(0), "0 B/s");
-    assert_eq!(throughput_text(512), "512 B/s");
-    assert_eq!(throughput_text(999), "999 B/s");
-    assert_eq!(throughput_text(1000), "1.0 KB/s");
-    assert_eq!(throughput_text(1500), "1.5 KB/s");
-    assert_eq!(throughput_text(1_000_000), "1.0 MB/s");
-    assert_eq!(throughput_text(2_500_000), "2.5 MB/s");
-}
-
-#[test]
-fn uptime_has_seconds_minutes_and_hours() {
-    assert_eq!(uptime_text(0), "0s");
-    assert_eq!(uptime_text(59), "59s");
-    assert_eq!(uptime_text(60), "1m 0s");
-    assert_eq!(uptime_text(185), "3m 5s");
-    assert_eq!(uptime_text(3599), "59m 59s");
-    assert_eq!(uptime_text(3600), "1h 0m");
-    assert_eq!(uptime_text(3725), "1h 2m");
 }

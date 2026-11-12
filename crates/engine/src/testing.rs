@@ -1,6 +1,6 @@
 //! Test helpers shared by the engine's integration tests.
 
-use crate::exec::{CommandOutput, CommandRunner, RelayRunner};
+use crate::exec::{CommandOutput, CommandRunner, LinkRunner};
 use std::collections::VecDeque;
 
 struct Reply {
@@ -85,7 +85,7 @@ impl CommandRunner for FakeRunner {
     }
 }
 
-impl RelayRunner for FakeRunner {
+impl LinkRunner for FakeRunner {
     fn run(&mut self, argv: &[String]) -> Result<String, String> {
         self.ran.push(argv.to_vec());
         let output = self.take(argv);
@@ -94,18 +94,5 @@ impl RelayRunner for FakeRunner {
         } else {
             Err(output.stderr)
         }
-    }
-
-    fn start_relay(&mut self, argv: &[String], name: &str) -> Result<(), String> {
-        let mut words = vec!["relay".to_string()];
-        words.extend_from_slice(argv);
-        words.push(name.to_string());
-        self.ran.push(words);
-        Ok(())
-    }
-
-    fn stop_relay(&mut self) -> Result<(), String> {
-        self.ran.push(vec!["relay".into(), "stop".into()]);
-        Ok(())
     }
 }

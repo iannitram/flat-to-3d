@@ -14,10 +14,6 @@ pub fn view(s: &HeadsetState, now: u64) -> Element<'_, Msg> {
             v.health.battery, v.health.temp
         ))
         .color(health_colour),
-        text(format!(
-            "RX: {}   TX: {}   Uptime: {}",
-            v.rx, v.tx, v.uptime
-        )),
     ]
     .spacing(10);
     if v.start && !s.busy {
@@ -26,13 +22,11 @@ pub fn view(s: &HeadsetState, now: u64) -> Element<'_, Msg> {
     if v.stop && !s.busy {
         content = content.push(button("Stop 3D").on_press(Msg::StopPressed));
     }
-    content = content
-        .push(
-            toggler(v.auto_3d)
-                .label("Auto 3D")
-                .on_toggle(Msg::SetAuto3d),
-        )
-        .push(toggler(v.tunnel).label("Tunnel").on_toggle(Msg::SetTunnel));
+    content = content.push(
+        toggler(v.auto_3d)
+            .label("Auto 3D")
+            .on_toggle(Msg::SetAuto3d),
+    );
     if let Some(error) = &s.error {
         content = content.push(text(error));
     }

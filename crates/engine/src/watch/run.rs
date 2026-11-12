@@ -34,7 +34,7 @@ pub fn run(paths: &Paths) -> ! {
         .and_then(|text| serde_json::from_str::<LinkSnapshot>(&text).ok());
     let mut service = Service::new(
         paths.clone(),
-        Rc::new(RefCell::new(ProcessRunner::default())),
+        Rc::new(RefCell::new(ProcessRunner)),
         feed,
         choice,
     );

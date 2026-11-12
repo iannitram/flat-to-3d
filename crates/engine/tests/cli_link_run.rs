@@ -44,12 +44,12 @@ fn run(
     cmd: &LinkCommand,
     paths: &EnginePaths,
     runner: &mut FakeRunner,
-    relay: &mut FakeRunner,
+    process: &mut FakeRunner,
 ) -> serde_json::Value {
     let mut ctx = cli::Ctx {
         paths,
         runner,
-        relay,
+        process,
         json: false,
     };
     cli_link::run(cmd, &mut ctx).unwrap()
@@ -100,7 +100,7 @@ fn request_3d_writes_start_then_stop_only_for_a_fresh_snapshot() {
 fn switches_and_settings_are_read_and_written_through_the_settings_file() {
     let (_root, paths) = setup("settings");
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     assert_eq!(
         run(
             &LinkCommand::SwitchSet {
@@ -109,7 +109,7 @@ fn switches_and_settings_are_read_and_written_through_the_settings_file() {
             },
             &paths,
             &mut runner,
-            &mut relay
+            &mut process
         ),
         serde_json::json!({"appid":5,"on":false})
     );
@@ -121,32 +121,21 @@ fn switches_and_settings_are_read_and_written_through_the_settings_file() {
             &LinkCommand::SwitchGet { appid: 5 },
             &paths,
             &mut runner,
-            &mut relay
+            &mut process
         ),
         serde_json::json!({"appid":5,"on":false})
     );
     assert_eq!(
         run(
             &LinkCommand::SettingSet {
-                key: SettingKey::Tunnel,
+                key: SettingKey::Auto3d,
                 on: false
             },
             &paths,
             &mut runner,
-            &mut relay
+            &mut process
         ),
-        serde_json::json!({"key":"tunnel","on":false})
-    );
-    assert_eq!(
-        run(
-            &LinkCommand::SettingGet {
-                key: SettingKey::Tunnel
-            },
-            &paths,
-            &mut runner,
-            &mut relay
-        ),
-        serde_json::json!({"key":"tunnel","on":false})
+        serde_json::json!({"key":"auto-3d","on":false})
     );
     assert_eq!(
         run(
@@ -155,9 +144,20 @@ fn switches_and_settings_are_read_and_written_through_the_settings_file() {
             },
             &paths,
             &mut runner,
-            &mut relay
+            &mut process
         ),
-        serde_json::json!({"key":"auto-3d","on":true})
+        serde_json::json!({"key":"auto-3d","on":false})
+    );
+    assert_eq!(
+        run(
+            &LinkCommand::SettingGet {
+                key: SettingKey::Auto3d
+            },
+            &paths,
+            &mut runner,
+            &mut process
+        ),
+        serde_json::json!({"key":"auto-3d","on":false})
     );
 }
 
@@ -165,14 +165,14 @@ fn switches_and_settings_are_read_and_written_through_the_settings_file() {
 fn snapshot_returns_stopped_when_absent_and_the_saved_state_when_present() {
     let (_root, paths) = setup("snapshot");
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     assert_eq!(
-        run(&LinkCommand::Snapshot, &paths, &mut runner, &mut relay)["state"],
+        run(&LinkCommand::Snapshot, &paths, &mut runner, &mut process)["state"],
         "stopped"
     );
     save_snapshot(&paths, flat3d_inject::sys::unix_now());
     assert_eq!(
-        run(&LinkCommand::Snapshot, &paths, &mut runner, &mut relay)["state"],
+        run(&LinkCommand::Snapshot, &paths, &mut runner, &mut process)["state"],
         "ready"
     );
 }
@@ -211,19 +211,19 @@ fn read_verbs_leave_the_file_tree_and_runners_unchanged() {
     save_snapshot(&paths, flat3d_inject::sys::unix_now());
     let before = tree(&root);
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     for cmd in [
         LinkCommand::Snapshot,
         LinkCommand::SwitchGet { appid: 5 },
         LinkCommand::SettingGet {
-            key: SettingKey::Tunnel,
+            key: SettingKey::Auto3d,
         },
     ] {
-        run(&cmd, &paths, &mut runner, &mut relay);
+        run(&cmd, &paths, &mut runner, &mut process);
     }
     assert_eq!(tree(&root), before);
     assert!(runner.ran.is_empty());
-    assert!(relay.ran.is_empty());
+    assert!(process.ran.is_empty());
 
     let (_root, empty_paths) = setup("read-only-empty");
     let before = tree(empty_paths.home.parent().unwrap());
@@ -231,26 +231,26 @@ fn read_verbs_leave_the_file_tree_and_runners_unchanged() {
         LinkCommand::Snapshot,
         LinkCommand::SwitchGet { appid: 5 },
         LinkCommand::SettingGet {
-            key: SettingKey::Tunnel,
+            key: SettingKey::Auto3d,
         },
     ] {
-        run(&cmd, &empty_paths, &mut runner, &mut relay);
+        run(&cmd, &empty_paths, &mut runner, &mut process);
     }
     assert_eq!(tree(empty_paths.home.parent().unwrap()), before);
     assert!(runner.ran.is_empty());
-    assert!(relay.ran.is_empty());
+    assert!(process.ran.is_empty());
 }
 
 #[test]
 fn install_error_is_a_known_api_error_and_does_not_enable_the_service() {
     let (_root, paths) = setup("install-fails");
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     {
         let mut ctx = cli::Ctx {
             paths: &paths,
             runner: &mut runner,
-            relay: &mut relay,
+            process: &mut process,
             json: false,
         };
         let error = cli_link::run(&LinkCommand::Install, &mut ctx).unwrap_err();
@@ -271,7 +271,7 @@ fn bad_link_arguments_keep_the_exact_usage_errors_and_exit_two() {
         ),
         (
             vec!["setting", "get", "volume", "--json"],
-            "usage: flat3d-inject setting get auto-3d|tunnel",
+            "usage: flat3d-inject setting get <name>",
         ),
         (
             vec!["run", "5", "game", "--json"],
@@ -308,10 +308,10 @@ fn link_command_registry_matches_parsing_variants_and_effects_in_both_directions
         ),
         ("switch get", &["5"], &[SideEffect::ReadOnly]),
         ("switch set", &["5", "off"], &[SideEffect::WritesFiles]),
-        ("setting get", &["tunnel"], &[SideEffect::ReadOnly]),
+        ("setting get", &["auto-3d"], &[SideEffect::ReadOnly]),
         (
             "setting set",
-            &["tunnel", "off"],
+            &["auto-3d", "off"],
             &[SideEffect::WritesFiles],
         ),
         (

@@ -1,5 +1,4 @@
 export type LinkState = "no-headset" | "unauthorised" | "starting" | "ready" | "stopped";
-export type TetherMode = "off" | "own" | "quest-tether";
 export type Zone = "green" | "yellow" | "red" | "unknown";
 
 export interface LinkEvent { seq: number; kind: string; text: string }
@@ -11,11 +10,6 @@ export interface LinkView {
   start: boolean;
   stop: boolean;
   health: HealthView;
-  rx: string;
-  tx: string;
-  uptime: string;
-  tether: TetherMode;
-  tunnel: boolean;
   auto_3d: boolean;
   adb_source: string;
 }

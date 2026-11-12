@@ -8,8 +8,6 @@
 pub enum SettingKey {
     /// Automatic stereo injection (`auto-3d`).
     Auto3d,
-    /// The headset tunnel (`tunnel`).
-    Tunnel,
 }
 
 impl SettingKey {
@@ -17,7 +15,6 @@ impl SettingKey {
     pub fn as_str(&self) -> &'static str {
         match self {
             SettingKey::Auto3d => "auto-3d",
-            SettingKey::Tunnel => "tunnel",
         }
     }
 }
@@ -166,12 +163,10 @@ fn run_with(
             let on = match cmd {
                 LinkCommand::SettingGet { .. } => match key {
                     SettingKey::Auto3d => settings.auto_3d,
-                    SettingKey::Tunnel => settings.tunnel,
                 },
                 LinkCommand::SettingSet { on, .. } => {
                     match key {
                         SettingKey::Auto3d => settings.auto_3d = *on,
-                        SettingKey::Tunnel => settings.tunnel = *on,
                     }
                     crate::switches::write_settings(&path, &settings)
                         .map_err(|error| ApiError::new("io", &error.to_string()))?;
@@ -293,7 +288,6 @@ fn parse_on_off(word: &str) -> Option<bool> {
 fn parse_key(word: &str) -> Option<SettingKey> {
     match word {
         "auto-3d" => Some(SettingKey::Auto3d),
-        "tunnel" => Some(SettingKey::Tunnel),
         _ => None,
     }
 }
@@ -315,14 +309,12 @@ fn parse_setting(rest: &[String]) -> Result<LinkCommand, String> {
     match rest {
         [verb, key] if verb == "get" => parse_key(key)
             .map(|key| LinkCommand::SettingGet { key })
-            .ok_or_else(|| usage("setting get auto-3d|tunnel")),
+            .ok_or_else(|| usage("setting get <name>")),
         [verb, key, state] if verb == "set" => match (parse_key(key), parse_on_off(state)) {
             (Some(key), Some(on)) => Ok(LinkCommand::SettingSet { key, on }),
-            _ => Err(usage("setting set auto-3d|tunnel on|off")),
+            _ => Err(usage("setting set <name> on|off")),
         },
-        _ => Err(usage(
-            "setting get auto-3d|tunnel | setting set auto-3d|tunnel on|off",
-        )),
+        _ => Err(usage("setting get <name> | setting set <name> on|off")),
     }
 }
 
@@ -383,11 +375,11 @@ mod tests {
             ),
         ]);
         let mut runner = FakeRunner::new();
-        let mut relay = ProcessRunner::default();
+        let mut process = ProcessRunner;
         let mut ctx = super::super::Ctx {
             paths: &paths,
             runner: &mut runner,
-            relay: &mut relay,
+            process: &mut process,
             json: false,
         };
         let argv = vec!["game".into(), "--json".into()];
@@ -448,11 +440,11 @@ mod tests {
     fn watch_calls_its_closure_once() {
         let (_root, paths) = setup("watch");
         let mut runner = FakeRunner::new();
-        let mut relay = ProcessRunner::default();
+        let mut process = ProcessRunner;
         let mut ctx = super::super::Ctx {
             paths: &paths,
             runner: &mut runner,
-            relay: &mut relay,
+            process: &mut process,
             json: false,
         };
         let calls = std::rc::Rc::new(std::cell::Cell::new(0));
@@ -491,12 +483,12 @@ mod tests {
         }
         let env = BTreeMap::from([("HOME".into(), paths.home.to_string_lossy().into_owned())]);
         let mut runner = FakeRunner::new();
-        let mut relay = ProcessRunner::default();
+        let mut process = ProcessRunner;
         {
             let mut ctx = super::super::Ctx {
                 paths: &paths,
                 runner: &mut runner,
-                relay: &mut relay,
+                process: &mut process,
                 json: false,
             };
             let mut exec = |_: &crate::wrapper::Launch| Ok(());

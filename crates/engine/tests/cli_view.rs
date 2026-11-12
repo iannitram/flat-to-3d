@@ -2,7 +2,7 @@
 mod scenes;
 
 use flat3d_inject::{
-    api::{AdbSource, EventKind, LinkSnapshot, LinkState, Stats, TetherMode},
+    api::{AdbSource, EventKind, LinkSnapshot, LinkState},
     cli::{self, AnyCommand, Ctx, ViewCommand},
     face::link_model,
     testing::FakeRunner,
@@ -121,7 +121,7 @@ fn bad_view_args_are_usage_errors() {
 }
 
 fn expected_stopped() -> Value {
-    json!({"state":"stopped","label":"Stopped","hint":"Press Start 3D to bring the headset link up.","start":true,"stop":false,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"rx":"—","tx":"—","uptime":"—","tether":"off","tunnel":false,"auto_3d":false,"adb_source":"missing"})
+    json!({"state":"stopped","label":"Stopped","hint":"Press Start 3D to bring the headset link up.","start":true,"stop":false,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"auto_3d":false,"adb_source":"missing"})
 }
 
 #[test]
@@ -139,19 +139,11 @@ fn link_model_handles_absent_stale_and_fresh_snapshots() {
     );
     let mut fresh = LinkSnapshot::stopped(now);
     fresh.state = LinkState::Ready;
-    fresh.tether = TetherMode::Own;
-    fresh.tunnel = true;
     fresh.auto_3d = true;
     fresh.adb_source = AdbSource::Bundled;
-    fresh.stats = Some(Stats {
-        rx_bytes_s: 1536,
-        tx_bytes_s: 512,
-        uptime_s: 185,
-        reconnects: 0,
-    });
     assert_eq!(
         serde_json::to_value(link_model::link_view(Some(fresh), now)).unwrap(),
-        json!({"state":"ready","label":"Ready","hint":"Press Play on a 3D Ready game.","start":false,"stop":true,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"rx":"1.5 KB/s","tx":"512 B/s","uptime":"3m 5s","tether":"own","tunnel":true,"auto_3d":true,"adb_source":"bundled"})
+        json!({"state":"ready","label":"Ready","hint":"Press Play on a 3D Ready game.","start":false,"stop":true,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"auto_3d":true,"adb_source":"bundled"})
     );
 }
 
@@ -161,11 +153,11 @@ fn with_ctx<T>(
 ) -> T {
     let paths = scenes::no_steam(case);
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     let mut ctx = Ctx {
         paths: &paths,
         runner: &mut runner,
-        relay: &mut relay,
+        process: &mut process,
         json: true,
     };
     f(&paths, &mut ctx)
@@ -359,12 +351,12 @@ fn every_view_verb_is_read_only() {
     let root = p.home.parent().unwrap();
     let before = files(root);
     let mut runner = FakeRunner::new();
-    let mut relay = FakeRunner::new();
+    let mut process = FakeRunner::new();
     {
         let mut ctx = Ctx {
             paths: &p,
             runner: &mut runner,
-            relay: &mut relay,
+            process: &mut process,
             json: true,
         };
         for command in [
@@ -391,5 +383,5 @@ fn every_view_verb_is_read_only() {
     }
     assert_eq!(before, files(root));
     assert!(runner.ran.is_empty());
-    assert!(relay.ran.is_empty());
+    assert!(process.ran.is_empty());
 }
