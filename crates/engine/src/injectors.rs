@@ -12,6 +12,7 @@ pub mod fetch;
 pub mod geo11;
 pub mod port;
 pub mod uevr;
+pub mod uevr_profile;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RouteEnv {
