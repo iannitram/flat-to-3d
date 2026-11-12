@@ -16,7 +16,6 @@ pub enum Msg {
     StopPressed,
     Done(Result<(), String>),
     SetAuto3d(bool),
-    SetTunnel(bool),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
@@ -72,6 +71,5 @@ pub fn update(state: &mut HeadsetState, msg: Msg) -> Option<Action> {
             }
             Some(Action::SetSetting { key: "auto-3d", on })
         }
-        Msg::SetTunnel(on) => Some(Action::SetSetting { key: "tunnel", on }),
     }
 }
