@@ -518,3 +518,235 @@ fn stale_nested_backup_refuses_and_symlink_loops_end() {
     assert!(err.starts_with("refused: "), "{err}");
     assert_eq!(snapshot(&game), before);
 }
+
+#[test]
+fn stale_version_folder_is_not_picked() {
+    let pins = flat3d_inject::injectors::fetch::parse_pins(flat3d_inject::injectors::fetch::PINS);
+    let v = pins.get("geo11").expect("geo11 pin").version.clone();
+    assert!(!v.is_empty() && !v.starts_with("TBD"));
+
+    let r = root("stale_version");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    put(game.join("Control_DX11.exe"), "exe");
+    put(
+        cache.join("control-fix/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n",
+    );
+
+    let oldver = "0.0.1";
+    assert!(oldver < v.as_str());
+
+    let old_dir = cache.join("geo11").join(oldver);
+    put(old_dir.join(".flat3d-fetch"), "old\n");
+    put(old_dir.join("x64/d3d11.dll"), "dll-old");
+    put(old_dir.join("x64/nvapi64.dll"), "nvapi-old");
+    put(
+        old_dir.join("x64/d3dxdm.ini"),
+        "direct_mode=sbs\ndm_separation=11\ndm_convergence=1.0\nver=11\n",
+    );
+
+    let v_dir = cache.join("geo11").join(&v);
+    put(v_dir.join(".flat3d-fetch"), format!("{v}\n"));
+    put(v_dir.join("x64/d3d11.dll"), "dll-new");
+    put(v_dir.join("x64/nvapi64.dll"), "nvapi-new");
+    put(
+        v_dir.join("x64/d3dxdm.ini"),
+        "direct_mode=sbs\ndm_separation=22\ndm_convergence=1.0\nver=22\n",
+    );
+
+    let m = settings(&[
+        ("geo11-fix", "control-fix"),
+        ("geo11-exe", "Control_DX11.exe"),
+        ("geo11-separation", "22"),
+    ]);
+
+    let plan = geo11::plan_files(&cache, &game, &m).unwrap();
+    let d3dxdm_write = plan
+        .iter()
+        .find_map(|s| match s {
+            FileStep::Write { to, text } if to.file_name().unwrap() == "d3dxdm.ini" => {
+                Some(text.as_str())
+            }
+            _ => None,
+        })
+        .expect("Write step for d3dxdm.ini");
+    assert!(d3dxdm_write.contains("22"), "{d3dxdm_write}");
+    assert!(!d3dxdm_write.contains("11"), "{d3dxdm_write}");
+    assert!(plan
+        .iter()
+        .any(|s| matches!(s, FileStep::Copy { from, .. } if from == &v_dir.join("x64/d3d11.dll"))));
+
+    // Variant: only the old version folder (with marker) exists and no V folder:
+    // plan_files returns an Err starting with "not-found: geo11 is not fetched"
+    let r_old_only = root("stale_old_only");
+    let cache_old_only = r_old_only.join("cache");
+    let game_old_only = r_old_only.join("game");
+    put(game_old_only.join("Control_DX11.exe"), "exe");
+    put(
+        cache_old_only.join("control-fix/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n",
+    );
+    let old_only_dir = cache_old_only.join("geo11").join(oldver);
+    put(old_only_dir.join(".flat3d-fetch"), "old\n");
+    put(old_only_dir.join("x64/d3d11.dll"), "dll-old");
+    put(old_only_dir.join("x64/nvapi64.dll"), "nvapi-old");
+    put(
+        old_only_dir.join("x64/d3dxdm.ini"),
+        "direct_mode=sbs\ndm_separation=11\ndm_convergence=1.0\n",
+    );
+    let err = geo11::plan_files(&cache_old_only, &game_old_only, &m).unwrap_err();
+    assert!(err.starts_with("not-found: geo11 is not fetched"), "{err}");
+}
+
+#[test]
+fn leftover_tmp_folder_is_not_picked() {
+    let pins = flat3d_inject::injectors::fetch::parse_pins(flat3d_inject::injectors::fetch::PINS);
+    let v = pins.get("geo11").expect("geo11 pin").version.clone();
+    assert!(!v.is_empty() && !v.starts_with("TBD"));
+
+    let r = root("tmp_leftover");
+    let cache = r.join("cache");
+    let game = r.join("game");
+    put(game.join("Control_DX11.exe"), "exe");
+    put(
+        cache.join("control-fix/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n",
+    );
+
+    let tmp_dir = cache.join("geo11").join(format!(".{v}.tmp"));
+    put(tmp_dir.join("x64/d3d11.dll"), "dll-wrong");
+    put(tmp_dir.join("x64/nvapi64.dll"), "nvapi-wrong");
+    put(
+        tmp_dir.join("x64/d3dxdm.ini"),
+        "direct_mode=sbs\ndm_separation=99\ndm_convergence=1.0\nwrong\n",
+    );
+
+    let v_dir = cache.join("geo11").join(&v);
+    put(v_dir.join(".flat3d-fetch"), format!("{v}\n"));
+    put(v_dir.join("x64/d3d11.dll"), "dll-right");
+    put(v_dir.join("x64/nvapi64.dll"), "nvapi-right");
+    put(
+        v_dir.join("x64/d3dxdm.ini"),
+        "direct_mode=sbs\ndm_separation=22\ndm_convergence=1.0\nright\n",
+    );
+
+    let m = settings(&[
+        ("geo11-fix", "control-fix"),
+        ("geo11-exe", "Control_DX11.exe"),
+        ("geo11-separation", "22"),
+    ]);
+
+    let plan = geo11::plan_files(&cache, &game, &m).unwrap();
+    let d3dxdm_write = plan
+        .iter()
+        .find_map(|s| match s {
+            FileStep::Write { to, text } if to.file_name().unwrap() == "d3dxdm.ini" => {
+                Some(text.as_str())
+            }
+            _ => None,
+        })
+        .expect("Write step for d3dxdm.ini");
+    assert!(d3dxdm_write.contains("right"), "{d3dxdm_write}");
+    assert!(!d3dxdm_write.contains("wrong"), "{d3dxdm_write}");
+    assert!(plan
+        .iter()
+        .any(|s| matches!(s, FileStep::Copy { from, .. } if from == &v_dir.join("x64/d3d11.dll"))));
+
+    // Variant: with only the .tmp folder present, the result is Err "not-found: geo11 is not fetched"
+    let r_only_tmp = root("tmp_only");
+    let cache_only_tmp = r_only_tmp.join("cache");
+    let game_only_tmp = r_only_tmp.join("game");
+    put(game_only_tmp.join("Control_DX11.exe"), "exe");
+    put(
+        cache_only_tmp.join("control-fix/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n",
+    );
+    let tmp_only_dir = cache_only_tmp.join("geo11").join(format!(".{v}.tmp"));
+    put(tmp_only_dir.join("x64/d3d11.dll"), "dll-wrong");
+    put(tmp_only_dir.join("x64/nvapi64.dll"), "nvapi-wrong");
+    put(
+        tmp_only_dir.join("x64/d3dxdm.ini"),
+        "direct_mode=sbs\ndm_separation=99\ndm_convergence=1.0\nwrong\n",
+    );
+    let err = geo11::plan_files(&cache_only_tmp, &game_only_tmp, &m).unwrap_err();
+    assert!(err.starts_with("not-found: geo11 is not fetched"), "{err}");
+
+    // Fix key: <cache>/control-fix/.1.2.tmp/d3dx.ini must not be picked over <cache>/control-fix/d3dx.ini
+    // In sorted order, .1.2.tmp sorts before fix and would win without the fix.
+    let r_fix = root("tmp_fix");
+    let cache_fix = r_fix.join("cache");
+    let game_fix = r_fix.join("game");
+    put(game_fix.join("Control_DX11.exe"), "exe");
+    geo11_overlay(&cache_fix);
+
+    put(
+        cache_fix.join("control-fix/.1.2.tmp/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n;wrong_ini = 1\n",
+    );
+    put(
+        cache_fix.join("control-fix/fix/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n;right_ini = 1\n",
+    );
+
+    let m_fix = settings(&[
+        ("geo11-fix", "control-fix"),
+        ("geo11-exe", "Control_DX11.exe"),
+    ]);
+
+    let plan_fix = geo11::plan_files(&cache_fix, &game_fix, &m_fix).unwrap();
+    let d3dx_write = plan_fix
+        .iter()
+        .find_map(|s| match s {
+            FileStep::Write { to, text } if to.file_name().unwrap() == "d3dx.ini" => {
+                Some(text.as_str())
+            }
+            _ => None,
+        })
+        .expect("Write step for d3dx.ini");
+    assert!(d3dx_write.contains("right_ini"), "{d3dx_write}");
+    assert!(!d3dx_write.contains("wrong_ini"), "{d3dx_write}");
+
+    // Also verify direct d3dx.ini in <cache>/control-fix/ wins over leftover .1.2.tmp
+    let r_direct = root("tmp_direct_fix");
+    let cache_direct = r_direct.join("cache");
+    let game_direct = r_direct.join("game");
+    put(game_direct.join("Control_DX11.exe"), "exe");
+    geo11_overlay(&cache_direct);
+    put(
+        cache_direct.join("control-fix/.1.2.tmp/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n;wrong_ini = 1\n",
+    );
+    put(
+        cache_direct.join("control-fix/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n;direct_ini = 1\n",
+    );
+    let plan_direct = geo11::plan_files(&cache_direct, &game_direct, &m_fix).unwrap();
+    let direct_write = plan_direct
+        .iter()
+        .find_map(|s| match s {
+            FileStep::Write { to, text } if to.file_name().unwrap() == "d3dx.ini" => {
+                Some(text.as_str())
+            }
+            _ => None,
+        })
+        .expect("Write step for d3dx.ini");
+    assert!(direct_write.contains("direct_ini"), "{direct_write}");
+    assert!(!direct_write.contains("wrong_ini"), "{direct_write}");
+
+    // Variant: only the .tmp folder present for the fix key returns not-found
+    let r_only_fix_tmp = root("only_fix_tmp");
+    let cache_only_fix = r_only_fix_tmp.join("cache");
+    let game_only_fix = r_only_fix_tmp.join("game");
+    put(game_only_fix.join("Control_DX11.exe"), "exe");
+    geo11_overlay(&cache_only_fix);
+    put(
+        cache_only_fix.join("control-fix/.1.2.tmp/d3dx.ini"),
+        "[Stereo]\nforce_stereo = 0\n",
+    );
+    let err_fix = geo11::plan_files(&cache_only_fix, &game_only_fix, &m_fix).unwrap_err();
+    assert!(
+        err_fix.starts_with("not-found: control-fix is not fetched"),
+        "{err_fix}"
+    );
+}
