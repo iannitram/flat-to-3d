@@ -2,6 +2,8 @@
 
 Every game-specific item on Spidy's GAME SCREEN 3D path ([spidy-core-map.md](spidy-core-map.md)), with its Remastered address and, once found, its Spider-Man 2 counterpart as a byte pattern. Plan step 3 (and steps 4–8 after it) works from this table.
 
+This map is the output of Spider-Man 2's hook-point research step, Step 2r in [the plan](plan.md) (#283, ruling 52, 2026-11-12): every SM2 address is found on the installed game with our own tools before Step 3 hooks it, the exe's SHA-256, file version and Steam build go at the top once the step runs, and Spidy's, HEROVR's and other peers' addresses are a checklist to verify, not a source.
+
 
 <!-- BEGIN GENERATED -->
 ### Priority 1. Steps 1-3: camera, frame entry, view setup

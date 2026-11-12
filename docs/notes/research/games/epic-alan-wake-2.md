@@ -126,7 +126,7 @@ Use it only after a public, free release appears. Then: OpenXR build of the mod 
 
 - Recipe files are `<appid>-<slug>.recipe` and the loader parses the appid as a number ([recipes/README.md](../../../../recipes/README.md)). This game has none.
 - The engine sets Steam launch options. Here the Steam shortcut starts Heroic, so a wrapper in the shortcut's launch options wraps Heroic, not the game. The game's Proton, prefix and environment are Heroic's.
-- Ways out (inferred, not designed): key the recipe by the Steam shortcut id, which is local to one machine; or add a recipe key for the store and let the engine write Heroic's per-game wrapper setting; or have the owner add `AlanWake2.exe` to Steam directly with `-EpicPortal`, which loses gamepad support unless `-epicuserid=Default-Epic-User` is also given ([PCGamingWiki](https://www.pcgamingwiki.com/wiki/Alan_Wake_II)).
+- Ways out (inferred, not designed): key the recipe by the Steam shortcut id, which is local to one machine; or add a recipe key for the store and let the engine write Heroic's per-game wrapper setting (the Heroic files it would read and write, taken from Kaon's reader, are in [epic-alan-wake-2-heroic-files.md](epic-alan-wake-2-heroic-files.md), unverified on the device); or have the owner add `AlanWake2.exe` to Steam directly with `-EpicPortal`, which loses gamepad support unless `-epicuserid=Default-Epic-User` is also given ([PCGamingWiki](https://www.pcgamingwiki.com/wiki/Alan_Wake_II)).
 
 ## 5. Proposed seed recipe
 
