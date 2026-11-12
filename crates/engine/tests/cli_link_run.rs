@@ -137,21 +137,6 @@ fn switches_and_settings_are_read_and_written_through_the_settings_file() {
         ),
         serde_json::json!({"key":"auto-3d","on":false})
     );
-    // `tunnel` is retired (#223): setting it answers off and leaves the file alone.
-    let before = std::fs::read_to_string(paths.settings()).unwrap();
-    assert_eq!(
-        run(
-            &LinkCommand::SettingSet {
-                key: SettingKey::Tunnel,
-                on: true
-            },
-            &paths,
-            &mut runner,
-            &mut process
-        ),
-        serde_json::json!({"key":"tunnel","on":false})
-    );
-    assert_eq!(std::fs::read_to_string(paths.settings()).unwrap(), before);
     assert_eq!(
         run(
             &LinkCommand::SettingGet {

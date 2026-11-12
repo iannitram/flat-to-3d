@@ -98,11 +98,4 @@ fn the_switches_ask_for_a_setting() {
         })
     );
     assert!(s.snapshot.as_ref().unwrap().auto_3d);
-    assert_eq!(
-        update(&mut s, Msg::SetTunnel(false)),
-        Some(Action::SetSetting {
-            key: "tunnel",
-            on: false
-        })
-    );
 }

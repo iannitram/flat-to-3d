@@ -75,10 +75,10 @@ fn headset_settings_route() {
     assert_eq!(
         update(
             &mut app,
-            Message::Headset(headset_page::Msg::SetTunnel(false))
+            Message::Headset(headset_page::Msg::SetAuto3d(false))
         ),
         vec![Effect::SetSetting {
-            key: "tunnel",
+            key: "auto-3d",
             on: false
         }]
     );
@@ -154,17 +154,11 @@ fn setup_run_is_busy_and_results_live_in_page_state() {
     );
     update(
         &mut app,
-        Message::Setup(setup_page::Msg::Packages(Ok(Packages {
-            wivrn: true,
-            gnirehtet: false,
-        }))),
+        Message::Setup(setup_page::Msg::Packages(Ok(Packages { wivrn: true }))),
     );
     assert_eq!(
         app.setup.packages,
-        Some(Packages {
-            wivrn: true,
-            gnirehtet: false
-        })
+        Some(Packages { wivrn: true })
     );
 }
 
@@ -286,14 +280,6 @@ fn effect_argv_matches_the_registered_cli_grammar() {
             key: "auto-3d",
             on: false,
         },
-        Effect::SetSetting {
-            key: "tunnel",
-            on: true,
-        },
-        Effect::SetSetting {
-            key: "tunnel",
-            on: false,
-        },
         Effect::LoadRows {
             filter: "all".into(),
         },
@@ -333,10 +319,10 @@ fn effect_argv_matches_the_registered_cli_grammar() {
     let argv = |effect: Effect| engine::effect_args(&effect).unwrap();
     assert_eq!(
         argv(Effect::SetSetting {
-            key: "tunnel",
+            key: "auto-3d",
             on: false
         }),
-        ["setting", "set", "tunnel", "off"]
+        ["setting", "set", "auto-3d", "off"]
     );
     assert_eq!(
         argv(Effect::SetSetting {
@@ -579,10 +565,7 @@ fn all_page_views_build_for_named_states() {
     };
     let setup_done = App {
         setup: setup_page::SetupState {
-            packages: Some(Packages {
-                wivrn: true,
-                gnirehtet: true,
-            }),
+            packages: Some(Packages { wivrn: true }),
             ..Default::default()
         },
         headset: link_ready.headset.clone(),
