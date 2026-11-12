@@ -104,15 +104,20 @@ Every game-specific item on Spidy's GAME SCREEN 3D path ([spidy-core-map.md](spi
 | component registry | data | `0x7a44320` | - | pending | - | pending | - |
 | component registry 2 | data | `0x7a44340` | - | pending | - | pending | - |
 
+<!-- END GENERATED -->
+
 ### Checked against HEROVR's list
 
 Checklist derived from peer [lecutis7of9/HEROVR](https://github.com/lecutis7of9/HEROVR/blob/82f3ffe4e4dc65d9f0df3b29918af2ccb7fc9859/BUILD-SM2.md) (GPL-3.0, commit `82f3ffe4e4dc65d9f0df3b29918af2ccb7fc9859`, `BUILD-SM2.md`). Per ruling 2026-10-31: learn only, keep our port. No addresses or code are copied (HEROVR's addresses come from the closed SM2VR mod). Every address in our port must be found by our own analysis tools (Ghidra Version Tracking and matcher, session Q12). For clean-eye findings (TAA/FXAA/CAS and RT settings), see [clean eyes note](../notes/sm2-clean-eyes.md).
 
-The list acts as a checklist for what our analysis must locate across port steps 2–5 (#18–#21):
-- #18 (Step 2: Get inside the game): H1 runtime queue discovery
+The peer file has no numbered hook list, so this one numbers every hook its text documents. H1 to H11 are the items the update notes name first. H12 to H24 are the other hooks the file describes (input, ray, movement, camera fit, bind trace, actor and body hooks). Its section 8 items are documented as not hooked, so they are not in the list.
+
+The list is a checklist for what our analysis must locate, by port step:
+- #18 (Step 2: Get inside the game): H1 runtime queue discovery, H6 game view kept, H11 Steam ticket guard (needed to start and quit safely), H19 stereo start and maintain hooks
 - #19 (Step 3: Move the camera): H5 pose setter
-- #20 (Step 4: Two eyes): H7 eye-job offset in copyJob
-- #21 (Step 5: Same-frame pairs and clean images): H2 render memory ring, H3 scene submit, H4 display setup, H8 buffer-set sizes, H9 tone map exposure copy, H10 temporal AA target kinds
+- #20 (Step 4: Two eyes): H7 eye-job offset in copyJob, H22 render-actor hook (hero hidden per view)
+- #21 (Step 5: Same-frame pairs and clean images): H2 render memory ring, H3 scene submit, H4 display setup, H8 buffer-set sizes, H9 tone hook (eye view copy), H10 temporal AA target kinds, H20 render-target and table-bind trace hooks, H21 fit-cascades and IsActiveView hooks
+- Step 6 (in the headset) or later, not in #18–#21: H12–H18, H23, H24
 
 | HEROVR item | Our row | Check | Evidence |
 |---|---|---|---|
@@ -121,14 +126,25 @@ The list acts as a checklist for what our analysis must locate across port steps
 | H3 Scene submit (5th argument) | SubmitScene (shadows) | pending | pending Q12 analysis |
 | H4 Display setup (5th argument) | display setup | pending | pending Q12 analysis |
 | H5 Pose setter (3 arguments) | pose setter | pending | pending Q12 analysis |
-| H6 Game view retention (flag 32 omitted) | - | no-row | - |
+| H6 Game view kept (flag 32 never sent) | - | pending | pending #18 |
 | H7 Eye-job offset in copyJob | copy view into render job | pending | pending Q12 analysis |
 | H8 Buffer-size hook and output sizing | buffer-set sizes | pending | pending Q12 analysis |
-| H9 Tone map exposure copy | tone map | pending | pending Q12 analysis |
+| H9 Tone hook: copies the eye's view bytes into the job's view copy | tone map | pending | pending Q12 analysis |
 | H10 Temporal AA offscreen target kinds | TemporalAa | pending | pending Q12 analysis |
-| H11 Steam ticket guard on menu exit | - | off-path | - |
-
-<!-- END GENERATED -->
+| H11 Steam ticket guard (quit to menu) | - | pending | pending #18 |
+| H12 Input commit hook (input bridge, hook 0) | - | pending | pending Step 6 |
+| H13 Input clear hook (input bridge, hook 1) | - | pending | pending Step 6 |
+| H14 Digital query hook (input bridge, hook 2) | - | pending | pending Step 6 |
+| H15 Analog query hook (input bridge, hook 3) | - | pending | pending Step 6 |
+| H16 Combat camera update hook (hook 4) | - | pending | pending Step 6 |
+| H17 Controller world-ray cast hook | - | pending | pending Step 6 |
+| H18 Web-swing mover hook | - | pending | pending Step 6 |
+| H19 Stereo start and end-of-maintain hooks | - | pending | pending #18 |
+| H20 Render-target, viewport and table-bind trace hooks | - | pending | pending #21 |
+| H21 Fit-cascades and IsActiveView hooks (far shadows) | FitCascades | pending | pending #21 |
+| H22 Render-actor hook (hero hidden per view) | RenderActor | pending | pending #20 |
+| H23 Body pose-writer and toModel hooks (analysis only) | - | pending | pending Step 6 |
+| H24 Web-shooter muzzle hooks (wrist ball look) | - | pending | pending Step 6 |
 
 ## Next leg: exact steps
 
