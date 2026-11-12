@@ -20,7 +20,7 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-11 | 2 | done | - | #248 | follow-up: Healer holds heals after a backward clock step; lapses with WP-36 |
 | WP-12 | 2 | done | - | #246 |  |
 | WP-13 | 2 | done | - | #215 |  |
-| WP-14 | 2 | done | - | #217 | follow-up: apply_with never installs the fetched profile and replaces an existing config.txt |
+| WP-14 | 2 | done | - | #217 | follow-up: apply_with never installs the fetched profile and replaces an existing config.txt; fixed in #278 (closes #275), which installs the profile and merges our keys into its config.txt |
 | WP-16 | 2 | done | - | #250 | follow-up: plan_files can pick a stale cache version; fix before the geo11 pin and Q9 |
 | WP-17 | 2 | done | - | #218 |  |
 | WP-18 | 2 | done | - | #220 |  |
@@ -30,8 +30,8 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-23 | 2 | done | - | #230 | closes #117 |
 | WP-24 | 2 | done | - | #231 |  |
 | WP-25b | 2 | done | - | #252 |  |
-| WP-35 | 2b | todo | - | - | |
-| WP-36 | 2b | todo | - | - | |
+| WP-35 | 2b | done | - | #279 | closes #224 |
+| WP-36 | 2b | running | - | #284 | first PR merged (closes #225): the tether is out of watch, exec, api and settings; the gnirehtet left in install.rs and cli/link.rs is listed for #226 |
 | WP-37 | 2b | todo | - | - | |
 | WP-08 | 3 | done | - | #233 |  |
 | WP-10 | 3 | done | - | #253 | superseded by ruling 42; WP-36 removes its code |
@@ -49,6 +49,6 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-38 | 5 | todo | - | - | |
 | WP-34 | 6 | todo | - | - | |
 
-Brought up to date from `git log origin/main` at `3e5ea15` (2026-11-11). The WPs were merged one PR at a time into `main` (§0), not through `v2/integration`, so the Branch column stays `-`.
+Brought up to date from `git log origin/main` and `gh pr list --state merged` at `d257671` (2026-11-12). Merged since `3e5ea15` and outside the WPs: #278 (#275), #280 (#223), #281 (#38), #282 (#37). The WPs were merged one PR at a time into `main` (§0), not through `v2/integration`, so the Branch column stays `-`.
 
 Run log (one line per stop: time, reason, tip of `v2/integration`):
