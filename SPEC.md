@@ -4,7 +4,7 @@
 
 **Approved by the owner:** 2026-11-11, the owner, the question tool: "Approve (Recommended)" for the spec with the six-game list and the rulings from the same question set (rulings 43-47 in `docs/notes/DECISIONS.md`): alternate-eye rendering "Yes, where nothing better exists (Recommended)"; Forza Horizon 6 "Move it to after-1.0"; order "By readiness (Recommended)". The list itself is his ruling of the same day, made while looking at his Steam Favorites: "This is the 1.0 list." (ruling 43). Changes this approval covers: M23 and M33 moved out, M30 reworded, M31 and M32 added with the routes research recommends (planned, untested).
 
-**Ruling 42 (2026-11-10, written into the docs after the approval above):** Flat to 3D and Quest Tether stay separate apps, and the internet tunnel leaves 1.0. It removes M25 and revises M10, M11, M18, M24, M26, M27, M28 and M29. Those changes await the owner's re-approval; the rest of the approval above stands.
+**Ruling 42 (2026-11-10, written into the docs after the approval above):** Flat to 3D and Quest Tether stay separate apps, and the internet tunnel leaves 1.0. It removes M25 and revises M10, M11, M18, M24, M26, M27, M28 and M29. **Re-approved:** 2026-11-12, the owner, the question tool: "Re-approve SPEC (Recommended)" for SPEC.md as revised for ruling 42 (M25 removed; M10, M11, M18, M24 and M26-M29 revised), recorded on #223. The rest of the approval above stands.
 
 A Must or a Won't changed after approval sends the line above back to "not yet".
 
