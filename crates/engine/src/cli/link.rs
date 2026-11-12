@@ -8,6 +8,10 @@
 pub enum SettingKey {
     /// Automatic stereo injection (`auto-3d`).
     Auto3d,
+    /// The retired headset tunnel (`tunnel`). Flat to 3D no longer runs a tether (#223), so
+    /// this key is accepted and ignored: `get` and `set` answer off and write nothing. It
+    /// stays only so the app's old toggle keeps a valid command until #226 removes it.
+    Tunnel,
 }
 
 impl SettingKey {
@@ -15,6 +19,7 @@ impl SettingKey {
     pub fn as_str(&self) -> &'static str {
         match self {
             SettingKey::Auto3d => "auto-3d",
+            SettingKey::Tunnel => "tunnel",
         }
     }
 }
@@ -163,15 +168,17 @@ fn run_with(
             let on = match cmd {
                 LinkCommand::SettingGet { .. } => match key {
                     SettingKey::Auto3d => settings.auto_3d,
+                    SettingKey::Tunnel => false,
                 },
-                LinkCommand::SettingSet { on, .. } => {
-                    match key {
-                        SettingKey::Auto3d => settings.auto_3d = *on,
+                LinkCommand::SettingSet { on, .. } => match key {
+                    SettingKey::Auto3d => {
+                        settings.auto_3d = *on;
+                        crate::switches::write_settings(&path, &settings)
+                            .map_err(|error| ApiError::new("io", &error.to_string()))?;
+                        *on
                     }
-                    crate::switches::write_settings(&path, &settings)
-                        .map_err(|error| ApiError::new("io", &error.to_string()))?;
-                    *on
-                }
+                    SettingKey::Tunnel => false,
+                },
                 _ => unreachable!(),
             };
             serde_json::to_value(SettingState {
@@ -288,6 +295,7 @@ fn parse_on_off(word: &str) -> Option<bool> {
 fn parse_key(word: &str) -> Option<SettingKey> {
     match word {
         "auto-3d" => Some(SettingKey::Auto3d),
+        "tunnel" => Some(SettingKey::Tunnel),
         _ => None,
     }
 }
