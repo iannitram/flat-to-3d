@@ -8,13 +8,13 @@ Spidy stays on its pinned v0.3.8 for this step. Upstream's v0.7.0 Proton + WiVRn
 
 ## One-time setup
 
-1. **You:** In Steam, right-click Spider-Man Remastered → Properties → General. Set the compatibility tool to **Proton Experimental** (upstream's requirement). Then Launch Options. Run `flatpak info io.github.wivrn.wivrn` in a terminal first: if WiVRn is a `--user` install, paste the line below; if it's system-wide, use `/var/lib/flatpak/app/io.github.wivrn.wivrn` in place of the path. Paste exactly, with `<your home>` replaced by your full home path (run `echo $HOME`):
+1. **You:** In Steam, right-click Spider-Man Remastered → Properties → General. Set the compatibility tool to **Proton Experimental** (the build upstream tested with). Then Launch Options. Run `flatpak info io.github.wivrn.wivrn` in a terminal first: if WiVRn is a `--user` install, paste the line below; if it's system-wide, use `/var/lib/flatpak/app/io.github.wivrn.wivrn` in place of the path. Paste exactly, with `<your home>` replaced by your full home path (run `echo $HOME`):
 
    ~~~
    PRESSURE_VESSEL_IMPORT_OPENXR_1_RUNTIMES=1 PRESSURE_VESSEL_FILESYSTEMS_RW=<your home>/.local/share/flatpak/app/io.github.wivrn.wivrn STEAM_COMPAT_LAUNCHER_SERVICE=proton %command%
    ~~~
 
-   These let the game see WiVRn and let Spidy run inside the game's Proton session. The game itself is unchanged. Upstream's guidance is to write the full path rather than `$HOME`.
+   These let the game see WiVRn and let Spidy run inside the game's Proton session. The game itself is unchanged. Upstream says to write the full home path.
 2. **Script:** With the Quest plugged in, run `adb install` for the WiVRn APK. Its package name is `org.meumeu.wivrn.github`.
 3. **You:** In the headset, use a **stationary** (seated) boundary. WiVRn pauses the game when you step outside it.
 
