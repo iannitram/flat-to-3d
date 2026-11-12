@@ -76,7 +76,7 @@ export function Content(): JSX.Element {
     };
   }, []);
 
-  const runSetting = async (key: "tunnel" | "auto-3d", on: boolean) => {
+  const runSetting = async (key: "auto-3d", on: boolean) => {
     const result = await setSetting(key, on);
     if (!mounted.current) return;
     if (!result.ok) setErrors((current) => [...current, result.error]);
@@ -144,16 +144,6 @@ export function Content(): JSX.Element {
             <div style={{ color: v.health.colour }}>
               <Field label="Temperature" description={v.health.temp} />
             </div>
-          </PanelSectionRow>
-          <Field label="Received" description={v.rx} />
-          <Field label="Sent" description={v.tx} />
-          <Field label="Uptime" description={v.uptime} />
-          <PanelSectionRow>
-            <ToggleField
-              label="Tunnel"
-              checked={v.tunnel}
-              onChange={(on) => void runSetting("tunnel", on)}
-            />
           </PanelSectionRow>
           <PanelSectionRow>
             <ToggleField

@@ -82,11 +82,6 @@ pub struct LinkView {
     pub start: bool,
     pub stop: bool,
     pub health: crate::face::view::HealthView,
-    pub rx: String,
-    pub tx: String,
-    pub uptime: String,
-    pub tether: TetherMode,
-    pub tunnel: bool,
     pub auto_3d: bool,
     pub adb_source: AdbSource,
 }
@@ -240,14 +235,6 @@ impl<T> Response<T> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum TetherMode {
-    Off,
-    Own,
-    QuestTether,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
 pub enum AdbSource {
     Running,
     Bundled,
@@ -272,7 +259,6 @@ pub enum EventKind {
     AllowDebugging,
     Warm,
     Hot,
-    TetherError,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -281,14 +267,6 @@ pub struct Health {
     pub status: String,
     pub temp_c: Option<f64>,
     pub zone: Zone,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Stats {
-    pub rx_bytes_s: u64,
-    pub tx_bytes_s: u64,
-    pub uptime_s: u64,
-    pub reconnects: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -302,13 +280,10 @@ pub struct LinkEvent {
 pub struct LinkSnapshot {
     pub state: LinkState,
     pub message: String,
-    pub tether: TetherMode,
-    pub tunnel: bool,
     pub auto_3d: bool,
     pub adb: String,
     pub adb_source: AdbSource,
     pub health: Option<Health>,
-    pub stats: Option<Stats>,
     pub events: Vec<LinkEvent>,
     pub updated: u64,
 }
@@ -319,13 +294,10 @@ impl LinkSnapshot {
         LinkSnapshot {
             state: LinkState::Stopped,
             message: "Link service is not running.".into(),
-            tether: TetherMode::Off,
-            tunnel: false,
             auto_3d: false,
             adb: String::new(),
             adb_source: AdbSource::Missing,
             health: None,
-            stats: None,
             events: Vec::new(),
             updated: now,
         }

@@ -23,7 +23,7 @@ export const rows = () => engine<GameRow[]>("rows");
 export const start3d = () => engine<LinkReport>("start-3d");
 export const stop3d = () => engine<LinkReport>("stop-3d");
 export const setSwitch = (appid: number, on: boolean) => engine<SwitchState>("switch", "set", String(appid), on ? "on" : "off");
-export const setSetting = (key: "auto-3d"|"tunnel", on: boolean) => engine<SettingState>("setting", "set", key, on ? "on" : "off");
+export const setSetting = (key: "auto-3d", on: boolean) => engine<SettingState>("setting", "set", key, on ? "on" : "off");
 export const launch = (verb: "add"|"remove", options: string) => engine<LaunchText>("launch", verb, "--json", "--options", options);
 export const doctor = () => engine<DoctorReport>("doctor");
 export const collection = (current?: number[]) => engine<CollectionPlan>(...(current ? ["collection", "--current", current.join(",")] : ["collection"]));

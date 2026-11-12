@@ -73,7 +73,7 @@ pub fn choose_adb(running_exe: Option<&str>, bundled: Option<&str>) -> AdbChoice
 }
 
 /// Run one command, replacing the adb word with the selected executable and adding its serial.
-pub fn run<R: crate::exec::RelayRunner>(
+pub fn run<R: crate::exec::LinkRunner>(
     runner: &mut R,
     adb: &str,
     serial: &str,

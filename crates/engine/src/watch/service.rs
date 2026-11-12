@@ -15,14 +15,13 @@ use super::machine::{
 };
 #[cfg(test)]
 use super::machine::{note_kind, Note};
-use crate::api::{LinkEvent, LinkSnapshot, LinkState, TetherMode};
-use crate::exec::RelayRunner as CommandRunner;
+use crate::api::{LinkEvent, LinkSnapshot, LinkState};
+use crate::exec::LinkRunner as CommandRunner;
 use crate::link;
 use crate::link::adb::AdbChoice;
 use crate::link::Headset;
 use crate::state::{EventRing, Request};
 use crate::switches::Settings;
-use crate::tether::{stepaside, Tether};
 
 pub trait Feed {
     fn poll(&mut self) -> Option<Vec<Device>>;
@@ -126,6 +125,22 @@ impl Feed for TrackDevices {
     }
 }
 
+/// Runs the health loop's `adb` words through Flat to 3D's own adb and the headset's serial.
+struct OwnAdb<'a, R> {
+    runner: Shared<R>,
+    path: &'a str,
+    serial: &'a str,
+}
+
+impl<R: CommandRunner> CommandRunner for OwnAdb<'_, R> {
+    fn run(&mut self, command: &[String]) -> Result<String, String> {
+        if self.serial.is_empty() {
+            return Err("No headset".to_string());
+        }
+        link::adb::run(&mut self.runner, self.path, self.serial, command)
+    }
+}
+
 /// What the device list says about the headset.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Seen {
@@ -147,26 +162,18 @@ fn classify(devices: &[Device]) -> Seen {
     Seen::Absent
 }
 
-/// The one runner the link service and its tether share, so both act through the same process
-/// runner and the relay it starts is owned in one place.
+/// The one runner the link service and its health loop share, so both act through the same
+/// process runner.
 struct Shared<R>(Rc<RefCell<R>>);
 
 impl<R: CommandRunner> CommandRunner for Shared<R> {
     fn run(&mut self, command: &[String]) -> Result<String, String> {
         self.0.borrow_mut().run(command)
     }
-
-    fn start_relay(&mut self, command: &[String], adb: &str) -> Result<(), String> {
-        self.0.borrow_mut().start_relay(command, adb)
-    }
-
-    fn stop_relay(&mut self) -> Result<(), String> {
-        self.0.borrow_mut().stop_relay()
-    }
 }
 
-/// The link service's state: the watch state machine, the headset as last seen, the tether and
-/// the event ring. Every effect runs through `runner` (adb commands get the adb in use).
+/// The link service's state: the watch state machine, the headset as last seen and the
+/// event ring. Every effect runs through `runner` (adb commands get the adb in use).
 pub struct Service<R: CommandRunner, F: Feed> {
     paths: Paths,
     runner: Rc<RefCell<R>>,
@@ -178,12 +185,8 @@ pub struct Service<R: CommandRunner, F: Feed> {
     serial: String,
     unauthorised: bool,
     starting: bool,
-    tether: Option<Tether<Shared<R>>>,
-    tether_serial: String,
     ring: EventRing,
     health: HealthLoop,
-    #[allow(dead_code)]
-    heal: Option<crate::tether::heal::Heal>,
 }
 
 impl<R: CommandRunner, F: Feed> Service<R, F> {
@@ -196,7 +199,6 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             watch: Watch::new(),
             inputs: Inputs {
                 auto_3d: false,
-                tunnel_on: false,
                 game_3d_running: false,
                 game_flat_running: false,
             },
@@ -204,11 +206,8 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             serial: String::new(),
             unauthorised: false,
             starting: false,
-            tether: None,
-            tether_serial: String::new(),
             ring: EventRing::new(),
-            health: HealthLoop::new(crate::sys::unix_now(), 0, None),
-            heal: None,
+            health: HealthLoop::new(None),
         }
     }
 
@@ -228,7 +227,6 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
     ) -> LinkSnapshot {
         self.inputs = Inputs {
             auto_3d: settings.auto_3d,
-            tunnel_on: settings.tunnel,
             game_3d_running: modes.0,
             game_flat_running: modes.1,
         };
@@ -276,23 +274,10 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
     }
 
     fn execute(&mut self, now: u64, before: Watch, effects: Vec<Effect>) {
-        // A tether connect runs Start 3D's WiVRn commands itself only when this batch also starts
-        // the link; a StartLink in the same batch then must not run them a second time
-        // (systemd-run would find the unit running). Without a StartLink the tether connects
-        // the tunnel alone and leaves WiVRn to a later Start 3D.
-        let with_link = effects.contains(&Effect::StartLink);
-        let mut wivrn_by_tether = false;
         let mut link_failed = false;
         for effect in effects {
             match effect {
-                Effect::StartTether => match self.connect_tether(with_link) {
-                    Ok(()) => wivrn_by_tether = with_link,
-                    Err(message) => self.log(now, &format!("tether: {message}")),
-                },
                 Effect::StartLink | Effect::Reattach => {
-                    if effect == Effect::StartLink && wivrn_by_tether {
-                        continue;
-                    }
                     self.starting = true;
                     self.publish(now);
                     let commands = link_commands(&effect);
@@ -305,11 +290,6 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                 Effect::StopLink => {
                     let commands = link_commands(&effect);
                     let _ = self.run_steps(now, &commands, false);
-                }
-                Effect::StopTether => {
-                    if let Err(message) = self.disconnect_tether() {
-                        self.log(now, &format!("tether stop: {message}"));
-                    }
                 }
                 Effect::Notify(note) => {
                     if !link_failed {
@@ -381,52 +361,6 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         }
     }
 
-    fn connect_tether(&mut self, with_wivrn: bool) -> Result<(), String> {
-        let ps_command: Vec<String> = vec!["ps".into(), "-eo".into(), "pid=,args=".into()];
-        let ps = self.runner.borrow_mut().run(&ps_command)?;
-        let foreign = stepaside::foreign_relay(&stepaside::parse_ps(&ps), None);
-        let serial = self.serial.clone();
-        let tether = self.tether_for(&serial);
-        let result = if with_wivrn {
-            tether.connect(foreign)
-        } else {
-            tether.connect_tunnel_only(foreign)
-        };
-        result.map(|_| ())
-    }
-
-    /// Stop the tether. With the headset gone its device commands cannot work, so the tether is
-    /// torn down on this machine only and is ready to connect again on the next plug-in.
-    fn disconnect_tether(&mut self) -> Result<(), String> {
-        let ready = self.ready;
-        match self.tether.as_mut() {
-            Some(tether) if ready => tether.disconnect(),
-            Some(tether) => tether.drop_local(),
-            None => Ok(()),
-        }
-    }
-
-    /// The tether for this headset. A new one replaces an idle tether that was made for another
-    /// serial; a tether that is still connected is kept.
-    fn tether_for(&mut self, serial: &str) -> &mut Tether<Shared<R>> {
-        let keep = match &self.tether {
-            Some(tether) => self.tether_serial == serial || tether.mode() != TetherMode::Off,
-            None => false,
-        };
-        if !keep {
-            self.tether = None;
-            self.tether_serial = serial.to_string();
-        }
-        self.tether.get_or_insert_with(|| {
-            Tether::new(
-                &self.paths.home,
-                serial,
-                self.adb.clone(),
-                Shared(Rc::clone(&self.runner)),
-            )
-        })
-    }
-
     fn state_text(&self) -> (LinkState, String) {
         if self.starting {
             return (LinkState::Starting, "Starting 3D.".into());
@@ -452,42 +386,31 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         }
     }
 
-    /// The snapshot as it stands. Health and stats wait for the health loop (#125); `tunnel`
-    /// is the tether being up until that loop checks tun0.
+    /// The snapshot as it stands, with the health the loop last read.
     fn current(&self, now: u64, tick: &HealthTick) -> LinkSnapshot {
         let (state, message) = self.state_text();
-        let tether = self
-            .tether
-            .as_ref()
-            .map_or(TetherMode::Off, |tether| tether.mode());
         LinkSnapshot {
             state,
             message,
-            tether,
-            tunnel: tick.tunnel,
             auto_3d: self.inputs.auto_3d,
             adb: self.adb.path.clone(),
             adb_source: self.adb.source,
             health: tick.health.clone(),
-            stats: tick.stats.clone(),
             events: self.ring.events().to_vec(),
             updated: now,
         }
     }
 
     fn publish(&mut self, now: u64) -> LinkSnapshot {
-        let mode = self
-            .tether
-            .as_ref()
-            .map_or(TetherMode::Off, |tether| tether.mode());
         let playing = self.inputs.game_3d_running;
-        let mut shared = Shared(Rc::clone(&self.runner));
-        let tick = self.health.tick(now, mode, playing, &mut shared);
+        let mut adb = OwnAdb {
+            runner: Shared(Rc::clone(&self.runner)),
+            path: &self.adb.path,
+            serial: &self.serial,
+        };
+        let tick = self.health.tick(now, playing, &mut adb);
         if let Some((kind, text)) = tick.toast.clone() {
             self.ring.push(kind, &text);
-        }
-        if tick.heal.is_some() {
-            self.heal = tick.heal;
         }
         let snapshot = self.current(now, &tick);
         if let Err(message) = write_snapshot(&self.paths.snapshot(), &snapshot) {
@@ -516,8 +439,8 @@ mod service_tests {
         ran: Vec<String>,
         gone: bool,
         fail: Option<String>,
-        /// The command `start_relay` was given, while the relay runs.
-        relay: Option<String>,
+        /// What `dumpsys battery` prints; empty by default.
+        battery: String,
     }
 
     impl CommandRunner for Fake {
@@ -525,39 +448,22 @@ mod service_tests {
             let line = command.join(" ");
             self.ran.push(line.clone());
             if self.gone && command.first().map(String::as_str) == Some("adb") {
-                return Err("Tether command failed".to_string());
+                return Err("Command failed".to_string());
             }
             if self
                 .fail
                 .as_ref()
                 .is_some_and(|word| line.contains(word.as_str()))
             {
-                return Err("Tether command failed".to_string());
+                return Err("Command failed".to_string());
             }
             if command.iter().any(|word| word == "devices") {
                 return Ok("List of devices attached\nSER\tdevice\n".to_string());
             }
-            if line == "ps -eo pid=,args=" {
-                if let Some(relay) = &self.relay {
-                    return Ok(format!("7 {relay}"));
-                }
-            }
-            if line.ends_with("ip addr show tun0") {
-                return Ok("    inet 10.0.0.2/30 scope global tun0".to_string());
+            if line.ends_with("dumpsys battery") {
+                return Ok(self.battery.clone());
             }
             Ok(String::new())
-        }
-
-        fn start_relay(&mut self, command: &[String], _adb: &str) -> Result<(), String> {
-            self.ran.push(format!("relay {}", command.join(" ")));
-            self.relay = Some(command.join(" "));
-            Ok(())
-        }
-
-        fn stop_relay(&mut self) -> Result<(), String> {
-            self.ran.push("relay stop".to_string());
-            self.relay = None;
-            Ok(())
         }
     }
 
@@ -577,11 +483,8 @@ mod service_tests {
         }]
     }
 
-    fn settings(tunnel: bool) -> Settings {
-        Settings {
-            tunnel,
-            ..Settings::default()
-        }
+    fn settings() -> Settings {
+        Settings::default()
     }
 
     fn service(
@@ -616,7 +519,7 @@ mod service_tests {
                 Some(Vec::new()),
             ],
         );
-        let s = settings(false);
+        let s = settings();
 
         let first = service.tick(100, &s, None, (false, false));
         assert_eq!(first.state, LinkState::Unauthorised);
@@ -625,7 +528,7 @@ mod service_tests {
             .borrow()
             .ran
             .iter()
-            .all(|c| c == "adb shell dumpsys battery"));
+            .all(|c| !c.contains("dumpsys battery")));
 
         let second = service.tick(101, &s, None, (false, false));
         assert_eq!(second.state, LinkState::Ready);
@@ -661,32 +564,20 @@ mod service_tests {
     }
 
     #[test]
-    fn a_tether_connect_runs_the_wivrn_commands_once() {
+    fn a_plug_runs_the_wivrn_commands_once() {
         let (fake, mut service) = service(
-            "tunnel",
+            "plug-once",
             vec![Some(device("SER", "device")), Some(Vec::new())],
         );
-        let s = settings(true);
+        let s = settings();
 
         let up = service.tick(200, &s, None, (false, false));
         assert_eq!(up.state, LinkState::Ready);
-        assert_eq!(up.tether, TetherMode::Own);
-        assert!(up.tunnel);
-        {
-            let ran = &fake.borrow().ran;
-            assert_eq!(
-                ran.iter()
-                    .filter(|line| line.contains("systemd-run"))
-                    .count(),
-                1
-            );
-            assert!(ran.iter().any(|line| line.starts_with("relay ")));
-        }
+        assert_eq!(count(&fake, "systemd-run"), 1);
 
         let down = service.tick(201, &s, None, (false, false));
         assert_eq!(down.state, LinkState::NoHeadset);
-        assert_eq!(down.tether, TetherMode::Off);
-        assert!(fake.borrow().ran.iter().any(|line| line == "relay stop"));
+        assert_eq!(count(&fake, "systemd-run"), 1);
     }
 
     #[test]
@@ -695,7 +586,7 @@ mod service_tests {
             "grace",
             vec![Some(device("SER", "device")), Some(Vec::new()), None],
         );
-        let s = settings(false);
+        let s = settings();
 
         service.tick(300, &s, None, (false, false));
         let gone = service.tick(301, &s, None, (true, false));
@@ -724,47 +615,43 @@ mod service_tests {
     }
 
     #[test]
-    fn an_unplug_tears_the_tether_down_when_adb_cannot_reach_the_headset() {
+    fn an_unplug_stops_the_link_when_adb_cannot_reach_the_headset() {
         let (fake, mut service) = service(
-            "unplug-tether",
+            "unplug-gone",
             vec![
                 Some(device("SER", "device")),
                 Some(Vec::new()),
                 Some(device("SER", "device")),
             ],
         );
-        let s = settings(true);
+        let s = settings();
 
         let up = service.tick(400, &s, None, (false, false));
-        assert_eq!(up.tether, TetherMode::Own);
-        assert!(up.tunnel);
+        assert_eq!(up.state, LinkState::Ready);
 
         fake.borrow_mut().gone = true;
+        let before = fake.borrow().ran.len();
         let down = service.tick(401, &s, None, (false, false));
         assert_eq!(down.state, LinkState::NoHeadset);
-        assert_eq!(down.tether, TetherMode::Off);
-        assert!(!down.tunnel);
-        assert!(fake.borrow().ran.iter().any(|line| line == "relay stop"));
+        assert!(fake.borrow().ran[before..]
+            .iter()
+            .any(|line| line.ends_with("systemctl --user stop flat3d-wivrn.service")));
 
         fake.borrow_mut().gone = false;
-        // Past the health loop's 5s tun0 cadence, so the re-plug tick probes tun0 again.
         let back = service.tick(410, &s, None, (false, false));
-        assert_eq!(back.tether, TetherMode::Own);
-        assert!(back.tunnel);
+        assert_eq!(back.state, LinkState::Ready);
     }
 
     #[test]
-    fn with_auto_3d_off_a_plug_brings_up_only_the_tunnel_and_start_runs_wivrn_once() {
-        let (fake, mut service) = service("manual-tunnel", vec![Some(device("SER", "device"))]);
+    fn with_auto_3d_off_a_plug_runs_nothing_and_start_runs_wivrn_once() {
+        let (fake, mut service) = service("manual-plug", vec![Some(device("SER", "device"))]);
         let s = Settings {
             auto_3d: false,
-            tunnel: true,
             ..Settings::default()
         };
 
         let plugged = service.tick(500, &s, None, (false, false));
         assert_eq!(plugged.state, LinkState::Stopped);
-        assert_eq!(plugged.tether, TetherMode::Own);
         assert_eq!(count(&fake, "systemd-run"), 0);
         assert_eq!(count(&fake, "wivrn+tcp"), 0);
         let before = fake.borrow().ran.len();
@@ -782,10 +669,32 @@ mod service_tests {
     }
 
     #[test]
+    fn battery_and_temperature_toasts_fire_while_a_3d_game_plays() {
+        let (fake, mut service) = service("toasts", vec![Some(device("SER", "device"))]);
+        let s = settings();
+        fake.borrow_mut().battery = "level: 80\nstatus: 3\ntemperature: 390\n".into();
+
+        let warm = service.tick(700, &s, None, (true, false));
+        let health = warm.health.expect("battery read through adb");
+        assert_eq!(health.battery, Some(80));
+        assert_eq!(health.temp_c, Some(39.0));
+        assert!(warm.events.iter().any(|e| e.kind == EventKind::Warm));
+        assert!(fake
+            .borrow()
+            .ran
+            .iter()
+            .any(|line| line == "adb -s SER shell dumpsys battery"));
+
+        fake.borrow_mut().battery = "level: 79\nstatus: 3\ntemperature: 430\n".into();
+        let hot = service.tick(731, &s, None, (true, false));
+        assert!(hot.events.iter().any(|e| e.kind == EventKind::Hot));
+    }
+
+    #[test]
     fn a_failed_link_start_does_not_read_as_ready() {
         let (fake, mut service) = service("failed-start", vec![Some(device("SER", "device"))]);
         fake.borrow_mut().fail = Some("reverse tcp:9757".to_string());
-        let s = settings(false);
+        let s = settings();
 
         let after = service.tick(600, &s, None, (false, false));
         assert_ne!(after.state, LinkState::Ready);

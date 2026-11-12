@@ -28,7 +28,7 @@ fn sample_argv() -> Vec<(&'static str, Vec<&'static str>, Vec<&'static str>)> {
         ),
         (
             "setSetting",
-            vec!["setting", "set", "tunnel", "off"],
+            vec!["setting", "set", "auto-3d", "off"],
             vec!["setting", "set", "on"],
         ),
         (
@@ -217,7 +217,7 @@ fn decky_error_codes_and_type_mirrors_match_rust() {
         (
             "SettingState",
             json!(api::SettingState {
-                key: "tunnel".into(),
+                key: "auto-3d".into(),
                 on: true
             }),
         ),

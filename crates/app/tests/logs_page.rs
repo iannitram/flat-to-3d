@@ -2,9 +2,9 @@ use flat3d_app::logs_page::{self, Action, Filter, LogsState, Msg};
 
 fn lines() -> Vec<String> {
     [
-        "3 link: Tether command failed: exit 1",
+        "3 link: Command failed: exit 1",
         "2 link: ready",
-        "1 run: Could not run tether command",
+        "1 run: Could not run command",
     ]
     .into_iter()
     .map(str::to_owned)
@@ -60,8 +60,8 @@ fn errors_filter_shows_only_error_lines() {
     assert_eq!(
         logs_page::visible(&state),
         [
-            "3 link: Tether command failed: exit 1",
-            "1 run: Could not run tether command"
+            "3 link: Command failed: exit 1",
+            "1 run: Could not run command"
         ]
     );
 }
@@ -76,7 +76,7 @@ fn copy_copies_visible_lines() {
     assert_eq!(
         logs_page::update(&mut state, Msg::CopyPressed),
         Some(Action::Copy(
-            "3 link: Tether command failed: exit 1\n1 run: Could not run tether command".into()
+            "3 link: Command failed: exit 1\n1 run: Could not run command".into()
         ))
     );
 }

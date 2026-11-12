@@ -12,7 +12,7 @@ pub mod undo;
 pub mod view;
 
 use crate::api::{ApiError, Response};
-use crate::exec::{CommandRunner, ProcessRunner, RelayRunner, SystemRunner};
+use crate::exec::{CommandRunner, LinkRunner, ProcessRunner, SystemRunner};
 use crate::paths::EnginePaths;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -144,7 +144,7 @@ pub fn render(command: &str, result: Result<Value, ApiError>, json: bool) -> Out
 pub struct Ctx<'a> {
     pub paths: &'a EnginePaths,
     pub runner: &'a mut dyn CommandRunner,
-    pub relay: &'a mut dyn RelayRunner,
+    pub process: &'a mut dyn LinkRunner,
     pub json: bool,
 }
 
@@ -571,11 +571,11 @@ pub fn execute(args: &[String]) -> Output {
         Err(e) => return render("", Err(e), parsed.json),
     };
     let mut runner = SystemRunner;
-    let mut relay = ProcessRunner::default();
+    let mut process = ProcessRunner;
     let mut ctx = Ctx {
         paths: &paths,
         runner: &mut runner,
-        relay: &mut relay,
+        process: &mut process,
         json: parsed.json,
     };
     execute_with(args, &mut ctx)
@@ -653,11 +653,11 @@ mod tests {
             env.insert("XDG_RUNTIME_DIR".to_string(), home.display().to_string());
             let paths = EnginePaths::from_env(&env, 1).unwrap();
             let mut runner = crate::testing::FakeRunner::new();
-            let mut relay = ProcessRunner::default();
+            let mut process = ProcessRunner;
             let mut ctx = Ctx {
                 paths: &paths,
                 runner: &mut runner,
-                relay: &mut relay,
+                process: &mut process,
                 json: false,
             };
             let outcome = dispatch(&cmd, &mut ctx);
