@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-12 HEROVR checklist and clean-eye findings (#37): added HEROVR's documented hook list as an address map checklist (docs/spiderman2/address-map.md) for #18-#21, and recorded clean-eye findings (FXAA 3.11 + CAS on offscreen views, RT reflections and interiors off) as input to Step 5 (docs/notes/sm2-clean-eyes.md). Docs only.
 - 2026-11-12 Issue #38: read SpidyVR v0.7.0 (57537585) against our v0.3.8 pin (aed5c0c); Step 0 stays on v0.3.8 and the run sheet's WiVRn launch options now follow upstream's (Proton Experimental, home-path placeholder); the stereo-path version note is in docs/spiderman2/spidy-core-map.md. Docs only.
 
 - 2026-11-11 Roadmap, code map and roadmap-v2 progress brought up to date with main (`3e5ea15`): 34 of 44 work packages merged; next WP-35 → WP-36 → WP-37, then WP-31 and WP-30; the follow-ups found in review (WP-14 profile pin, WP-16 stale cache, WP-27 empty folders, WP-11 clock step) are recorded. Docs only.

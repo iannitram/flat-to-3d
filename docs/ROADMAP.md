@@ -102,7 +102,7 @@ STAR WARS Zero Company (Steam 2075800): Unreal 5.6.1, DX12 only (vkd3d-proton), 
 | Z4 (#35) | Full mission in the headset at 30+ fps over WiVRn wired | Z3 | M16 |
 | Z5 (#36) | Zero Company recipe (`works-now`, UEVR route and settings) and `flat3d-inject inject 2075800` | Z4, #25 | M17 |
 
-Spider-Man 2 note (2026-10-31): HEROVR (lecutis7of9/HEROVR, [PEERS.md](../PEERS.md)) already shows Spider-Man 2 in stereo on Windows. Ruling: learn only, keep our port; its hook list is a map to check our Ghidra results against, never a source of addresses (#37). SpidyVR 0.7.0's Proton + WiVRn path feeds Step 0 (#38).
+Spider-Man 2 note (2026-10-31): HEROVR (lecutis7of9/HEROVR, [PEERS.md](../PEERS.md)) already shows Spider-Man 2 in stereo on Windows. Ruling: learn only, keep our port; its hook list is checked in [the address map](spiderman2/address-map.md#checked-against-herovrs-list) against our Ghidra results (#37), its clean-eye findings feed Step 5 (#21, [sm2-clean-eyes.md](notes/sm2-clean-eyes.md)), never as a source of addresses. SpidyVR 0.7.0's Proton + WiVRn path feeds Step 0 (#38).
 
 Zero Company proves the headset chain, the link service and the `flat3d-run` wrapper on a real game while the Spider-Man 2 address mapping goes on.
 
