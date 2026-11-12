@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 const ALLOWLIST: &[(&str, &str)] = &[
     ("bin/flat3d-run.rs", "WP-31"),
     ("cli/link.rs", "WP-08"),
-    ("watch/run.rs", "follow-up"),
+    ("link/adb.rs", "follow-up"),
     ("watch/service.rs", "follow-up"),
 ];
 

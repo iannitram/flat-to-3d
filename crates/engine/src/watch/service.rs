@@ -16,11 +16,12 @@ use super::machine::{
 #[cfg(test)]
 use super::machine::{note_kind, Note};
 use crate::api::{LinkEvent, LinkSnapshot, LinkState, TetherMode};
+use crate::exec::RelayRunner as CommandRunner;
 use crate::link;
+use crate::link::adb::AdbChoice;
 use crate::link::Headset;
 use crate::state::{EventRing, Request};
 use crate::switches::Settings;
-use crate::tether::adb::{AdbChoice, CommandRunner, TetherAdb};
 use crate::tether::{stepaside, Tether};
 
 pub trait Feed {
@@ -351,12 +352,12 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
     }
 
     fn adb_run(&self, command: &[String]) -> Result<String, String> {
-        let mut adb = TetherAdb::new(
-            self.adb.clone(),
+        crate::link::adb::run(
+            &mut Shared(Rc::clone(&self.runner)),
+            &self.adb.path,
             &self.serial,
-            Shared(Rc::clone(&self.runner)),
-        );
-        adb.run(command)
+            command,
+        )
     }
 
     /// A link start failed: it must not read as Ready. With the headset here, run Stop 3D's

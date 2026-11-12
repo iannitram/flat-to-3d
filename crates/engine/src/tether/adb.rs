@@ -1,65 +1,9 @@
-//! Choosing the adb executable shared by the tether and link service.
+//! Tether-specific adb and relay execution.
 
-use crate::api::AdbSource;
 pub use crate::exec::{ProcessRunner, RelayRunner, RelayRunner as CommandRunner};
-use crate::link;
-
-pub fn listener_pid(ss_output: &str, port: u16) -> Option<u32> {
-    let suffix = format!(":{port}");
-    for line in ss_output.lines() {
-        let fields: Vec<&str> = line.split_whitespace().collect();
-        if fields.len() < 4 || !fields[3].ends_with(&suffix) {
-            continue;
-        }
-        if let Some(pid_start) = line.find("pid=") {
-            let digits: String = line[pid_start + 4..]
-                .chars()
-                .take_while(|character| character.is_ascii_digit())
-                .collect();
-            if let Ok(pid) = digits.parse() {
-                return Some(pid);
-            }
-        }
-    }
-    None
-}
-
-pub fn proc_exe_path(pid: u32) -> String {
-    format!("/proc/{pid}/exe")
-}
-
-pub fn tools_dir(home: &str) -> String {
-    format!("{home}/.local/share/flat3d/bin")
-}
-
-pub fn bundled_adb(home: &str) -> String {
-    format!("{}/adb", tools_dir(home))
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AdbChoice {
-    pub path: String,
-    pub source: AdbSource,
-}
-
-pub fn choose_adb(running_exe: Option<&str>, bundled: Option<&str>) -> AdbChoice {
-    if let Some(path) = running_exe.filter(|path| !path.is_empty()) {
-        return AdbChoice {
-            path: path.to_string(),
-            source: AdbSource::Running,
-        };
-    }
-    if let Some(path) = bundled.filter(|path| !path.is_empty()) {
-        return AdbChoice {
-            path: path.to_string(),
-            source: AdbSource::Bundled,
-        };
-    }
-    AdbChoice {
-        path: String::new(),
-        source: AdbSource::Missing,
-    }
-}
+pub use crate::link::adb::{
+    bundled_adb, choose_adb, listener_pid, proc_exe_path, tools_dir, AdbChoice,
+};
 
 /// Use the chosen adb and headset for every tether word list (the tether's own runner).
 pub struct TetherAdb<R> {
@@ -83,15 +27,7 @@ impl<R: CommandRunner> TetherAdb<R> {
     }
 
     pub fn run(&mut self, command: &[String]) -> Result<String, String> {
-        if command.first().map(String::as_str) != Some("adb") {
-            return self.runner.run(command);
-        }
-        if self.path.is_empty() {
-            return Err("No adb is available".to_string());
-        }
-        let mut words = vec![self.path.clone(), "-s".to_string(), self.serial.clone()];
-        words.extend_from_slice(&command[1..]);
-        self.runner.run(&words)
+        crate::link::adb::run(&mut self.runner, &self.path, &self.serial, command)
     }
 
     pub fn start_relay(&mut self, command: &[String]) -> Result<(), String> {
@@ -100,49 +36,6 @@ impl<R: CommandRunner> TetherAdb<R> {
 
     pub fn stop_relay(&mut self) -> Result<(), String> {
         self.runner.stop_relay()
-    }
-}
-
-/// E6b: wraps the link's `CommandRunner` so `adb ...` words name the adb in use and the
-/// headset's serial; the link and tether code never know which adb they got.
-pub struct AdbRunner<R: link::CommandRunner> {
-    inner: R,
-    adb: String,
-    serial: Option<String>,
-}
-
-impl<R: link::CommandRunner> AdbRunner<R> {
-    pub fn new(inner: R, adb: &str, serial: Option<&str>) -> Self {
-        Self {
-            inner,
-            adb: adb.to_string(),
-            serial: serial.map(str::to_string),
-        }
-    }
-
-    pub fn inner(&self) -> &R {
-        &self.inner
-    }
-}
-
-impl<R: link::CommandRunner> link::CommandRunner for AdbRunner<R> {
-    fn run(&mut self, command: &[String]) -> link::CommandOutput {
-        if command.first().map(String::as_str) != Some("adb") {
-            return self.inner.run(command);
-        }
-        let mut words = vec![self.adb.clone()];
-        if let Some(serial) = self.serial.as_deref() {
-            let server_command = matches!(
-                command.get(1).map(String::as_str),
-                Some("devices" | "start-server" | "kill-server" | "-s")
-            );
-            if !server_command {
-                words.push("-s".to_string());
-                words.push(serial.to_string());
-            }
-        }
-        words.extend_from_slice(&command[1..]);
-        self.inner.run(&words)
     }
 }
 

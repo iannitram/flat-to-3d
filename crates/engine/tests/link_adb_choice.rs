@@ -1,7 +1,7 @@
 //! Locked tests for E6a: choosing the adb to use. Pure: nothing is run.
 
 use flat3d_inject::api::AdbSource;
-use flat3d_inject::tether::adb::{bundled_adb, choose_adb, listener_pid, proc_exe_path, tools_dir};
+use flat3d_inject::link::adb::{bundled_adb, choose_adb, listener_pid, proc_exe_path, tools_dir};
 
 const SS: &str = "State  Recv-Q Send-Q Local Address:Port Peer Address:Port Process\n\
 LISTEN 0      128        127.0.0.1:5037      0.0.0.0:*     users:((\"adb\",pid=1234,fd=7))\n\
