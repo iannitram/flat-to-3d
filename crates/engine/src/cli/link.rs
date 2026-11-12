@@ -422,7 +422,7 @@ mod tests {
             &mut link_io,
         )
         .unwrap();
-        assert_eq!(value["message"], "flat: snapshot is missing");
+        assert_eq!(value["message"], "flat: no link snapshot");
         let observed = observed.borrow_mut().take().unwrap();
         assert_eq!(observed.0, argv);
         assert_eq!(observed.1, 5);
