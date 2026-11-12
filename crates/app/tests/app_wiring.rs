@@ -156,10 +156,7 @@ fn setup_run_is_busy_and_results_live_in_page_state() {
         &mut app,
         Message::Setup(setup_page::Msg::Packages(Ok(Packages { wivrn: true }))),
     );
-    assert_eq!(
-        app.setup.packages,
-        Some(Packages { wivrn: true })
-    );
+    assert_eq!(app.setup.packages, Some(Packages { wivrn: true }));
 }
 
 #[test]
