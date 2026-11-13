@@ -106,6 +106,22 @@ This map is the output of Spider-Man 2's hook-point research step, Step 2r in [t
 | component registry | data | `0x7a44320` | - | pending | - | pending | - |
 | component registry 2 | data | `0x7a44340` | - | pending | - | pending | - |
 
+### Checked against HEROVR's list
+
+| HEROVR item | Our row | Check | Evidence |
+|---|---|---|---|
+| H1 Runtime Direct3D 12 and DXGI queue discovery | - | runtime | - |
+| H2 512 MB render memory ring allocator | - | pending | - |
+| H3 Scene submit (5th argument) | - | pending | - |
+| H4 Display setup (5th argument) | - | pending | - |
+| H5 Pose setter (3 arguments) | - | pending | - |
+| H6 Game view kept (flag 32 never sent) | - | no-row | - |
+| H7 Eye-job offset in copyJob | - | pending | - |
+| H8 Buffer-size hook and output sizing | - | pending | - |
+| H9 Tone hook: copies the eye's view bytes into the job's view copy | - | pending | - |
+| H10 Temporal AA offscreen target kinds | - | pending | - |
+| H11 Steam ticket guard (quit to menu) | - | off-path | - |
+
 <!-- END GENERATED -->
 
 ### Checked against HEROVR's list
