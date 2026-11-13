@@ -737,11 +737,7 @@ fn leftover_tmp_folder_is_not_picked() {
     // The copy walk from the key folder must skip the same folders: a sibling old version
     // (with the fetch marker) and the .1.2.tmp staging folder give no Copy or Write step.
     let old_dir = cache_direct.join("control-fix/1.0");
-    put(
-        old_dir.join(".flat3d-fetch"),
-        "1.0
-",
-    );
+    put(old_dir.join(".flat3d-fetch"), "1.0\n");
     put(old_dir.join("ShaderFixes/old-ps.txt"), "old");
     put(
         cache_direct.join("control-fix/ShaderFixes/new-ps.txt"),
