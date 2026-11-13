@@ -734,6 +734,37 @@ fn leftover_tmp_folder_is_not_picked() {
     assert!(direct_write.contains("direct_ini"), "{direct_write}");
     assert!(!direct_write.contains("wrong_ini"), "{direct_write}");
 
+    // The copy walk from the key folder must skip the same folders: a sibling old version
+    // (with the fetch marker) and the .1.2.tmp staging folder give no Copy or Write step.
+    let old_dir = cache_direct.join("control-fix/1.0");
+    put(
+        old_dir.join(".flat3d-fetch"),
+        "1.0
+",
+    );
+    put(old_dir.join("ShaderFixes/old-ps.txt"), "old");
+    put(
+        cache_direct.join("control-fix/ShaderFixes/new-ps.txt"),
+        "new",
+    );
+    let plan_direct = geo11::plan_files(&cache_direct, &game_direct, &m_fix).unwrap();
+    let skipped = [cache_direct.join("control-fix/.1.2.tmp"), old_dir.clone()];
+    for s in &plan_direct {
+        if let FileStep::Copy { from, to } = s {
+            assert!(
+                !skipped.iter().any(|d| from.starts_with(d)),
+                "copied from a skipped folder: {from:?}"
+            );
+            assert!(!to.starts_with(game_direct.join(".1.2.tmp")), "{to:?}");
+            assert!(!to.starts_with(game_direct.join("1.0")), "{to:?}");
+        }
+        if let FileStep::Write { to, .. } = s {
+            assert!(!to.starts_with(game_direct.join(".1.2.tmp")), "{to:?}");
+            assert!(!to.starts_with(game_direct.join("1.0")), "{to:?}");
+        }
+    }
+    assert!(plan_direct.iter().any(|s| matches!(s, FileStep::Copy { from, .. } if from == &cache_direct.join("control-fix/ShaderFixes/new-ps.txt"))));
+
     // Variant: only the .tmp folder present for the fix key returns not-found
     let r_only_fix_tmp = root("only_fix_tmp");
     let cache_only_fix = r_only_fix_tmp.join("cache");
