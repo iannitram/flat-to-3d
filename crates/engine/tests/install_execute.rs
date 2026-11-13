@@ -21,8 +21,6 @@ fn fixture(name: &str, omit: &[&str]) -> (PathBuf, PathBuf, PathBuf) {
         ("flat3d-run", "run"),
         ("flat3d-viewer", "viewer"),
         ("tools/adb", "adb"),
-        ("tools/gnirehtet", "relay"),
-        ("tools/gnirehtet.apk", "apk"),
         ("tools/lib/libusb.so", "lib"),
         ("recipes/1-a.recipe", "recipe"),
         ("recipes/notes.txt", "notes"),
@@ -37,7 +35,21 @@ fn fixture(name: &str, omit: &[&str]) -> (PathBuf, PathBuf, PathBuf) {
     (root, home, src)
 }
 fn plan(home: &Path, src: &Path) -> install::InstallPlan {
-    install::install_plan(home.to_str().unwrap(), src.to_str().unwrap())
+    let mut plan = install::install_plan(home.to_str().unwrap(), src.to_str().unwrap());
+    // The real rule path is /etc/udev/rules.d; point the skip check at the fixture
+    // so the result does not depend on the machine running the tests.
+    plan.udev_rule = home
+        .parent()
+        .unwrap()
+        .join("etc/udev/rules.d/70-flat3d-quest.rules")
+        .display()
+        .to_string();
+    plan
+}
+fn udev_rule_in_place(p: &install::InstallPlan) {
+    let rule = PathBuf::from(&p.udev_rule);
+    fs::create_dir_all(rule.parent().unwrap()).unwrap();
+    fs::write(rule, install::UDEV_RULE_TEXT).unwrap();
 }
 fn err(result: Result<flat3d_inject::api::InstallReport, ApiError>, code: &str) -> ApiError {
     let error = result.unwrap_err();
@@ -92,25 +104,33 @@ fn execute_copies_chmods_writes_unit_then_reloads_and_enables() {
     let p = plan(&home, &src);
     let mut runner = FakeRunner::new();
     let report = install::execute(&p, &mut runner).unwrap();
-    assert_eq!(
-        runner.ran,
+    let mut expected = vec![
+        vec!["systemctl", "--user", "daemon-reload"]
+            .into_iter()
+            .map(str::to_string)
+            .collect::<Vec<_>>(),
         vec![
-            vec!["systemctl", "--user", "daemon-reload"],
-            vec![
-                "systemctl",
-                "--user",
-                "enable",
-                "--now",
-                "flat3d-link.service"
-            ]
+            "systemctl",
+            "--user",
+            "enable",
+            "--now",
+            "flat3d-link.service",
         ]
-    );
+        .into_iter()
+        .map(str::to_string)
+        .collect(),
+    ];
+    expected.extend(p.udev_commands.clone());
+    assert_eq!(runner.ran, expected);
+    assert_eq!(report.summary, "");
     assert_eq!(mode(home.join(".local/bin/flat3d-run")), 0o755);
     assert_eq!(mode(home.join(".local/bin/flat3d-viewer")), 0o755);
+    assert_eq!(mode(home.join(".local/share/flat3d/bin/adb")), 0o755);
     assert_eq!(
-        mode(home.join(".local/share/flat3d/bin/gnirehtet.apk")),
-        0o644
+        fs::read_to_string(home.join(".local/share/flat3d/flat3d-quest.rules")).unwrap(),
+        include_str!("../../../packaging/flat3d-quest.rules")
     );
+    assert_eq!(mode(home.join(".local/share/flat3d/flat3d-quest.rules")), 0o644);
     assert_eq!(
         fs::read_to_string(home.join(".config/systemd/user/flat3d-link.service")).unwrap(),
         install::unit_text_with(&UnitSpec::default())
@@ -125,21 +145,76 @@ fn execute_copies_chmods_writes_unit_then_reloads_and_enables() {
 }
 #[test]
 fn missing_tools_are_skipped_and_named() {
-    let (_, home, src) = fixture("missing-tools", &["tools/adb", "tools/gnirehtet"]);
+    let (_, home, src) = fixture("missing-tools", &["tools/adb"]);
     let report = install::execute(&plan(&home, &src), &mut FakeRunner::new()).unwrap();
-    assert!(report.summary.contains("not bundled: adb, gnirehtet"));
+    assert!(report.summary.contains("not bundled: adb"));
 }
 #[test]
 fn missing_tools_are_named_in_plan_order() {
-    let (_, home, src) = fixture(
-        "missing-order",
-        &["tools/adb", "tools/gnirehtet.apk", "flat3d-viewer"],
-    );
+    let (_, home, src) = fixture("missing-order", &["tools/adb", "flat3d-viewer"]);
     let report = install::execute(&plan(&home, &src), &mut FakeRunner::new()).unwrap();
+    assert_eq!(report.summary, "not bundled: adb, flat3d-viewer");
+}
+#[test]
+fn udev_rule_already_in_place_is_skipped() {
+    let (_, home, src) = fixture("udev-present", &[]);
+    let p = plan(&home, &src);
+    udev_rule_in_place(&p);
+    let mut runner = FakeRunner::new();
+    let report = install::execute(&p, &mut runner).unwrap();
+    assert_eq!(runner.ran.len(), 2);
+    assert!(runner.ran.iter().all(|argv| argv[0] == "systemctl"));
+    assert_eq!(report.summary, "");
+}
+#[test]
+fn refused_sudo_prompt_is_a_setup_warning_not_an_install_failure() {
+    let (_, home, src) = fixture("udev-refused", &["tools/adb"]);
+    let p = plan(&home, &src);
+    let mut runner = FakeRunner::new().fail(&["sudo"], "sudo: a password is required
+");
+    let report = install::execute(&p, &mut runner).unwrap();
+    assert_eq!(runner.ran.last().unwrap(), &p.udev_commands[0]);
+    assert!(runner.ran.contains(&vec![
+        "systemctl".to_string(),
+        "--user".into(),
+        "enable".into(),
+        "--now".into(),
+        "flat3d-link.service".into()
+    ]));
+    assert!(report.summary.starts_with("not bundled: adb; warning: "));
+    assert!(report
+        .summary
+        .contains("the Quest udev rule is not installed: sudo: a password is required; fix: "));
+    assert!(PathBuf::from(&p.unit_path).exists());
+}
+#[test]
+fn uninstall_removes_the_udev_rule_only_when_it_is_there() {
+    let (_, home, src) = fixture("udev-uninstall", &[]);
+    let p = plan(&home, &src);
+    install::execute(&p, &mut FakeRunner::new()).unwrap();
+    let mut u = install::uninstall_plan(home.to_str().unwrap());
+    u.udev_rule = p.udev_rule.clone();
+    let mut absent = FakeRunner::new();
+    install::execute_uninstall(&u, &mut absent).unwrap();
+    assert!(absent.ran.iter().all(|argv| argv[0] == "systemctl"));
+    assert!(!home.join(".local/share/flat3d/flat3d-quest.rules").exists());
+
+    udev_rule_in_place(&p);
+    let mut present = FakeRunner::new();
+    install::execute_uninstall(&u, &mut present).unwrap();
+    assert_eq!(present.ran[1], u.udev_commands[0]);
     assert_eq!(
-        report.summary,
-        "not bundled: adb, gnirehtet.apk, flat3d-viewer"
+        present.ran.last().unwrap(),
+        &vec!["systemctl", "--user", "daemon-reload"]
     );
+
+    let mut refused = FakeRunner::new().fail(&["sudo"], "sudo: a password is required
+");
+    let report = install::execute_uninstall(&u, &mut refused).unwrap();
+    assert!(report
+        .summary
+        .contains("tolerated sudo sh -c rm -f"));
+    assert!(report.summary.contains(": sudo: a password is required; fix: "));
 }
 #[test]
 fn reinstall_keeps_earlier_manifest_entries_and_leaves_no_tmp() {
