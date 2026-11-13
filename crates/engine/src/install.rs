@@ -145,7 +145,9 @@ pub fn execute(
                 written.push(dest);
             }
         }
-        place(&plan.udev_source, 0o644, |tmp| fs::write(tmp, UDEV_RULE_TEXT))?;
+        place(&plan.udev_source, 0o644, |tmp| {
+            fs::write(tmp, UDEV_RULE_TEXT)
+        })?;
         written.push(plan.udev_source.clone());
         let tmp = format!("{}.tmp", plan.unit_path);
         let placed = fs::write(&tmp, unit_text_with(&UnitSpec::default()))

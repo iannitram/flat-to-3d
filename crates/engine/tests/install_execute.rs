@@ -130,7 +130,10 @@ fn execute_copies_chmods_writes_unit_then_reloads_and_enables() {
         fs::read_to_string(home.join(".local/share/flat3d/flat3d-quest.rules")).unwrap(),
         include_str!("../../../packaging/flat3d-quest.rules")
     );
-    assert_eq!(mode(home.join(".local/share/flat3d/flat3d-quest.rules")), 0o644);
+    assert_eq!(
+        mode(home.join(".local/share/flat3d/flat3d-quest.rules")),
+        0o644
+    );
     assert_eq!(
         fs::read_to_string(home.join(".config/systemd/user/flat3d-link.service")).unwrap(),
         install::unit_text_with(&UnitSpec::default())
@@ -170,8 +173,7 @@ fn udev_rule_already_in_place_is_skipped() {
 fn refused_sudo_prompt_is_a_setup_warning_not_an_install_failure() {
     let (_, home, src) = fixture("udev-refused", &["tools/adb"]);
     let p = plan(&home, &src);
-    let mut runner = FakeRunner::new().fail(&["sudo"], "sudo: a password is required
-");
+    let mut runner = FakeRunner::new().fail(&["sudo"], "sudo: a password is required\n");
     let report = install::execute(&p, &mut runner).unwrap();
     assert_eq!(runner.ran.last().unwrap(), &p.udev_commands[0]);
     assert!(runner.ran.contains(&vec![
@@ -208,13 +210,12 @@ fn uninstall_removes_the_udev_rule_only_when_it_is_there() {
         &vec!["systemctl", "--user", "daemon-reload"]
     );
 
-    let mut refused = FakeRunner::new().fail(&["sudo"], "sudo: a password is required
-");
+    let mut refused = FakeRunner::new().fail(&["sudo"], "sudo: a password is required\n");
     let report = install::execute_uninstall(&u, &mut refused).unwrap();
+    assert!(report.summary.contains("tolerated sudo sh -c rm -f"));
     assert!(report
         .summary
-        .contains("tolerated sudo sh -c rm -f"));
-    assert!(report.summary.contains(": sudo: a password is required; fix: "));
+        .contains(": sudo: a password is required; fix: "));
 }
 #[test]
 fn reinstall_keeps_earlier_manifest_entries_and_leaves_no_tmp() {
