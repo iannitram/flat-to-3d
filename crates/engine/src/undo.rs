@@ -25,19 +25,77 @@ pub struct UndoRecord {
     pub created: Vec<PathBuf>,
     /// Files we replaced, with the backup we made.
     pub replaced: Vec<Replaced>,
+    /// Folders we made, one entry per level, in the order made (`created-dir` lines, owner
+    /// ruling 2026-11-12, DECISIONS ruling 54). Undo removes them deepest first, only when empty.
+    pub created_dirs: Vec<PathBuf>,
 }
 
 /// One ordered step for undoing an injection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UndoAction {
     RemoveFile(PathBuf),
-    RestoreFile { backup: PathBuf, path: PathBuf },
+    RestoreFile {
+        backup: PathBuf,
+        path: PathBuf,
+    },
+    /// Remove a folder we made, only when it is empty.
+    RemoveDir(PathBuf),
     SetLaunchOptions(String),
+}
+
+/// The created folders, deepest first; among equal depths, the one recorded last goes first.
+fn deepest_first(dirs: &[PathBuf]) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = dirs.iter().rev().cloned().collect();
+    out.sort_by_key(|d| std::cmp::Reverse(d.components().count()));
+    out
+}
+
+/// Create `dir` and any missing parents, like `fs::create_dir_all`, and record in
+/// `record.created_dirs` each level this call made, shallowest first. A level counts as made
+/// when it did not exist before the call and is a folder after it, even if the call failed
+/// part way, so a rollback or undo still finds it.
+pub fn create_dir_all_recorded(dir: &Path, record: &mut UndoRecord) -> io::Result<()> {
+    let missing: Vec<PathBuf> = dir
+        .ancestors()
+        .take_while(|a| !a.as_os_str().is_empty() && fs::symlink_metadata(a).is_err())
+        .map(Path::to_path_buf)
+        .collect();
+    let result = fs::create_dir_all(dir);
+    for level in missing.into_iter().rev() {
+        if level.is_dir() {
+            record.created_dirs.push(level);
+        }
+    }
+    result
+}
+
+/// Remove the folders an apply made, deepest first, leaving any that are not empty. For an
+/// injector's own rollback, where errors are ignored.
+pub(crate) fn remove_created_dirs(record: &UndoRecord) {
+    for dir in deepest_first(&record.created_dirs) {
+        let _ = fs::remove_dir(dir);
+    }
+}
+
+/// What removing one created folder did, as a `restored` line; `Err` for a real failure.
+fn remove_dir_step(dir: &Path) -> Result<String, io::Error> {
+    match fs::remove_dir(dir) {
+        Ok(()) => Ok(format!("removed folder {}", dir.display())),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            Ok(format!("already gone {}", dir.display()))
+        }
+        Err(e) if e.kind() == io::ErrorKind::DirectoryNotEmpty => {
+            Ok(format!("kept {} (not empty)", dir.display()))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 /// List the steps that restore the game, without changing the record.
 pub fn undo_actions(record: &UndoRecord) -> Vec<UndoAction> {
-    let mut actions = Vec::with_capacity(record.created.len() + record.replaced.len() + 1);
+    let mut actions = Vec::with_capacity(
+        record.created.len() + record.replaced.len() + record.created_dirs.len() + 1,
+    );
     actions.extend(
         record
             .created
@@ -55,6 +113,11 @@ pub fn undo_actions(record: &UndoRecord) -> Vec<UndoAction> {
                 backup: replaced.backup.clone(),
                 path: replaced.path.clone(),
             }),
+    );
+    actions.extend(
+        deepest_first(&record.created_dirs)
+            .into_iter()
+            .map(UndoAction::RemoveDir),
     );
     actions.push(UndoAction::SetLaunchOptions(
         record.launch_options_before.clone(),
@@ -117,6 +180,12 @@ impl UndoRecord {
                 escape(&r.backup.to_string_lossy())
             ));
         }
+        for dir in &self.created_dirs {
+            text.push_str(&format!(
+                "created-dir\t{}\n",
+                escape(&dir.to_string_lossy())
+            ));
+        }
         text
     }
 
@@ -131,6 +200,7 @@ impl UndoRecord {
         let mut launch_options = None;
         let mut created = Vec::new();
         let mut replaced = Vec::new();
+        let mut created_dirs = Vec::new();
         for line in lines {
             if line.is_empty() {
                 continue;
@@ -157,6 +227,9 @@ impl UndoRecord {
                         backup: PathBuf::from(unescape(backup)),
                     });
                 }
+                "created-dir" => {
+                    created_dirs.push(PathBuf::from(unescape(fields.next().unwrap_or(""))));
+                }
                 other => return Err(format!("unknown line: {}", other)),
             }
         }
@@ -169,6 +242,7 @@ impl UndoRecord {
             launch_options_before: launch_options,
             created,
             replaced,
+            created_dirs,
         })
     }
 }
@@ -246,6 +320,10 @@ pub fn put_back(rec: &UndoRecord) -> Vec<String> {
                     e
                 )),
             },
+            UndoAction::RemoveDir(dir) => match remove_dir_step(&dir) {
+                Ok(line) => restored.push(line),
+                Err(e) => restored.push(format!("failed to remove {}: {}", dir.display(), e)),
+            },
             UndoAction::SetLaunchOptions(_) => {}
         }
     }
@@ -255,10 +333,11 @@ pub fn put_back(rec: &UndoRecord) -> Vec<String> {
 /// Put a game back to flat from its undo record (`undo <appid>`).
 ///
 /// Runs the file steps of [`undo_actions`] on disk: created files are removed, replaced files
-/// get their backups copied back. The launch option step is not run here: the Decky plugin
-/// removes only our wrapper word from the line (code map). The record is deleted only after
-/// every file step has worked, so a failed undo can be run again; a file already gone or a
-/// backup already restored counts as done.
+/// get their backups copied back, then the folders the apply made are removed deepest first;
+/// one that is not empty is kept and named in `restored` ("kept <dir> (not empty)"). The
+/// launch option step is not run here: the Decky plugin removes only our wrapper word from the
+/// line (code map). The record is deleted only after every file step has worked, so a failed
+/// undo can be run again; a file already gone or a backup already restored counts as done.
 pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
     let path = record_path(data_dir, appid);
     let text = match fs::read_to_string(&path) {
@@ -308,15 +387,18 @@ pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
                 }
                 Err(e) => return Err(io_error("cannot restore", &path, &e)),
             },
+            UndoAction::RemoveDir(dir) => restored
+                .push(remove_dir_step(&dir).map_err(|e| io_error("cannot remove", &dir, &e))?),
             UndoAction::SetLaunchOptions(_) => {}
         }
     }
 
     fs::remove_file(&path).map_err(|e| io_error("cannot remove", &path, &e))?;
+    // A folder kept because it is not empty is named in `restored` but is not a change.
+    let changes = restored.iter().filter(|l| !l.starts_with("kept ")).count();
     let summary = format!(
         "{} change(s) put back for {}; the launch option is left to the Decky plugin",
-        restored.len(),
-        appid
+        changes, appid
     );
     Ok(UndoResult {
         appid,
@@ -355,6 +437,7 @@ mod tests {
                 path: game.join("b.ini"),
                 backup: game.join("b.ini.bak"),
             }],
+            created_dirs: vec![],
         };
         fs::write(record_path(&data, appid), record.to_text()).unwrap();
         data
@@ -429,6 +512,7 @@ mod tests {
             launch_options_before: String::new(),
             created: vec![root.join("x")],
             replaced: vec![],
+            created_dirs: vec![],
         };
         let path = save_record(&data, &rec).unwrap();
         assert_eq!(path, record_path(&data, 11));

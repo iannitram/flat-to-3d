@@ -661,6 +661,7 @@ fn rollback(record: &UndoRecord) {
     for r in record.replaced.iter().rev() {
         let _ = fs::rename(&r.backup, &r.path);
     }
+    crate::undo::remove_created_dirs(record);
 }
 
 fn io_error(action: &str, path: &Path, e: &io::Error) -> String {
@@ -712,6 +713,7 @@ pub fn apply(
         launch_options_before: String::new(),
         created: Vec::new(),
         replaced: Vec::new(),
+        created_dirs: Vec::new(),
     };
     let result = (|| {
         fs::write(&marker, "").map_err(|err| io_error("write", &marker, &err))?;
@@ -731,7 +733,7 @@ pub fn apply(
                 }
                 FileStep::Copy { from, to } => {
                     if let Some(parent) = to.parent() {
-                        fs::create_dir_all(parent)
+                        crate::undo::create_dir_all_recorded(parent, &mut record)
                             .map_err(|err| io_error("create", parent, &err))?;
                     }
                     if to.exists() {
@@ -758,7 +760,7 @@ pub fn apply(
                 }
                 FileStep::Write { to, text } => {
                     if let Some(parent) = to.parent() {
-                        fs::create_dir_all(parent)
+                        crate::undo::create_dir_all_recorded(parent, &mut record)
                             .map_err(|err| io_error("create", parent, &err))?;
                     }
                     if to.exists() {

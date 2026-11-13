@@ -13,6 +13,7 @@ fn sample() -> UndoRecord {
             path: PathBuf::from("/g/d3d11.dll"),
             backup: PathBuf::from("/g/d3d11.dll.flat3d-backup"),
         }],
+        created_dirs: vec![],
     }
 }
 
@@ -37,6 +38,7 @@ fn an_empty_record_round_trips() {
         launch_options_before: String::new(),
         created: vec![],
         replaced: vec![],
+        created_dirs: vec![],
     };
     assert_eq!(r.to_text(), "flat3d-undo 1\nappid\t7\nlaunch-options\t\n");
     assert_eq!(UndoRecord::from_text(&r.to_text()), Ok(r));

@@ -19,6 +19,7 @@ fn record() -> UndoRecord {
                 backup: PathBuf::from("/g/y.dll.bak"),
             },
         ],
+        created_dirs: vec![],
     }
 }
 
@@ -62,6 +63,7 @@ fn an_empty_record_only_resets_the_launch_options() {
         launch_options_before: String::new(),
         created: vec![],
         replaced: vec![],
+        created_dirs: vec![],
     };
     assert_eq!(
         undo_actions(&r),
