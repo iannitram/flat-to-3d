@@ -10,18 +10,19 @@ use std::thread;
 use super::files::{append_log, write_snapshot, Paths};
 use super::frames::{parse_track_frames, Device};
 use super::health_loop::{HealthLoop, HealthTick};
-use super::machine::{
-    link_commands, note_event, note_text, step, Effect, Event, Inputs, Phase, Watch,
-};
 #[cfg(test)]
-use super::machine::{note_kind, Note};
+use super::machine::note_kind;
+use super::machine::{
+    link_commands_with, note_event, note_text, step, Effect, Event, Inputs, Note, Phase, Watch,
+};
 use crate::api::{LinkEvent, LinkSnapshot, LinkState};
 use crate::exec::LinkRunner as CommandRunner;
 use crate::link;
-use crate::link::adb::AdbChoice;
+use crate::link::adb::{AdbChoice, AdbRunner};
 use crate::link::Headset;
 use crate::state::{EventRing, Request};
 use crate::switches::Settings;
+use crate::wivrn::{detect_quest_app, WivrnStart, SERVER_FLAGS};
 
 pub trait Feed {
     fn poll(&mut self) -> Option<Vec<Device>>;
@@ -125,19 +126,19 @@ impl Feed for TrackDevices {
     }
 }
 
-/// Runs the health loop's `adb` words through Flat to 3D's own adb and the headset's serial.
-struct OwnAdb<'a, R> {
-    runner: Shared<R>,
-    path: &'a str,
-    serial: &'a str,
-}
+/// Runs the health loop's `adb` words through an [`AdbRunner`] over the shared runner, so they
+/// run as `<adb> -s <serial> ...`. With no adb or no headset serial nothing runs.
+struct HealthAdb<R: link::CommandRunner>(Result<AdbRunner<R>, &'static str>);
 
-impl<R: CommandRunner> CommandRunner for OwnAdb<'_, R> {
+impl<R: link::CommandRunner> CommandRunner for HealthAdb<R> {
     fn run(&mut self, command: &[String]) -> Result<String, String> {
-        if self.serial.is_empty() {
-            return Err("No headset".to_string());
+        let adb = self.0.as_mut().map_err(|message| (*message).to_string())?;
+        let output = link::CommandRunner::run(adb, command);
+        if output.success {
+            Ok(output.stdout)
+        } else {
+            Err(output.stderr.trim().to_string())
         }
-        link::adb::run(&mut self.runner, self.path, self.serial, command)
     }
 }
 
@@ -172,6 +173,35 @@ impl<R: CommandRunner> CommandRunner for Shared<R> {
     }
 }
 
+/// The same runner in the link code's shape, so `link::stop_3d`, `detect_quest_app` and an
+/// [`AdbRunner`] can act through it. A failure's message becomes the stderr the link code reads.
+impl<R: CommandRunner> link::CommandRunner for Shared<R> {
+    fn run(&mut self, command: &[String]) -> link::CommandOutput {
+        match self.0.borrow_mut().run(command) {
+            Ok(stdout) => link::CommandOutput {
+                success: true,
+                stdout,
+                stderr: String::new(),
+            },
+            Err(message) => link::CommandOutput {
+                success: false,
+                stdout: String::new(),
+                stderr: stderr_of(&message).to_string(),
+            },
+        }
+    }
+}
+
+/// The stderr inside a runner's failure message. `ProcessRunner` reports a failed command as
+/// `Command failed: exit N; <stderr>`, and the link code matches on the stderr alone (Stop 3D
+/// reads a server unit that is already gone as stopped); any other message is the stderr.
+fn stderr_of(message: &str) -> &str {
+    message
+        .strip_prefix("Command failed: ")
+        .and_then(|rest| rest.split_once("; "))
+        .map_or(message, |(_, stderr)| stderr)
+}
+
 /// The link service's state: the watch state machine, the headset as last seen and the
 /// event ring. Every effect runs through `runner` (adb commands get the adb in use).
 pub struct Service<R: CommandRunner, F: Feed> {
@@ -187,6 +217,9 @@ pub struct Service<R: CommandRunner, F: Feed> {
     starting: bool,
     ring: EventRing,
     health: HealthLoop,
+    /// The WiVRn app found on a headset (serial, package), so the dumpsys probes run once per
+    /// headset.
+    quest_app: Option<(String, String)>,
 }
 
 impl<R: CommandRunner, F: Feed> Service<R, F> {
@@ -208,6 +241,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             starting: false,
             ring: EventRing::new(),
             health: HealthLoop::new(None),
+            quest_app: None,
         }
     }
 
@@ -241,6 +275,12 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                     }
                 }
                 Seen::Unauthorised => {
+                    if !self.unauthorised {
+                        self.ring.push(
+                            note_event(Note::AllowUsbDebugging),
+                            note_text(Note::AllowUsbDebugging),
+                        );
+                    }
                     self.unauthorised = true;
                     self.unplug(now);
                 }
@@ -280,7 +320,8 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                 Effect::StartLink | Effect::Reattach => {
                     self.starting = true;
                     self.publish(now);
-                    let commands = link_commands(&effect);
+                    let w = self.wivrn_start();
+                    let commands = link_commands_with(&effect, &w);
                     if self.run_steps(now, &commands, true).is_err() {
                         link_failed = true;
                         self.roll_back(now, before);
@@ -288,8 +329,11 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                     self.starting = false;
                 }
                 Effect::StopLink => {
-                    let commands = link_commands(&effect);
-                    let _ = self.run_steps(now, &commands, false);
+                    // A server unit that is already gone reads as stopped, so a second Stop 3D
+                    // logs nothing.
+                    if let Err(e) = link::stop_3d(&mut self.own_adb()) {
+                        self.log(now, &format!("stop: {}", e.message));
+                    }
                 }
                 Effect::Notify(note) => {
                     if !link_failed {
@@ -329,6 +373,44 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             }
         }
         first.map_or(Ok(()), Err)
+    }
+
+    /// The shared runner with the adb in use and the headset's serial.
+    fn own_adb(&self) -> AdbRunner<Shared<R>> {
+        AdbRunner::new(
+            Shared(Rc::clone(&self.runner)),
+            &self.adb.path,
+            Some(&self.serial),
+        )
+    }
+
+    /// The WiVRn start for this headset: the app `detect_quest_app` finds on it (WiVRn's
+    /// default app when none answers), with the server flags. A found app is kept per serial;
+    /// a miss is not, so the next start probes again.
+    fn wivrn_start(&mut self) -> WivrnStart {
+        let cached = self
+            .quest_app
+            .as_ref()
+            .filter(|(serial, _)| *serial == self.serial)
+            .map(|(_, package)| package.clone());
+        let app = match cached {
+            Some(package) => package,
+            None => {
+                let serial = self.serial.clone();
+                match detect_quest_app(&mut self.own_adb(), &serial).map(|q| q.package) {
+                    Some(package) => {
+                        self.quest_app = Some((serial, package.clone()));
+                        package
+                    }
+                    None => link::WIVRN_APP.to_string(),
+                }
+            }
+        };
+        WivrnStart {
+            scope: None,
+            app,
+            flags: SERVER_FLAGS.map(String::from).to_vec(),
+        }
     }
 
     fn adb_run(&self, command: &[String]) -> Result<String, String> {
@@ -403,11 +485,13 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
 
     fn publish(&mut self, now: u64) -> LinkSnapshot {
         let playing = self.inputs.game_3d_running;
-        let mut adb = OwnAdb {
-            runner: Shared(Rc::clone(&self.runner)),
-            path: &self.adb.path,
-            serial: &self.serial,
-        };
+        let mut adb = HealthAdb(if self.adb.path.is_empty() {
+            Err("No adb is available")
+        } else if self.serial.is_empty() {
+            Err("No headset")
+        } else {
+            Ok(self.own_adb())
+        });
         let tick = self.health.tick(now, playing, &mut adb);
         if let Some((kind, text)) = tick.toast.clone() {
             self.ring.push(kind, &text);
@@ -523,7 +607,9 @@ mod service_tests {
 
         let first = service.tick(100, &s, None, (false, false));
         assert_eq!(first.state, LinkState::Unauthorised);
-        assert!(first.events.is_empty());
+        assert_eq!(first.events.len(), 1);
+        assert_eq!(first.events[0].kind, EventKind::AllowDebugging);
+        assert_eq!(first.events[0].seq, 1);
         assert!(fake
             .borrow()
             .ran
@@ -532,9 +618,9 @@ mod service_tests {
 
         let second = service.tick(101, &s, None, (false, false));
         assert_eq!(second.state, LinkState::Ready);
-        assert_eq!(second.events.len(), 1);
-        assert_eq!(second.events[0].kind, EventKind::Ready);
-        assert_eq!(second.events[0].seq, 1);
+        assert_eq!(second.events.len(), 2);
+        assert_eq!(second.events[1].kind, EventKind::Ready);
+        assert_eq!(second.events[1].seq, 2);
         assert!(fake
             .borrow()
             .ran
@@ -543,12 +629,12 @@ mod service_tests {
 
         let third = service.tick(102, &s, None, (false, false));
         assert_eq!(third.state, LinkState::Ready);
-        assert_eq!(third.events.len(), 1);
+        assert_eq!(third.events.len(), 2);
         let before = fake.borrow().ran.len();
 
         let fourth = service.tick(103, &s, None, (false, false));
         assert_eq!(fourth.state, LinkState::NoHeadset);
-        assert_eq!(fourth.events.len(), 1);
+        assert_eq!(fourth.events.len(), 2);
         let ran = fake.borrow().ran.clone();
         assert!(ran[before..]
             .iter()
@@ -560,7 +646,7 @@ mod service_tests {
         let written: LinkSnapshot =
             serde_json::from_str(&fs::read_to_string(service.paths.snapshot()).unwrap()).unwrap();
         assert_eq!(written.state, LinkState::NoHeadset);
-        assert_eq!(written.events.len(), 1);
+        assert_eq!(written.events.len(), 2);
     }
 
     #[test]
