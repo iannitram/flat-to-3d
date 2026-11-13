@@ -48,7 +48,7 @@ gate = true
 id = "toggles"
 kind = "ask"
 who = "you"
-text = "Auto 3D and Tunnel, game switch and Undo work against real CLI."
+text = "Auto 3D, game switch and Undo work against real CLI."
 
 [[step]]
 id = "headset-actions"

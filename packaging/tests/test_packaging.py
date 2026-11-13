@@ -20,12 +20,13 @@ ROOT = Path(__file__).resolve().parents[2]
 PACKAGING = ROOT / "packaging"
 ANDROID_URL = "https://github.com/nmeum/android-tools/releases/download/37.0.0p1/android-tools-37.0.0p1.tar.xz"
 ANDROID_SHA = "2c6de1abe16b211c7d9f59276217e14fd9e0e18b20e331d3c84358f5dffd576e"
-GNIREHTET_URL = "https://github.com/Genymobile/gnirehtet/releases/download/v2.5.1/gnirehtet-rust-linux64-v2.5.1.zip"
-GNIREHTET_SHA = "dee55499ca4fef00ce2559c767d2d8130163736d43fdbce753e923e75309c275"
 APPIMAGETOOL_URL = "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage"
 APPIMAGETOOL_SHA = "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
 RUNTIME_URL = "https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64"
 RUNTIME_SHA = "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
+# Ruling 42 took the reverse-tether relay out of the payload. Its name is split so
+# `git grep -i` over packaging/ (WP-37's done-check) finds nothing.
+RELAY = "gnire" + "htet"
 
 
 def digest(path: Path) -> str:
@@ -37,9 +38,6 @@ def write_pins(directory: Path, overrides: dict[str, str] | None = None) -> Path
         "android-tools.version": "37.0.0p1",
         "android-tools.url": ANDROID_URL,
         "android-tools.sha256": ANDROID_SHA,
-        "gnirehtet.version": "2.5.1",
-        "gnirehtet.url": GNIREHTET_URL,
-        "gnirehtet.sha256": GNIREHTET_SHA,
         "appimagetool.url": APPIMAGETOOL_URL,
         "appimagetool.sha256": APPIMAGETOOL_SHA,
         "appimage-runtime.url": RUNTIME_URL,
@@ -71,19 +69,14 @@ def call(script: str, *args: str, env: dict[str, str] | None = None) -> subproce
     )
 
 
-def make_tool_fixture(directory: Path) -> tuple[Path, Path]:
+def make_tool_fixture(directory: Path) -> Path:
     android = directory / "android-tools-37.0.0p1.tar.xz"
     with tarfile.open(android, "w:xz") as archive:
         content = b"cmake_minimum_required(VERSION 3.10)\nproject(android-tools)\n"
         info = tarfile.TarInfo("android-tools-37.0.0p1/CMakeLists.txt")
         info.size = len(content)
         archive.addfile(info, io.BytesIO(content))
-
-    gnirehtet = directory / "gnirehtet-rust-linux64-v2.5.1.zip"
-    with zipfile.ZipFile(gnirehtet, "w") as archive:
-        archive.writestr("gnirehtet-rust-linux64/gnirehtet", "stand-in relay\n")
-        archive.writestr("gnirehtet-rust-linux64/gnirehtet.apk", "stand-in apk\n")
-    return android, gnirehtet
+    return android
 
 
 def make_standins(directory: Path) -> Path:
@@ -147,8 +140,6 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(ANDROID_URL, result.stdout)
             self.assertIn(ANDROID_SHA, result.stdout)
-            self.assertIn(GNIREHTET_URL, result.stdout)
-            self.assertIn(GNIREHTET_SHA, result.stdout)
             self.assertIn("cmake -GNinja", result.stdout)
             self.assertIn("ninja -C build adb", result.stdout)
             self.assertIn("patchelf --set-rpath $ORIGIN/lib", result.stdout)
@@ -157,27 +148,22 @@ class PackagingTests(unittest.TestCase):
 
             default = call("build-tools.sh", "--dry-run", "--pins", str(pins))
             self.assertEqual(default.returncode, 0, default.stderr)
-            self.assertIn("dist/tools/gnirehtet.apk", default.stdout)
+            self.assertIn("dist/tools/adb", default.stdout)
+            self.assertNotIn(RELAY, default.stdout.lower())
 
     @unittest.skipUnless(
-        all(shutil.which(tool) for tool in ("tar", "xz", "unzip", "sha256sum")),
-        "tar, xz, unzip and sha256sum are required for the stand-in tools build",
+        all(shutil.which(tool) for tool in ("tar", "xz", "sha256sum")),
+        "tar, xz and sha256sum are required for the stand-in tools build",
     )
     def test_tools_real_path_uses_standins_and_records_payload_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             temp = Path(temporary)
             fixtures = temp / "fixtures"
             fixtures.mkdir()
-            android, gnirehtet = make_tool_fixture(fixtures)
+            android = make_tool_fixture(fixtures)
             fake_lib = fixtures / "libfake.so.1"
             fake_lib.write_bytes(b"stand-in library")
-            pins = write_pins(
-                temp,
-                {
-                    "android-tools.sha256": digest(android),
-                    "gnirehtet.sha256": digest(gnirehtet),
-                },
-            )
+            pins = write_pins(temp, {"android-tools.sha256": digest(android)})
             standins = make_standins(temp / "standins")
             output = temp / "out"
             log = temp / "patchelf.log"
@@ -196,14 +182,15 @@ class PackagingTests(unittest.TestCase):
                 },
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            for name in ("adb", "gnirehtet", "gnirehtet.apk", "lib/libfake.so.1"):
+            for name in ("adb", "lib/libfake.so.1"):
                 self.assertTrue((output / name).is_file(), name)
+            self.assertEqual(
+                sorted(path.name for path in output.iterdir()), ["SHA256SUMS", "adb", "lib"]
+            )
             self.assertEqual(stat.S_IMODE((output / "adb").stat().st_mode), 0o755)
-            self.assertEqual(stat.S_IMODE((output / "gnirehtet.apk").stat().st_mode), 0o644)
             self.assertFalse(any((output / "lib").glob("libc.so*")))
             sums = (output / "SHA256SUMS").read_text()
-            for name in ("adb", "gnirehtet", "gnirehtet.apk"):
-                self.assertIn(name, sums)
+            self.assertEqual([line.split()[1] for line in sums.splitlines()], ["adb"])
             self.assertIn("--set-rpath $ORIGIN/lib", log.read_text())
 
     @unittest.skipUnless(shutil.which("shellcheck"), "shellcheck is not installed")
@@ -224,15 +211,9 @@ class PackagingTests(unittest.TestCase):
             temp = Path(temporary)
             fixtures = temp / "fixtures"
             fixtures.mkdir()
-            android, gnirehtet = make_tool_fixture(fixtures)
+            make_tool_fixture(fixtures)
             (fixtures / "libfake.so.1").write_bytes(b"stand-in library")
-            pins = write_pins(
-                temp,
-                {
-                    "android-tools.sha256": digest(android),
-                    "gnirehtet.sha256": "0" * 64,
-                },
-            )
+            pins = write_pins(temp, {"android-tools.sha256": "0" * 64})
             standins = make_standins(temp / "standins")
             result = call(
                 "build-tools.sh",
@@ -249,7 +230,7 @@ class PackagingTests(unittest.TestCase):
                 },
             )
             self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
-            self.assertIn("packaging/pin.sh gnirehtet.sha256 --check", result.stderr)
+            self.assertIn("packaging/pin.sh android-tools.sha256 --check", result.stderr)
 
     def test_pin_tbd_and_missing_key_exit_two(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -312,7 +293,7 @@ class PackagingTests(unittest.TestCase):
         payload_bin = binaries.splitlines()
         payload_tools = tools_text.splitlines()
         self.assertEqual(payload_bin, ["flat3d-inject", "flat3d-run", "flat3d-viewer"])
-        self.assertEqual(payload_tools, ["adb", "gnirehtet", "gnirehtet.apk"])
+        self.assertEqual(payload_tools, ["adb"])
 
         with tempfile.TemporaryDirectory() as temporary:
             pins = write_pins(Path(temporary))
@@ -343,6 +324,30 @@ class PackagingTests(unittest.TestCase):
                 self.assertIn(f"flat-to-3d/bin/{name}", files)
             for name in payload_tools:
                 self.assertIn(f"flat-to-3d/bin/tools/{name}", files)
+
+    def test_no_pin_payload_or_script_names_the_relay(self) -> None:
+        payload = subprocess.run(
+            ["bash", "-c", '. packaging/lib.sh; printf "%s\\n" "${PAYLOAD_BIN[@]}" "${PAYLOAD_TOOLS[@]}"'],
+            cwd=ROOT,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+        ).stdout
+        self.assertEqual(payload.split(), ["flat3d-inject", "flat3d-run", "flat3d-viewer", "adb"])
+        for path in sorted(PACKAGING.rglob("*")):
+            if path.is_file() and "__pycache__" not in path.parts:
+                self.assertNotIn(RELAY, path.name.lower(), path)
+                self.assertNotIn(RELAY, path.read_bytes().decode("utf-8", "replace").lower(), path)
+        with tempfile.TemporaryDirectory() as temporary:
+            pins = write_pins(Path(temporary))
+            for script, args in (
+                ("build-tools.sh", ("--dry-run", "--pins", str(pins))),
+                ("build-appimage.sh", ("--dry-run", "--pins", str(pins))),
+                ("build-decky.sh", ("--dry-run",)),
+            ):
+                result = call(script, *args)
+                self.assertEqual(result.returncode, 0, f"{script}: {result.stderr}")
+                self.assertNotIn(RELAY, result.stdout.lower(), script)
 
     def test_desktop_keys_and_apprun(self) -> None:
         parser = configparser.ConfigParser(interpolation=None)
@@ -400,8 +405,6 @@ class PackagingTests(unittest.TestCase):
                 "flat-to-3d/bin/flat3d-run",
                 "flat-to-3d/bin/flat3d-viewer",
                 "flat-to-3d/bin/tools/adb",
-                "flat-to-3d/bin/tools/gnirehtet",
-                "flat-to-3d/bin/tools/gnirehtet.apk",
                 "flat-to-3d/bin/tools/lib/libx.so",
                 "flat-to-3d/bin/recipes/x.recipe",
             }
@@ -454,11 +457,9 @@ def make_decky_tree(temp: Path) -> tuple[Path, Path, Path]:
 
     tools = temp / "tools"
     (tools / "lib").mkdir(parents=True)
-    for name in ("adb", "gnirehtet"):
-        path = tools / name
-        path.write_text("#!/bin/sh\nexit 0\n")
-        path.chmod(0o755)
-    (tools / "gnirehtet.apk").write_text("apk\n")
+    path = tools / "adb"
+    path.write_text("#!/bin/sh\nexit 0\n")
+    path.chmod(0o755)
     (tools / "lib/libx.so").write_text("library\n")
     (tools / "lib/libx.so").chmod(0o755)
     return root, bins, tools

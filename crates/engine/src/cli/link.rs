@@ -472,13 +472,7 @@ mod tests {
         let (root, paths) = setup("install");
         let src = root.join("release");
         std::fs::create_dir_all(src.join("tools")).unwrap();
-        for path in [
-            "flat3d-inject",
-            "flat3d-run",
-            "tools/adb",
-            "tools/gnirehtet",
-            "tools/gnirehtet.apk",
-        ] {
+        for path in ["flat3d-inject", "flat3d-run", "tools/adb"] {
             std::fs::write(src.join(path), b"").unwrap();
         }
         let env = BTreeMap::from([("HOME".into(), paths.home.to_string_lossy().into_owned())]);

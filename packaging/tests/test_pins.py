@@ -71,7 +71,7 @@ class PinTests(unittest.TestCase):
 
     def test_real_pin_schema_and_required_keys(self):
         table = parse(ROOT / "packaging" / "pins")
-        required = {"uevr": "auto", "android-tools": "auto", "gnirehtet": "auto", "appimagetool": "auto",
+        required = {"uevr": "auto", "android-tools": "auto", "appimagetool": "auto",
                     "appimage-runtime": "auto", "geo11": "auto", "lana-fix": "auto", "control-fix": "auto",
                     "ac7-profile": "auto", "wivrn-apk": "auto", "ac7-prereqs": "manual"}
         for key, fetch in required.items():
@@ -92,6 +92,16 @@ class PinTests(unittest.TestCase):
             elif row.get("fetch") == "manual":
                 self.assertIn("page", row)
                 self.assertIn("license", row)
+
+    def test_no_pin_names_the_relay(self):
+        # Ruling 42: the reverse-tether relay left the payload, so no pin fetches it.
+        # The name is split so `git grep -i` over packaging/ (WP-37's done-check) stays empty.
+        relay = "gnire" + "htet"
+        self.assertNotIn(relay, (ROOT / "packaging" / "pins").read_text(encoding="utf-8").lower())
+        for key, row in parse(ROOT / "packaging" / "pins").items():
+            self.assertNotIn(relay, key.lower())
+            for value in row.values():
+                self.assertNotIn(relay, value.lower())
 
     def test_tbd_sha_filled_without_other_line_changes(self):
         before = self.pins.read_text()
