@@ -398,12 +398,18 @@ fn find_file_parent(
     Ok(None)
 }
 
-fn regular_files(root: &Path) -> io::Result<Vec<PathBuf>> {
+/// Every regular file below `root`. With `filter_root_children`, the direct children of
+/// `root` that `should_skip_root_child` names (staging and other-version folders) are left
+/// out, the same rule the search uses.
+fn regular_files(root: &Path, filter_root_children: bool) -> io::Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     let mut dirs = vec![root.to_path_buf()];
     while let Some(dir) = dirs.pop() {
         let entries = sorted_entries(&dir)?;
         for path in entries.into_iter().rev() {
+            if filter_root_children && dir == root && should_skip_root_child(&path) {
+                continue;
+            }
             if is_real_dir(&path) {
                 dirs.push(path);
             } else if path.is_file() {
@@ -489,6 +495,7 @@ pub fn plan_files(
     }
 
     let fix_name = m.get("geo11-fix");
+    let mut fix_filter = false;
     let fix_root = if let Some(name) = fix_name {
         if !is_pin_key(name) {
             return Err(bad_recipe(format!(
@@ -510,6 +517,9 @@ pub fn plan_files(
                 "{name} is not fetched; run flat3d-inject setup fetch {name}"
             )));
         }
+        // When the fix sits directly in the key folder, the copy walk below starts there
+        // and must skip the same staging and other-version folders the search skipped.
+        fix_filter = filter && found.as_deref() == Some(search_root.as_path());
         found
     } else {
         None
@@ -534,7 +544,7 @@ pub fn plan_files(
 
     let mut copies = Vec::<(PathBuf, PathBuf, bool)>::new();
     if let Some(root) = &fix_root {
-        for from in regular_files(root).map_err(|e| io_error("search", root, &e))? {
+        for from in regular_files(root, fix_filter).map_err(|e| io_error("search", root, &e))? {
             let rel = from.strip_prefix(root).expect("walked below root");
             if rel.components().count() == 1
                 && from
