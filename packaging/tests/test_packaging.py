@@ -152,8 +152,8 @@ class PackagingTests(unittest.TestCase):
             self.assertNotIn(RELAY, default.stdout.lower())
 
     @unittest.skipUnless(
-        all(shutil.which(tool) for tool in ("tar", "xz", "unzip", "sha256sum")),
-        "tar, xz, unzip and sha256sum are required for the stand-in tools build",
+        all(shutil.which(tool) for tool in ("tar", "xz", "sha256sum")),
+        "tar, xz and sha256sum are required for the stand-in tools build",
     )
     def test_tools_real_path_uses_standins_and_records_payload_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

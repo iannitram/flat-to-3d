@@ -8,6 +8,16 @@ const FIX_INSTALL_COMMAND: &str =
     "read systemctl --user status flat3d-link.service, then re-run flat3d-inject install";
 const FIX_UNINSTALL: &str = "remove that file by hand, then re-run flat3d-inject uninstall";
 const FIX_UNINSTALL_COMMAND: &str = "run systemctl --user daemon-reload";
+const FIX_UDEV: &str = "re-run flat3d-inject install in a terminal and answer the sudo prompt (SteamOS: set a password with passwd first)";
+const FIX_UDEV_UNINSTALL: &str =
+    "run sudo rm /etc/udev/rules.d/70-flat3d-quest.rules, then sudo udevadm control --reload-rules";
+
+/// Flat to 3D's own udev rule (ruling 42): the logged-in user may open Meta USB
+/// devices, so adb finds a Quest without Quest Tether's rule.
+pub const UDEV_RULE_TEXT: &str = include_str!("../../../packaging/flat3d-quest.rules");
+/// Where install puts the rule. It sorts before 73-seat-late.rules, which turns
+/// the `uaccess` tag into the user's access.
+pub const UDEV_RULE_PATH: &str = "/etc/udev/rules.d/70-flat3d-quest.rules";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnitSpec {
@@ -48,6 +58,7 @@ pub fn execute(
         .map(|(_, d)| d)
         .chain(plan.optional_bins.iter().map(|(_, d)| d))
         .chain(plan.trees.iter().map(|(_, d)| d))
+        .chain(std::iter::once(&plan.udev_source))
         .chain(std::iter::once(&plan.unit_path))
         .chain(std::iter::once(&plan.manifest));
     for path in destinations {
@@ -101,12 +112,7 @@ pub fn execute(
                 notes.push(name.to_string());
                 continue;
             }
-            let mode = if name == "gnirehtet.apk" {
-                0o644
-            } else {
-                0o755
-            };
-            copy_chmod(src, dst, mode)?;
+            copy_chmod(src, dst, 0o755)?;
             written.push(dst.clone());
         }
         for (src, dst) in &plan.trees {
@@ -139,6 +145,8 @@ pub fn execute(
                 written.push(dest);
             }
         }
+        place(&plan.udev_source, 0o644, |tmp| fs::write(tmp, UDEV_RULE_TEXT))?;
+        written.push(plan.udev_source.clone());
         let tmp = format!("{}.tmp", plan.unit_path);
         let placed = fs::write(&tmp, unit_text_with(&UnitSpec::default()))
             .map_err(|e| io_error(&tmp, &e, IO_INSTALL))
@@ -177,6 +185,21 @@ pub fn execute(
                     last_line(&output.stderr)
                 ),
             ));
+        }
+    }
+    // The udev step needs root, so a refused or failed sudo prompt is a Setup
+    // warning: the link service is in place, only the rule is missing.
+    if !Path::new(&plan.udev_rule).exists() {
+        for command in &plan.udev_commands {
+            let output = r.run(command);
+            ran.push(command.join(" "));
+            if !output.success {
+                notes.push(format!(
+                    "warning: the Quest udev rule is not installed: {}; fix: {FIX_UDEV}",
+                    last_line(&output.stderr)
+                ));
+                break;
+            }
         }
     }
     Ok(crate::api::InstallReport {
@@ -221,6 +244,20 @@ pub fn execute_uninstall(
                     "io",
                     &format!("{path}: {e}; fix: {FIX_UNINSTALL}"),
                 ))
+            }
+        }
+    }
+    if std::path::Path::new(&plan.udev_rule).exists() {
+        for command in &plan.udev_commands {
+            let out = r.run(command);
+            let argv = command.join(" ");
+            ran.push(argv.clone());
+            if !out.success {
+                notes.push(format!(
+                    "tolerated {argv}: {}; fix: {FIX_UDEV_UNINSTALL}",
+                    last_line(&out.stderr)
+                ));
+                break;
             }
         }
     }
@@ -288,9 +325,17 @@ fn write_manifest(path: &str, files: &[String]) -> Result<(), crate::api::ApiErr
     std::fs::write(path, body).map_err(|e| io_error(path, &e, IO_INSTALL))
 }
 fn copy_chmod(src: &str, dst: &str, mode: u32) -> Result<(), crate::api::ApiError> {
+    place(dst, mode, |tmp| std::fs::copy(src, tmp).map(|_| ()))
+}
+/// Fills `dst.tmp`, sets its mode, then renames it over `dst`.
+fn place(
+    dst: &str,
+    mode: u32,
+    fill: impl FnOnce(&str) -> std::io::Result<()>,
+) -> Result<(), crate::api::ApiError> {
     let tmp = format!("{dst}.tmp");
     let result = (|| {
-        std::fs::copy(src, &tmp).map_err(|e| io_error(dst, &e, IO_INSTALL))?;
+        fill(&tmp).map_err(|e| io_error(dst, &e, IO_INSTALL))?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -331,28 +376,29 @@ pub struct InstallPlan {
     pub optional_bins: Vec<(String, String)>,
     pub trees: Vec<(String, String)>,
     pub manifest: String,
+    /// The rule's copy inside the install folders, which the sudo command reads.
+    pub udev_source: String,
+    /// Where the rule goes; the udev step is skipped when this file is already there.
+    pub udev_rule: String,
+    /// One sudo prompt: put the rule in, reload udev, re-trigger Meta USB devices.
+    pub udev_commands: Vec<Vec<String>>,
 }
 
 pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
     let bin_dir = bin_dir(home);
     let tools_dir = crate::link::adb::tools_dir(home);
-    let copies = [
-        ("flat3d-inject", format!("{bin_dir}/flat3d-inject")),
-        ("flat3d-run", format!("{bin_dir}/flat3d-run")),
-    ]
-    .into_iter()
-    .map(|(name, destination)| (format!("{src_dir}/{name}"), destination))
-    .chain(
-        ["adb", "gnirehtet", "gnirehtet.apk"]
-            .into_iter()
-            .map(|name| {
-                (
-                    format!("{src_dir}/tools/{name}"),
-                    format!("{tools_dir}/{name}"),
-                )
-            }),
-    )
-    .collect();
+    let copies = vec![
+        (
+            format!("{src_dir}/flat3d-inject"),
+            format!("{bin_dir}/flat3d-inject"),
+        ),
+        (
+            format!("{src_dir}/flat3d-run"),
+            format!("{bin_dir}/flat3d-run"),
+        ),
+        (format!("{src_dir}/tools/adb"), format!("{tools_dir}/adb")),
+    ];
+    let udev_source = udev_source(home);
 
     InstallPlan {
         copies,
@@ -387,7 +433,25 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             ),
         ],
         manifest: format!("{home}/.local/share/flat3d/installed.txt"),
+        udev_commands: vec![[
+            "sudo",
+            "sh",
+            "-c",
+            "install -m 0644 \"$1\" \"$2\" && udevadm control --reload-rules && udevadm trigger --subsystem-match=usb --attr-match=idVendor=2833",
+            "sh",
+            udev_source.as_str(),
+            UDEV_RULE_PATH,
+        ]
+        .into_iter()
+        .map(str::to_string)
+        .collect()],
+        udev_source,
+        udev_rule: UDEV_RULE_PATH.to_string(),
     }
+}
+
+fn udev_source(home: &str) -> String {
+    format!("{home}/.local/share/flat3d/flat3d-quest.rules")
 }
 
 #[derive(Debug, Clone)]
@@ -397,6 +461,9 @@ pub struct UninstallPlan {
     pub after: Vec<Vec<String>>,
     pub home: String,
     pub manifest: String,
+    /// Flat to 3D's udev rule; removed (one sudo prompt) only when it is there.
+    pub udev_rule: String,
+    pub udev_commands: Vec<Vec<String>>,
 }
 
 pub fn uninstall_plan(home: &str) -> UninstallPlan {
@@ -412,8 +479,7 @@ pub fn uninstall_plan(home: &str) -> UninstallPlan {
             format!("{bin_dir}/flat3d-inject"),
             format!("{bin_dir}/flat3d-run"),
             format!("{tools_dir}/adb"),
-            format!("{tools_dir}/gnirehtet"),
-            format!("{tools_dir}/gnirehtet.apk"),
+            udev_source(home),
         ],
         after: vec![vec!["systemctl", "--user", "daemon-reload"]
             .into_iter()
@@ -421,5 +487,17 @@ pub fn uninstall_plan(home: &str) -> UninstallPlan {
             .collect()],
         home: home.to_string(),
         manifest: format!("{home}/.local/share/flat3d/installed.txt"),
+        udev_rule: UDEV_RULE_PATH.to_string(),
+        udev_commands: vec![[
+            "sudo",
+            "sh",
+            "-c",
+            "rm -f \"$1\" && udevadm control --reload-rules",
+            "sh",
+            UDEV_RULE_PATH,
+        ]
+        .into_iter()
+        .map(str::to_string)
+        .collect()],
     }
 }
