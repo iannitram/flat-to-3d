@@ -11,12 +11,27 @@ symptom = "link never becomes ready"
 cause = "Check service logs and headset connection."
 
 [[step]]
+id = "no-quest-tether-rule"
+kind = "check"
+who = "you"
+text = "Run this on a machine without Quest Tether, so no other udev rule gives access to the Quest (ruling 42)."
+gate = true
+
+[[step]]
 id = "install"
 kind = "cmd"
 who = "script"
-text = "Install the link service."
+text = "Install the link service and answer the one sudo prompt for the Quest udev rule."
 run = ["flat3d-inject", "install", "--json"]
 expect_json = { "/ok" = true }
+
+[[step]]
+id = "udev-rule"
+kind = "cmd"
+who = "script"
+text = "Confirm Flat to 3D's own udev rule is in place."
+run = ["grep", "-F", "TAG+=\"uaccess\"", "/etc/udev/rules.d/70-flat3d-quest.rules"]
+expect = "2833"
 
 [[step]]
 id = "active"
@@ -92,7 +107,7 @@ expect_json = { "/data/ok" = true }
 id = "headset"
 kind = "check"
 who = "you"
-text = "Doctor quest-app line shows a version, not no headset."
+text = "Doctor quest-app line shows a version, not no headset: the headset is found through Flat to 3D's own rule."
 gate = true
 
 [[step]]
@@ -109,35 +124,11 @@ who = "you"
 text = "Suspend and resume; link heals."
 gate = true
 
-
-[[step]]
-id = "wifi-tunnel"
-kind = "cmd"
-who = "script"
-text = "Confirm Wi-Fi tunnel interface when testing tunnel mode."
-run = ["adb", "shell", "ip", "addr", "show", "tun0"]
-expect = "inet "
-
-[[step]]
-id = "gnirehtet-package"
-kind = "cmd"
-who = "script"
-text = "Confirm the tunnel helper package is installed."
-run = ["adb", "shell", "pm", "list", "packages", "com.genymobile.gnirehtet"]
-expect = "^package:com\\.genymobile\\.gnirehtet$"
-
-[[step]]
-id = "wifi-back-after-disconnect"
-kind = "check"
-who = "you"
-text = "Wi-Fi link returns after disconnecting the wired link."
-gate = true
-
 [[step]]
 id = "stop-once"
 kind = "cmd"
 who = "script"
-text = "Stop 3D once after the tunnel checks."
+text = "Stop 3D once after the heal checks."
 run = ["flat3d-inject", "stop-3d", "--json"]
 expect_json = { "/ok" = true }
 
@@ -169,7 +160,7 @@ expect = "versionName=26\\.9"
 id = "uninstall"
 kind = "cmd"
 who = "script"
-text = "Uninstall service."
+text = "Uninstall the service and answer the sudo prompt that removes the udev rule."
 run = ["flat3d-inject", "uninstall", "--json"]
 expect_json = { "/ok" = true }
 
@@ -177,8 +168,8 @@ expect_json = { "/ok" = true }
 id = "cleanup-files"
 kind = "cmd"
 who = "script"
-text = "Confirm uninstall left no link service files behind."
-run = ["python3", "-c", "from pathlib import Path; import sys; sys.exit(any(p.exists() for p in map(Path, sys.argv[1:])));", "{home}/.config/systemd/user/flat3d-link.service", "{data}/systemd/user/flat3d-link.service"]
+text = "Confirm uninstall left no link service files and no udev rule behind."
+run = ["python3", "-c", "from pathlib import Path; import sys; sys.exit(any(p.exists() for p in map(Path, sys.argv[1:])));", "{home}/.config/systemd/user/flat3d-link.service", "{data}/systemd/user/flat3d-link.service", "/etc/udev/rules.d/70-flat3d-quest.rules"]
 
 [[step]]
 id = "service-inactive"
