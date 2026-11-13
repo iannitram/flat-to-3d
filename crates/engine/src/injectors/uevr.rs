@@ -294,6 +294,7 @@ pub fn apply_with_profile(
         launch_options_before: String::new(),
         created: Vec::new(),
         replaced: Vec::new(),
+        created_dirs: Vec::new(),
     };
     let ours = profile_text_full(&profile_settings, &extras);
     let full_text = match &profile_pin {
@@ -342,7 +343,7 @@ fn write_all_text(
     record: &mut UndoRecord,
 ) -> Result<(), String> {
     let io = |what: &str, path: &Path, e: std::io::Error| format!("{what} {}: {e}", path.display());
-    fs::create_dir_all(dir).map_err(|e| io("cannot create", dir, e))?;
+    crate::undo::create_dir_all_recorded(dir, record).map_err(|e| io("cannot create", dir, e))?;
     fs::write(marker, "").map_err(|e| io("cannot write", marker, e))?;
     record.created.push(marker.to_path_buf());
     for file in files {
@@ -392,6 +393,7 @@ pub fn apply(
         launch_options_before: launch_options_before.to_owned(),
         created: Vec::new(),
         replaced: Vec::new(),
+        created_dirs: Vec::new(),
     };
     if let Err(e) = write_all(&dir, &profile, &backup, &marker, settings, &mut record) {
         rollback(&record);
@@ -412,7 +414,7 @@ fn write_all(
     record: &mut UndoRecord,
 ) -> Result<(), String> {
     let io = |what: &str, path: &Path, e: std::io::Error| format!("{what} {}: {e}", path.display());
-    fs::create_dir_all(dir).map_err(|e| io("cannot create", dir, e))?;
+    crate::undo::create_dir_all_recorded(dir, record).map_err(|e| io("cannot create", dir, e))?;
     fs::write(marker, "").map_err(|e| io("cannot write", marker, e))?;
     record.created.push(marker.to_path_buf());
     if profile.exists() {
@@ -450,7 +452,8 @@ fn copy_over(src: &Path, target: &Path, record: &mut UndoRecord) -> Result<(), S
         ));
     }
     if let Some(parent) = target.parent() {
-        fs::create_dir_all(parent).map_err(|e| io("cannot create", parent, e))?;
+        crate::undo::create_dir_all_recorded(parent, record)
+            .map_err(|e| io("cannot create", parent, e))?;
     }
     if let Err(e) = fs::copy(src, &staging) {
         let _ = fs::remove_file(&staging);
@@ -493,6 +496,7 @@ fn rollback(record: &UndoRecord) {
     for p in record.created.iter().rev() {
         let _ = fs::remove_file(p);
     }
+    crate::undo::remove_created_dirs(record);
 }
 
 #[cfg(test)]
@@ -519,6 +523,9 @@ mod tests {
             match action {
                 UndoAction::RemoveFile(p) => fs::remove_file(p).unwrap(),
                 UndoAction::RestoreFile { backup, path } => fs::rename(backup, path).unwrap(),
+                UndoAction::RemoveDir(p) => {
+                    let _ = fs::remove_dir(p);
+                }
                 UndoAction::SetLaunchOptions(_) => {}
             }
         }
