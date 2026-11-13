@@ -168,56 +168,56 @@ IDs are stable: they are never renumbered or reused. "planned" means a WP owns t
 
 | # | Finding | Verdict | Owner | Proof |
 |---|---|---|---|---|
-| A1 | `cli_link::parse_link` (cli_link.rs:50) is never called | true | WP-01 pre-wires `parse_any`/dispatch + frozen `cli::<m>::run`; WP-08 bodies | — |
-| A2/A3/A4 | stale doc comments main.rs:1, lib.rs:5-6, injectors.rs:1 | true | WP-01 | — |
-| A5 | wrapper.rs:131 reads `{id}.recipe`, but recipes.rs:218-221 requires `<appid>-<slug>.recipe` (bug: every real recipe plays flat) | **bug** | WP-01 `catalog::find_recipe` + `run_with` | — |
+| A1 | `cli_link::parse_link` (cli_link.rs:50) is never called | true | WP-01 pre-wires `parse_any`/dispatch + frozen `cli::<m>::run`; WP-08 bodies | 7eb2060 + `cli_link_run.rs`, `cli_any.rs` |
+| A2/A3/A4 | stale doc comments main.rs:1, lib.rs:5-6, injectors.rs:1 | true | WP-01 | 0126a0b + the `//!` headers of `main.rs`, `lib.rs`, `injectors.rs` |
+| A5 | wrapper.rs:131 reads `{id}.recipe`, but recipes.rs:218-221 requires `<appid>-<slug>.recipe` (bug: every real recipe plays flat) | **bug** | WP-01 `catalog::find_recipe` + `run_with` | 0126a0b + `catalog_find.rs`, `wrapper_run.rs` |
 | A6 | snapshot `tunnel = tether!=Off`, `health/stats: None` (watch.rs:761-781) | void, tether removed (2026-11-10 ruling 42) | WP-01 pre-wires `HealthLoop::tick`; WP-11 body | — |
-| A7 | `uevr::apply` env is empty (uevr.rs:74-102); `prepare` passes `&[]` | true | WP-14, WP-27, WP-31 | — |
-| A8 | WiVRn start lacks `--early-active-runtime --no-publish-service`; Flatpak dir hard-coded (wrapper.rs:227-229) | true | WP-12 (`link/wivrn.rs`), WP-31 | — |
-| A9/A10 | code-map lists `cli_view.rs` and `rows.rs`, but neither exists | true | WP-01 rows → `planned`; WP-03, WP-28 | — |
-| A11 | code-map:21 mermaid has 2 statements per line | true | WP-25b + check.py (WP-25a) | — |
-| A12 | `watch::read_settings` (watch.rs:826) is the only reader; there is no writer | true | WP-01 `switches::{read_settings,write_settings}` | — |
-| A13 | locked `decky/tests/test_run_engine.py` (#67) is missing | true | WP-21 commits it verbatim | — |
+| A7 | `uevr::apply` env is empty (uevr.rs:74-102); `prepare` passes `&[]` | true | WP-14, WP-27, WP-31 | 3025963 + `uevr_apply.rs`, `ensure_applied.rs`, `wrapper_route.rs` |
+| A8 | WiVRn start lacks `--early-active-runtime --no-publish-service`; Flatpak dir hard-coded (wrapper.rs:227-229) | true | WP-12 (`link/wivrn.rs`), WP-31 | 3025963 + `wivrn_detect.rs`, `wrapper_route.rs` |
+| A9/A10 | code-map lists `cli_view.rs` and `rows.rs`, but neither exists | true | WP-01 rows → `planned`; WP-03, WP-28 | 4434f98 + `rows.rs`, `cli_view.rs` |
+| A11 | code-map:21 mermaid has 2 statements per line | true | WP-25b + check.py (WP-25a) | 74db888 + `check.py` mermaid rule |
+| A12 | `watch::read_settings` (watch.rs:826) is the only reader; there is no writer | true | WP-01 `switches::{read_settings,write_settings}` | 5fe781c + `switches_io.rs` |
+| A13 | locked `decky/tests/test_run_engine.py` (#67) is missing | true | WP-21 commits it verbatim | 1c42551 + `decky/tests/test_run_engine.py` |
 | A14 | viewer "Windows binary in Proton" (code-map:85, SPEC:77) | superseded: Linux PipeWire→OpenXR quads | WP-17/18/19; SPEC via OD3 | — |
-| A15 | bare `flat3d-run` fails (Game Mode PATH) | true | WP-20 `add_wrapper_at`; legacy stays (D4) | — |
-| A16 | ROADMAP:204 and `tools/ghidra/headless.sh:6` point at `docs/sm2-address-map.md` | true | WP-25b | — |
-| A17 | VT has no command written down | true | WP-30 | — |
+| A15 | bare `flat3d-run` fails (Game Mode PATH) | true | WP-20 `add_wrapper_at`; legacy stays (D4) | 1fec37c + `launch_options_at.rs` |
+| A16 | ROADMAP:204 and `tools/ghidra/headless.sh:6` point at `docs/sm2-address-map.md` | true | WP-25b | 74db888 + `check.py` links rule |
+| A17 | VT has no command written down | true | WP-30 | 10a79f6 + `tools/re/test_analyze_sh.py` |
 | A18 | test counts in docs | drop | WP-25b | — |
-| A19 | no fmt/clippy in CI; 48 files fail fmt; clippy fails at `switches_settings.rs:19` | true | WP-00 | — |
-| A20 | stop_3d errors on the second Stop; no `allow-debugging`; undo never saved | true | WP-12, WP-09, WP-27 | — |
+| A19 | no fmt/clippy in CI; 48 files fail fmt; clippy fails at `switches_settings.rs:19` | true | WP-00 | 18aa673 + `tools/check.sh` fmt and clippy steps |
+| A20 | stop_3d errors on the second Stop; no `allow-debugging`; undo never saved | true | WP-12, WP-09, WP-27 | cb9c3c4 + `link_stop_twice.rs`, `watch_service.rs`, `cli_undo.rs` |
 | A21 | #127 body drifted | true | section 6 | — |
-| A22 | untracked `app/Cargo.lock`, `inject/Cargo.lock`; iced without `smol` | true | WP-01 | — |
-| A23 | `dispatch` wires only Undo (cli.rs:141-149); unit test cli.rs:198 asserts `list` unbuilt (not locked) | true | WP-01 replaces the unit test | — |
-| A24 | locked `cli_json.rs` runs `start-3d/stop-3d --json` for real | rule: no fresh snapshot ⇒ `link-not-ready`, spawn nothing; check.sh exports a temp `XDG_RUNTIME_DIR` | WP-08, WP-02 | — |
-| K1 | v1 root lists a missing `viewer` member | planned | WP-01 creates the `crates/viewer` stub | — |
-| K2 | v1 merged two locked runner traits | planned | §2 exec split (two distinct traits) | — |
-| K3 | `module_inception` (`service/service.rs`); mod.rs/x.rs mix (E0761) | planned | facade-file form everywhere (`x.rs` + `x/`), no `mod.rs`, no `x/x.rs` | — |
-| K4 | v1 `wrapper::run(paths)` is wrong | planned | real locked sig wrapper.rs:119 kept; `run_with` added | — |
-| K5 | `run_with` loses NotFound→flat (wrapper.rs:129-131) | planned | `switches::read_settings` NotFound→Default | — |
-| K6 | route env `Vec<(String,String)>` can't carry unset/sidecar | planned | `RouteEnv{env,unset,sidecar}`; `ExecSpec{argv,env,unset,sidecar}` | — |
-| K7 | self dev-dep `features=["testing"]` duplicates types | planned | `#[doc(hidden)] pub mod testing` always compiled | — |
+| A22 | untracked `app/Cargo.lock`, `inject/Cargo.lock`; iced without `smol` | true | WP-01 | 22fd248 + `cargo test --workspace --locked` |
+| A23 | `dispatch` wires only Undo (cli.rs:141-149); unit test cli.rs:198 asserts `list` unbuilt (not locked) | true | WP-01 replaces the unit test | 7d50fab + `cli_any.rs` |
+| A24 | locked `cli_json.rs` runs `start-3d/stop-3d --json` for real | rule: no fresh snapshot ⇒ `link-not-ready`, spawn nothing; check.sh exports a temp `XDG_RUNTIME_DIR` | WP-08, WP-02 | 7eb2060 + `cli_json.rs` under check.sh's temp `XDG_RUNTIME_DIR` |
+| K1 | v1 root lists a missing `viewer` member | verified @22fd248 | WP-01 creates the `crates/viewer` stub | 22fd248 + `tools/check.sh` workspace build |
+| K2 | v1 merged two locked runner traits | verified @5fe781c | §2 exec split (two distinct traits) | 5fe781c + `architecture.rs` |
+| K3 | `module_inception` (`service/service.rs`); mod.rs/x.rs mix (E0761) | verified @5fe781c | facade-file form everywhere (`x.rs` + `x/`), no `mod.rs`, no `x/x.rs` | 5fe781c + `architecture.rs` |
+| K4 | v1 `wrapper::run(paths)` is wrong | verified @0126a0b | real locked sig wrapper.rs:119 kept; `run_with` added | 0126a0b + `wrapper_run.rs` |
+| K5 | `run_with` loses NotFound→flat (wrapper.rs:129-131) | verified @5fe781c | `switches::read_settings` NotFound→Default | 5fe781c + `switches_io.rs` |
+| K6 | route env `Vec<(String,String)>` can't carry unset/sidecar | verified @3025963 | `RouteEnv{env,unset,sidecar}`; `ExecSpec{argv,env,unset,sidecar}` | 3025963 + `wrapper_route.rs`, `wrapper_exec.rs` |
+| K7 | self dev-dep `features=["testing"]` duplicates types | verified @5fe781c | `#[doc(hidden)] pub mod testing` always compiled | 5fe781c + `cargo test --workspace --locked` |
 | K8 | heal reconnect has no call site | void, tether removed (2026-11-10 ruling 42) | WP-01 pre-wires `HealthTick.heal`; WP-09 executes the heal | — |
-| K9 | `unittest discover -s tools` doesn't recurse without `__init__.py` | planned | per-folder loop (§2 CI); decky run from `decky/` | — |
-| K10 | shellcheck missing on host; old scripts never linted | planned | CI apt; WP-02 lints the 2 scripts; check.sh skips with notice | — |
-| K11 | check.py "commands == USAGE" contradicts locked USAGE | planned | one-way USAGE ⊆ table | — |
+| K9 | `unittest discover -s tools` doesn't recurse without `__init__.py` | verified @5b53520 | per-folder loop (§2 CI); decky run from `decky/` | 5b53520 + `tools/check.sh --only py` |
+| K10 | shellcheck missing on host; old scripts never linted | verified @5b53520 | CI apt; WP-02 lints the 2 scripts; check.sh skips with notice | 5b53520 + `tools/check.sh` shellcheck step |
+| K11 | check.py "commands == USAGE" contradicts locked USAGE | verified @043e30f | one-way USAGE ⊆ table | 043e30f + `tools/docs/test_check.py` |
 | K12 | no node/pnpm in CI | planned | setup-node 22.23.4 + pnpm 10.34.9, per-step `hashFiles` guards | — |
-| K13 | doc contradictions C1-C19, C30 and private names (AGENTS.md:12) unowned | planned | WP-25b (C1/C3/C4 stay open: DECISIONS untouched) | — |
+| K13 | doc contradictions C1-C19, C30 and private names (AGENTS.md:12) unowned | verified @74db888 | WP-25b (C1/C3/C4 stay open: DECISIONS untouched) | 74db888 + `check.py` private rule |
 | K14 | tether/mod.rs and the production callers of new link/tether fns unowned | void, tether removed (2026-11-10 ruling 42) | WP-10 owns `tether.rs`; WP-09 switches the callers | — |
 | K15 | watch.rs:915,922 tests fake "Tether command failed"/"Could not run tether command" | void, tether removed (2026-11-10 ruling 42) | WP-10 appends `: exit N; <last 4 stderr lines>` | — |
 | K16 | tun0 read from host-side `/sys` is wrong (tun0 is on the headset) | planned | `adb shell ip addr show tun0` + `cat /proc/net/dev` | — |
-| K17 | `flatpak info --show-location` prints the deploy dir | planned | strip `/<arch>/<branch>/<commit>`; `--user` then `--system` | — |
-| K18 | locked link_stop.rs: "Access denied" stays an error | honour | WP-12 | — |
-| K19 | pins written by two WPs | planned | `packaging/pins` owned by WP-02 only | — |
-| K20 | windows-gnu can't link here | planned | msvc + xwin + rust-lld in `tools/build-win.sh` | — |
-| K21 | no WP built/installed the injector exe | planned; device pending Q2 | WP-15 `--install` | — |
-| K22 | geo11/wivrn-apk sha unknown | planned | TOFU `pin.sh` (OD8); `fetch.rs` refuses `TBD-at-pin`; wivrn-apk sha recorded by the pins research | — |
-| K23 | viewer xr/capture can't compile in CI without headers | planned | apt in CI; split WP-17 (pure) / WP-18 (capture) / WP-19 (xr); shared `frame.rs` frozen by WP-01 | — |
-| K24 | locked install_plan.rs:14-16,48 fixes `unit_text` | honour | `unit_text_with` new | — |
-| K25 | SM2 appid is 2651280; "check with list" is circular | planned | WP-26 seeds use 2651280 | — |
-| K26 | `InjectResult.launched` undefined | planned | `false` from CLI `inject` (it prepares, never launches) | — |
-| K27 | #117 needs only `rows::GameRow` | planned | games page in wave 2 (WP-23) | — |
-| K28 | rows.rs fixes the `flat_reason` texts | honour | not unified (Not-in-pass) | — |
-| K29 | `cli_undo.rs` gap; #37 HEROVR column | planned | WP-27; WP-30 | — |
+| K17 | `flatpak info --show-location` prints the deploy dir | verified @a9794af | strip `/<arch>/<branch>/<commit>`; `--user` then `--system` | a9794af + `wivrn_detect.rs` |
+| K18 | locked link_stop.rs: "Access denied" stays an error | honour | WP-12 | a9794af + `link_stop.rs` |
+| K19 | pins written by two WPs | verified @5b53520 | `packaging/pins` owned by WP-02 only | 5b53520 + `packaging/tests/test_pins.py` |
+| K20 | windows-gnu can't link here | verified @a82da0f | msvc + xwin + rust-lld in `tools/build-win.sh` | a82da0f + `tools/check.sh` Windows injector build |
+| K21 | no WP built/installed the injector exe | verified @a82da0f; device pending Q2 | WP-15 `--install` | a82da0f + `crates/uevr-inject/tests/args.rs` |
+| K22 | geo11/wivrn-apk sha unknown | verified @aa97def | TOFU `pin.sh` (OD8); `fetch.rs` refuses `TBD-at-pin`; wivrn-apk sha recorded by the pins research | aa97def + `fetch.rs` |
+| K23 | viewer xr/capture can't compile in CI without headers | verified @5d91499 | apt in CI; split WP-17 (pure) / WP-18 (capture) / WP-19 (xr); shared `frame.rs` frozen by WP-01 | 5d91499 + `tools/check.sh` viewer `xr,capture` build |
+| K24 | locked install_plan.rs:14-16,48 fixes `unit_text` | honour | `unit_text_with` new | 1fec37c + `install_plan.rs` |
+| K25 | SM2 appid is 2651280; "check with list" is circular | verified @3efb520 | WP-26 seeds use 2651280 | 3efb520 + `recipe_seeds.rs` |
+| K26 | `InjectResult.launched` undefined | verified @706a20d | `false` from CLI `inject` (it prepares, never launches) | 706a20d + `inject_fake_prefix.rs` |
+| K27 | #117 needs only `rows::GameRow` | verified @ab470da | games page in wave 2 (WP-23) | ab470da + `crates/app/tests/games_page.rs` |
+| K28 | rows.rs fixes the `flat_reason` texts | honour | not unified (Not-in-pass) | 0a9129e + `rows.rs` |
+| K29 | `cli_undo.rs` gap; #37 HEROVR column | verified @10a79f6 | WP-27; WP-30 | 10a79f6 + `cli_undo.rs`, `tools/re/test_fill_map.py` |
 | K30 | Grace→Ready, `launch_options_before` | owner | OD4, OD5 | — |
-| K31 | wave-parallel WPs disagreed on wivrn/HealthLoop/ensure_applied/EnginePaths/cli/viewer signatures | planned | §2 "Frozen signatures" (WP-01) | — |
-| K32 | bones, WP-01 and the implementing WPs disagreed on the wivrn path and types, HealthLoop, ensure_applied, viewer frame, from_env, Ctx, install and FakeRunner | planned | §2 reconciled: the implementing WP's form for wivrn (WP-12), HealthLoop (WP-11), ensure_applied (WP-27), install (WP-20), wrapper (WP-31) and frame (WP-17/18/19); bones' form for from_env and Ctx | — |
+| K31 | wave-parallel WPs disagreed on wivrn/HealthLoop/ensure_applied/EnginePaths/cli/viewer signatures | verified @0126a0b | §2 "Frozen signatures" (WP-01) | 0126a0b + `cli_any.rs`, `architecture.rs` |
+| K32 | bones, WP-01 and the implementing WPs disagreed on the wivrn path and types, HealthLoop, ensure_applied, viewer frame, from_env, Ctx, install and FakeRunner | verified @3025963 | §2 reconciled: the implementing WP's form for wivrn (WP-12), HealthLoop (WP-11), ensure_applied (WP-27), install (WP-20), wrapper (WP-31) and frame (WP-17/18/19); bones' form for from_env and Ctx | 3025963 + `tools/check.sh` |

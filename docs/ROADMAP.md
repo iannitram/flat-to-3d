@@ -21,13 +21,25 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 "Desktop app + Decky plugin (Recommended)", built in Rust ("Native Rust GUI", "iced (Recommended)"; "Rust backend, thin TS panel (Recommended)", 2026-11-01). The Decky panel (a thin TypeScript layer over the engine binary) runs in Game Mode (link, health, switches, 3D Ready games); the iced app runs in Desktop Mode (Setup, Headset, Games, Logs). Both read one `snapshot` from the Rust engine in `crates/engine/`, whose `flat3d-link` service owns the headset link; neither face has an Inject button. Shape and interlinks: [code-map.md](code-map.md).
 
-## Where it stands
+<a id="where-it-stands"></a>
 
-**Updated 2026-11-12** (rulings 49-52; `main` at `d257671`).
+## Where it stands (2026-11-12)
 
-The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track now starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (they still need the `after-1.0` label); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue.
+The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (they still need the `after-1.0` label); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue.
 
-**Roadmap v2 on main (`d257671`, 2026-11-12):** 35 of the 44 work packages are merged, and WP-36 has its first PR merged (#284, which removed the tether from the link service); the per-WP table with PR numbers is [`progress.md`](plans/roadmap-v2/progress.md). Built and tested on the host: the engine's commands (`list`, `status`, `inject`, `undo`, the link commands and the view commands), the link service, the UEVR and Geo-11 route files with undo, pinned fetches, the Windows UEVR injector, the SBS viewer's code, the app's four pages with their views and main loop, the Decky panel, the packaging scripts and the device session runner. Not merged: the rest of WP-36 and WP-37 (remove the tether, ruling 42; what #284 left, gnirehtet in `install.rs` and `cli/link.rs`, is listed for #226), WP-31 (the wrapper applies the route: today `flat3d-run` always plays flat, because its route step answers `not-built`), WP-09, WP-29 (`doctor` and `setup` answer `not-built`), WP-30, WP-38, WP-34, and WP-39 (after 1.0). The `port` route is not built (#27b). Every merged WP with a device half says `Refs`, so its issue stays open until its Q row in [the owner-device queue](plans/roadmap-v2/02-queues-and-decisions.md) passes. CI runs on GitHub-hosted `ubuntu-24.04` runners (ruling 48, #270). Spider-Man 2 Step 1 is done except for the full-hash manifest; see [the workbench](workbench.md). Device sessions are defined in `sessions/*.toml` and run with `tools/session/session.py`; `flat3d-inject doctor`, the local readiness report, comes with WP-29.
+**Roadmap v2, `main` at `3025963`.** The per-WP table with PR numbers is [`progress.md`](plans/roadmap-v2/progress.md); the waves are [below](#waves). One bullet per wave:
+
+- **Wave 0:** WP-00 fmt and clippy gate (#201, closes #183).
+- **Wave 1:** WP-01a-d workspace reshape and frozen bones (#202, #204, #206, #207), WP-02 repo tooling (#203), WP-25a docs check (#205).
+- **Wave 2:** WP-03 (#243), WP-04 (#249), WP-05 (#244), WP-06 (#247), WP-07 (#245), WP-11 (#248), WP-12 (#246), WP-13 (#215), WP-14 (#217), WP-16 (#250), WP-17 (#218), WP-18 (#220), WP-20 (#219), WP-21 (#221), WP-22 (#222), WP-23 (#230), WP-24 (#231), WP-25b (#252).
+- **Wave 2b (ruling 42):** WP-35 the adb choice in `link/adb.rs` (#279), WP-36 the tether out of the link service (#284), WP-37 gnirehtet out of the faces, Setup, install and packaging, and the app's own udev rule (#309, #314).
+- **Wave 3:** WP-08 (#233), WP-10 (#253, superseded by ruling 42, its code removed by WP-36), WP-15 (#236), WP-19 (#234), WP-26 (#237), WP-27 (#268), WP-28 (#267), WP-30 RE tooling and the address map (#310).
+- **Wave 4:** WP-09 watch service, the 3D half (#312), WP-29 `doctor` and `setup` (#317), WP-31 the wrapper applies the route (#313), WP-32 (#251), WP-33 (#272).
+- **Wave 5:** WP-38 the Quest Tether status line, read-only: PR #318 open, not merged.
+- **Wave 6:** WP-34 the docs sync after the pass (#319, this change). WP-39 is after 1.0, in no wave.
+- **Device work pending: Q0-Q16** ([below](#owner-device-queue)). Every merged WP with a device half says `Refs`, so its issue stays open until its Q row passes (ruling D5).
+
+Not built in this pass: the `port` route (#27b, NP-1). CI runs on GitHub-hosted `ubuntu-24.04` runners (ruling 48, #270). Spider-Man 2 Step 1 is done except for the full-hash manifest; see [the workbench](workbench.md). Device sessions are defined in `sessions/*.toml` and run with `tools/session/session.py`; `flat3d-inject doctor` is the local readiness report.
 
 ## Development stages
 
@@ -37,23 +49,23 @@ The game tracks below need the owner's devices; the engine, app and packaging st
 |---|---|---|---|
 | E1 Engine core | Steam games, recipes, the shared JSON shape (`api.rs`), `--json` CLI, the catalog join and `list` / `status` | **Done:** #24, #58-#63; WP-00 fmt and clippy gate (#201, closes #183); WP-01a-d workspace reshape and frozen bones (#202, #204, #206, #207); WP-07 `list` and `status` (#245) | parents #25, #50 (closable) |
 | E2 Link (WiVRn half) | WiVRn without its window, `adb reverse`, the app on the Quest; Stop 3D | **Done:** #64, #65, #66; WP-12 Stop 3D twice is safe, WiVRn server and Quest app detection (#246) | Q3 link smoke on the device. WP-35 moved the adb choice to `link/adb.rs` (#279) |
-| E3 Injectors | the routes: `uevr.rs`, `geo11.rs`, `port.rs`; each returns the environment for the wrapper; dispatch and `inject <appid>` | #83, #51's fake-prefix half (#196); WP-13 pinned fetch (#215); WP-14 UEVR route files (#217); WP-15 `flat3d-uevr-inject.exe` and `tools/build-win.sh` (#236); WP-16 Geo-11 route, pure half (#250); WP-27 `inject`, `ensure_applied`, `undo` and the `setup fetch` function (#268) | #27b the `port` route (`port.rs` is empty); WP-31 makes the wrapper apply the route; device halves #51 (Q2, Q6) and #52 (Q9). Follow-ups from the merged verdicts: **WP-16:** `geo11::plan_files` searches the fetch cache up to 3 levels deep, so after a pin bump it can pick a stale version folder or a leftover `.tmp` folder; fix in `geo11.rs` before the `geo11` pin is filled and before Q9. **WP-14:** the `uevr-profile` pin install is merged (#278, closes #275) |
+| E3 Injectors | the routes: `uevr.rs`, `geo11.rs`, `port.rs`; each returns the environment for the wrapper; dispatch and `inject <appid>` | #83, #51's fake-prefix half (#196); WP-13 pinned fetch (#215); WP-14 UEVR route files (#217); WP-15 `flat3d-uevr-inject.exe` and `tools/build-win.sh` (#236); WP-16 Geo-11 route, pure half (#250); WP-27 `inject`, `ensure_applied`, `undo` and the `setup fetch` function (#268); WP-31 the wrapper applies the route (#313) | #27b the `port` route (`port.rs` is a stub, NP-1); device halves #51 (Q2, Q6) and #52 (Q9). Follow-ups from the merged verdicts: **WP-16:** `geo11::plan_files` searches the fetch cache up to 3 levels deep, so after a pin bump it can pick a stale version folder or a leftover `.tmp` folder; fix in `geo11.rs` before the `geo11` pin is filled and before Q9. **WP-14:** the `uevr-profile` pin install is merged (#278, closes #275) |
 | E4 Undo and launch options | `route_of`, the `flat3d-run` word in launch options, the undo record and its steps, `undo <appid>` | **Done:** #79-#82, #84; WP-20 `add_wrapper_at` (#219); WP-27 `save_record`, `put_back` and the `undo` command (#268) | Follow-up from WP-27's verdict: undo leaves empty the folders the apply step made (the UEVR profile folder, Geo-11 subfolders), because the record does not list them; the record format is locked, so the fix needs a record-format change |
-| E5 Link service | `flat3d-inject watch`: track-devices, plug/unplug/grace state machine, state file, event ring, run records, settings, link command parsing | #85-#94, #119 (`watch::run`); WP-08 link commands wired (#233, refs #120) | WP-09 watch service correctness, the 3D half (after WP-36); Q3 |
-| E6 Tether | **To be removed (ruling 42, 2026-11-10).** Was: gnirehtet reverse tether ported from Quest Tether. Only the adb choice stays (WP-35, `link/adb.rs`). The closed issues are history | #95-#104, #124 (history); WP-10 tether plans and runner errors (#253, superseded by ruling 42); WP-35 (#279); WP-36's first PR (#284, closes #225) | the rest of WP-36, then WP-37 remove it; #125's tunnel, heal, throughput and soak parts are not planned |
-| E7 Health and stats | battery and temperature zones, toast gate (kept); throughput and soak summary (to be removed with the tunnel, ruling 42) | **Done:** #105-#108; WP-11 health loop (#248) | #284 (WP-36) cut the loop back to the battery poll and toasts and deleted the stats module. Follow-up from WP-11's verdict: after a backward clock step the locked `Healer` holds heals off until the clock passes its last heal; the heal ladder leaves with WP-36, so this lapses there |
-| E8 Wrapper | `flat3d-run`: plan, exec spec, run | **Done:** #109, #110, #126 | WP-31 the route step (today it answers `not-built`, so every launch plays flat) |
-| E9 Face data | 3D Ready collection diff, new toasts, health/speed/uptime wording, the view commands | #113, #114, #115; WP-28 view commands (#267, closes #121, #75) | the tunnel and speed wording leave with WP-36 |
+| E5 Link service | `flat3d-inject watch`: track-devices, plug/unplug/grace state machine, state file, event ring, run records, settings, link command parsing | #85-#94, #119 (`watch::run`); WP-08 link commands wired (#233, refs #120); WP-09 watch service correctness, the 3D half (#312, refs #305) | Q3 |
+| E6 Tether | **Removed (ruling 42, 2026-11-10).** Was: gnirehtet reverse tether ported from Quest Tether. Only the adb choice stays (WP-35, `link/adb.rs`). The closed issues are history | #95-#104, #124 (history); WP-10 tether plans and runner errors (#253, superseded by ruling 42); WP-35 (#279, closes #224); WP-36 (#284, closes #225); WP-37 (#309, #314, refs #226) | #125's tunnel, heal, throughput and soak parts are not planned |
+| E7 Health | battery and temperature zones, toast gate; the throughput and soak summary left with the tunnel (ruling 42) | **Done:** #105-#108; WP-11 health loop (#248); WP-36 cut the loop back to the battery poll and toasts and deleted the stats module (#284) | |
+| E8 Wrapper | `flat3d-run`: plan, exec spec, run | **Done:** #109, #110, #126; WP-31 the route step through `injectors::ensure_applied` (#313) | Q6, Q9, Q10 on the device |
+| E9 Face data | 3D Ready collection diff, new toasts, health/speed/uptime wording, the view commands | **Done:** #113, #114, #115; WP-28 view commands (#267, closes #121, #75); WP-36 took out the tunnel and speed wording (#284) | |
 | E10 Face rules | status labels and colours, link wording, game rows, headset buttons and logs | **Done:** #74, #75, #77; WP-03 `rows` (#243, closes #76); WP-06 log lines (#247) | |
-| I Install | user unit text, install/uninstall plans and their execution, Quest app check | #111, #112; WP-20 install execution (#219, refs #128) | WP-37 its own udev rule and no gnirehtet; WP-29 `doctor` and `setup`; #128's device half (Q3) |
-| A App (iced) | crate and CI, the four pages' state, views, main wiring | #78 (PR #197); WP-04 Headset page (#249, closes #116); WP-05 Setup page (#244, closes #118); WP-23 Games page (#230, closes #117); WP-06 Logs page (#247); WP-33 views and main wiring (#272, refs #122, #123) | Q15 the window on the owner's device (#78, #122, #123); WP-37 removes the Tunnel switch and Setup step; WP-38 the Quest Tether line |
-| D Decky (thin TS) | the engine binary as the backend, the panel, launch-option sync, 3D Ready collection, toasts | WP-21 scaffold (#221, refs #130); WP-32 panel, launch sync, collection, toasts (#251, refs #131-#133) | Q14 on the device (#130-#134); WP-37 removes the Tunnel toggle; WP-38 |
-| P Packaging | pins, `build-tools.sh`, AppImage, Decky zip, all from one tagged commit; CI | WP-02 `tools/check.sh`, `packaging/pins` and `pin.sh` (#203); WP-22 packaging scripts (#222, refs #127, #129, #134); CI on GitHub-hosted runners (#270, ruling 48) | Q0 fills the `TBD-at-pin` pins (among them the `geo11` sha); Q1 tools build (#127); Q16 AppImage (#129); WP-37 drops gnirehtet |
-| T Tooling and docs | docs check, docs scrub, device session runner, reverse-engineering tools | WP-25a docs check (#205); WP-25b docs scrub (#252); WP-24 session runner, stereo gates, `sessions/*.toml` (#231); docs-check fixes #254, #273 | WP-30 RE tooling and the address map (#19, #37; Q12); WP-34 the docs sync after the pass |
+| I Install | user unit text, install/uninstall plans and their execution, Quest app check | #111, #112; WP-20 install execution (#219, refs #128); WP-37 its own udev rule and no gnirehtet (#309, #314); WP-29 `doctor` and `setup` (#317, refs #315) | #128's device half (Q3); Q4 `doctor` baseline |
+| A App (iced) | crate and CI, the four pages' state, views, main wiring | #78 (PR #197); WP-04 Headset page (#249, closes #116); WP-05 Setup page (#244, closes #118); WP-23 Games page (#230, closes #117); WP-06 Logs page (#247); WP-33 views and main wiring (#272, refs #122, #123) | Q15 the window on the owner's device (#78, #122, #123); WP-38 the Quest Tether line (#318, open). WP-37 removed the Tunnel switch and Setup step (#309, #314) |
+| D Decky (thin TS) | the engine binary as the backend, the panel, launch-option sync, 3D Ready collection, toasts | WP-21 scaffold (#221, refs #130); WP-32 panel, launch sync, collection, toasts (#251, refs #131-#133) | Q14 on the device (#130-#134); WP-38 the Quest Tether line (#318, open). WP-37 removed the Tunnel toggle (#309, #314) |
+| P Packaging | pins, `build-tools.sh`, AppImage, Decky zip, all from one tagged commit; CI | WP-02 `tools/check.sh`, `packaging/pins` and `pin.sh` (#203); WP-22 packaging scripts (#222, refs #127, #129, #134); CI on GitHub-hosted runners (#270, ruling 48) | Q0 fills the `TBD-at-pin` pins (among them the `geo11` sha); Q1 tools build (#127); Q16 AppImage (#129). WP-37 dropped gnirehtet (#309, #314) |
+| T Tooling and docs | docs check, docs scrub, device session runner, reverse-engineering tools | WP-25a docs check (#205); WP-25b docs scrub (#252); WP-24 session runner, stereo gates, `sessions/*.toml` (#231); docs-check fixes #254, #273; WP-30 RE tooling and the address map (#310, refs #19, #37) | Q12 the RE overnight run; WP-34 the docs sync after the pass (#319) |
 | G Games | Zero Company -> ACE COMBAT 7 -> Control -> 007 First Light -> Spider-Man 2 -> Alan Wake 2 (tracks below) | WP-26 recipe seeds (#237, test fixtures only; `recipes/` has no `.recipe` yet); the SBS viewer's code: WP-17 (#218), WP-18 (#220), WP-19 (#234); research notes #260 (Alan Wake 2), #261 (Forza Horizon 6, after 1.0), #262 (ACE COMBAT 7), #263 (Control), #264 (007 First Light), #265 (Spider-Man 2), #266 (Zero Company) | #31-#44, #46, #47, #49, #5, #7, #18-#23, #29; 007 First Light #288, #290, #291, #294-#298 and Alan Wake 2 #289, #292, #293, #299-#303 (2026-11-12; #11 stays the 007 fallback); hook-point research #285-#289 and #283 (ruling 52); #45 and #48 (Planet of Lana) are `after-1.0` work |
 | X Design pass (last, R04) | the shared design system over the running app and the Decky panel; `design-pass` issues | | after the rest |
 
-**Critical path to a first end-to-end try (Zero Company, by hand):** WP-31 (the wrapper applies the route) -> a Zero Company recipe in `recipes/` -> the owner's sessions: Q2 (build and install the injector exe), Q5 (Z1 offline), then Q6 (Z2, UEVR live, #51's device half). The link commands (#120, WP-08), `inject` (#27a, WP-27), the UEVR route files (WP-14) and the injector exe's code (WP-15) are merged. The faces (A, D) and packaging (P) are not needed for that try: `flat3d-inject watch` run by hand (or `flat3d-inject install`) plus `flat3d-run %command%` in the game's launch options is enough.
+**Critical path to a first end-to-end try (Zero Company, by hand):** a Zero Company recipe in `recipes/` -> the owner's sessions: Q2 (build and install the injector exe), Q5 (Z1 offline), then Q6 (Z2, UEVR live, #51's device half). The link commands (#120, WP-08), `inject` (#27a, WP-27), the UEVR route files (WP-14), the injector exe's code (WP-15) and the wrapper's route step (WP-31) are merged. The faces (A, D) and packaging (P) are not needed for that try: `flat3d-inject watch` run by hand (or `flat3d-inject install`) plus `flat3d-run %command%` in the game's launch options is enough.
 
 ## ACE COMBAT 7 track (added 2026-10-31)
 
@@ -112,7 +124,7 @@ Fallback if F3 finds no two-eye picture: #11 (two-pass DX12 stereo).
 
 | Step | What | Depends on |
 |---|---|---|
-| W1 (#292) | Decision: how a non-Steam (Heroic) game gets a recipe key and the launch wrapper (Decisions for you, item 6); the Heroic files an engine would read are in [the Heroic files note](notes/research/games/epic-alan-wake-2-heroic-files.md) (#277, unverified on the device) | the owner |
+| W1 (#292) | Decision: how a non-Steam (Heroic) game gets a recipe key and the launch wrapper (the owner's call, tracked on #292 rather than under Decisions for you); the Heroic files an engine would read are in [the Heroic files note](notes/research/games/epic-alan-wake-2-heroic-files.md) (#277, unverified on the device) | the owner |
 | W2 (#293) | The launch path on the device, and a do-nothing proxy `version.dll` load check | - |
 | WR (#289) | Hook-point research on the installed game (ruling 52): `rend::View`'s setters and `renderWorldInternal` from Control's exports and the lambda RTTI names, the present hook below Streamline, one RenderDoc capture of the view constants, into `docs/hooks/epic-alan-wake-2.md` | the install (ruling 51) |
 | W3 (#299) | One-eye camera shift through the `rend::View` hook | WR, W2 |
@@ -156,18 +168,119 @@ Zero Company proves the headset chain, the link service and the `flat3d-run` wra
 
 ## What's next
 
-1. **Work packages, in dependency order** (the rules are in [`03-wp-index.md`](plans/roadmap-v2/03-wp-index.md); status per WP in [`progress.md`](plans/roadmap-v2/progress.md)). WP-35 is merged (#279) and WP-36 has its first PR merged (#284). Unblocked now: the rest of WP-36, then WP-37 (remove gnirehtet from the faces, Setup, install and packaging; add the app's own udev rule; two PRs); WP-31 (the wrapper applies the route; needs no tether WP); WP-30 (RE tooling and the address map). The wave order puts WP-36 and WP-37 (wave 2b) before WP-30 (wave 3) and WP-31 (wave 4); their dependencies alone would let them start now. After WP-36: WP-09 (watch service, the 3D half). After WP-37: WP-29 (`doctor` and `setup`) and WP-38 (the Quest Tether status line). Last: WP-34 (docs sync after the pass). WP-39 is after 1.0. WP-28 (#267) and WP-33 (#272) merged before WP-36 and WP-37, so the tunnel switch, the speed text and the tether snapshot fields they show go when those two land. The `port` route (#27b) is outside this pass.
-2. **Device sessions** (Q rows in [the owner-device queue](plans/roadmap-v2/02-queues-and-decisions.md)): see Decisions for you, item 8.
-3. **Hook-point research** (ruling 52): ZR #285, AR #286, GR #287, FR #288, Spider-Man 2 Step 2r #283 and WR #289, each on the installed game before its track's first hook ([above](#hook-point-research-ruling-52)).
-4. Continue Spider-Man 2's port steps in [the plan](spiderman2/plan.md), with Step 2r's map before Step 3. Reverse-engineering setup and the command live in [the workbench](workbench.md).
+1. **Waves** and **the owner-device queue**, below. WP-38 (#318) is the one WP not merged; after it, the pass is done.
+2. **Hook-point research** (ruling 52): ZR #285, AR #286, GR #287, FR #288, Spider-Man 2 Step 2r #283 and WR #289, each on the installed game before its track's first hook ([above](#hook-point-research-ruling-52)).
+3. Continue Spider-Man 2's port steps in [the plan](spiderman2/plan.md), with Step 2r's map before Step 3. Reverse-engineering setup and the command live in [the workbench](workbench.md).
+
+### Waves
+
+From the index in [`03-wp-index.md`](plans/roadmap-v2/03-wp-index.md); status per WP in [`progress.md`](plans/roadmap-v2/progress.md). A WP never depends on a WP in its own wave, except the WP-01a → 01b → 01c → 01d chain; wave 2b runs after wave 2 and before wave 3.
+
+| WP | Wave | Issue | Owner device |
+|---|---|---|---|
+| WP-00 | 0 | #183 | none |
+| WP-01a | 1 | — | none |
+| WP-01b | 1 | — | none |
+| WP-01c | 1 | — | none |
+| WP-01d | 1 | — | none |
+| WP-02 | 1 | — | none (the real `pin.sh` run is Q0) |
+| WP-25a | 1 | — | none |
+| WP-03 | 2 | #76 | none |
+| WP-04 | 2 | #116 | none |
+| WP-05 | 2 | #118 | none |
+| WP-06 | 2 | #121, #122 | none |
+| WP-07 | 2 | #27 | Q3 |
+| WP-11 | 2 | #125 | none |
+| WP-12 | 2 | — | Q3 |
+| WP-13 | 2 | #51, #52 | Q0 |
+| WP-14 | 2 | #51 | Q6 |
+| WP-16 | 2 | #52 | Q9 |
+| WP-17 | 2 | #44 | none |
+| WP-18 | 2 | #44 | Q10 |
+| WP-20 | 2 | #128 | Q3 |
+| WP-21 | 2 | #130 | Q14 |
+| WP-22 | 2 | #127, #129, #134 | Q1, Q14, Q16 |
+| WP-23 | 2 | #117 | none |
+| WP-24 | 2 | #31, #5, #7, #155 | all Q rows run its sessions |
+| WP-25b | 2 | — | none |
+| WP-35 | 2b | #224 | none |
+| WP-36 | 2b | #225 | Q3 |
+| WP-37 | 2b | #226 | Q1, Q3, Q14, Q15 |
+| WP-08 | 3 | #120 | Q3 |
+| WP-10 | 3 | — (superseded, ruling 42) | none |
+| WP-15 | 3 | — | Q2 |
+| WP-19 | 3 | #44 | Q10 |
+| WP-26 | 3 | — | none |
+| WP-27 | 3 | #27 | Q6, Q9 |
+| WP-28 | 3 | #121, #75 | none |
+| WP-30 | 3 | #19, #37 | Q12 |
+| WP-09 | 4 | #305 | Q3 |
+| WP-29 | 4 | #315 | Q4 |
+| WP-31 | 4 | #32, #51, #43, #52, #44 | Q6, Q9, Q10 |
+| WP-32 | 4 | #131, #132, #133 | Q14 |
+| WP-33 | 4 | #122, #123 | Q15 |
+| WP-38 | 5 | #227 | Q14, Q15 |
+| WP-34 | 6 | #319 | none |
+| WP-39 | after 1.0 | #228 | none |
+
+### Owner-device queue
+
+From [§5](plans/roadmap-v2/02-queues-and-decisions.md), in order; the Driver column names the command per session file. `tools/session/session.py pending` lists the sessions with no PASS result yet.
+
+| Q | What | Driver | Needs WPs | Closes |
+|---|---|---|---|---|
+| Q0 | record TBD shas (downloads) | `tools/session/session.py run sessions/q0.toml` (`packaging/pin.sh --all-tbd`, OD8; passes when no `TBD-at-pin` is left in `packaging/pins`) | 02 | K22 |
+| Q1 | tools build | `tools/session/session.py run sessions/tools-build.toml` (`build-tools.sh` in the build container) | 22 | #127 |
+| Q2 | injector exe | `tools/session/session.py run sessions/q2.toml` (`tools/build-win.sh --fetch-sdk`, network; running it is the owner accepting the SDK licence; then `tools/build-win.sh --install`) | 15 | — |
+| Q3 | install + link smoke, unit, `list --json` | `tools/session/session.py run sessions/link-smoke.toml` | 07,08,09,11,12,20 | #26,#39,#128 |
+| Q4 | doctor baseline | `flat3d-inject doctor --json` inside `tools/session/session.py run sessions/link-smoke.toml`; passes on exit 0 (a red report exits 1, ruling D4) and when the `quest-app` line shows a version | 29 | — |
+| Q5 | ZC offline | `tools/session/session.py run sessions/z1-offline.toml` | 24 | #31 |
+| Q6 | UEVR live | `tools/session/session.py run sessions/z2-uevr.toml` | 14,15,27,31 | #32,#51 |
+| Q7 | ZC screen/mission/recipe | `tools/session/session.py run sessions/z3-screen.toml`; `tools/session/session.py run sessions/z4-mission.toml`; `tools/session/session.py run sessions/z5-recipe.toml` | Q6 | #33,#35,#36 |
+| Q8 | AC7 | `tools/session/session.py run sessions/a1-install.toml`; `tools/session/session.py run sessions/a2-uevr.toml`; `tools/session/session.py run sessions/a3-sortie.toml` (OD8 prereqs) | Q6 | #40,#41,#42,#47 |
+| Q9 | Geo-11 | `tools/session/session.py run sessions/g1-geo11.toml` (fps.py, disparity.py) | 16,27,31 | #43,#52 |
+| Q10 | viewer | `tools/session/session.py run sessions/g2-viewer.toml` (built with `--features xr,capture` in the build container) | 17,18,19,31 | #44 |
+| Q11 | Lana / Control | `tools/session/session.py run sessions/g3-lana.toml`; `tools/session/session.py run sessions/g4-control.toml` | Q9,Q10 | #45,#48,#46,#49 |
+| Q12 | RE overnight | `tools/session/session.py run sessions/q12.toml` (`tools/re/analyze.sh all`, then `tools/re/fill_map.py --check`) | 30 | #19 (advances #37) |
+| Q13 | SM2 offline, Step 0, Spidy 0.7.0 | `tools/session/session.py run sessions/sm2-offline.toml`; `tools/session/session.py run sessions/step0.toml`; `tools/session/session.py run sessions/spidy-070.toml` | 24 | #7,#5,#155 |
+| Q14 | Decky | `tools/session/session.py run sessions/decky.toml` | 21,22,32 | #130-#134 |
+| Q15 | app window | `tools/session/session.py run sessions/app-window.toml` | 08,27,29,33 | #78,#122,#123 |
+| Q16 | AppImage | `tools/session/session.py run sessions/appimage.toml` | 22,33 | #129 |
 
 ## Decisions for you
 
-1. **When to run the analysis.** Overnight is the obvious slot. Just say "run the Ghidra analysis tonight" and it starts with the memory watch on.
-2. **REA.** Installed but not registered. Registering it (`rea setup`) changes Claude Code's config permanently, so it waits for your yes. Without it, I script Ghidra headless directly, which covers everything above.
-3. **Spidy's author: closed.** Not contacted (ruling 49, 2026-11-12: "We're not going to hear back from Spidys author."). A licence is not a blocker for using Spidy's code here (ruling 50).
-4. **Issue clean-up:** close #146 (done on main by #174) and the parents #25, #50, #26 and #39 (every child merged). #51 and #78 stay open for their device halves. The 8 merged PRs carry no `by:` / `model:` labels (the guard leaves labels to the coordinator; `by:strix-halo` and `model:claude-sonnet-5-5` don't exist yet).
-5. **Drives.** ACE COMBAT 7 (A1, #40) and Spider-Man Remastered (Step 0, #5) need their library drive mounted or a fresh install.
-6. **Alan Wake 2 is not a Steam game.** The 1.0 list, its order, alternate-eye rendering and the SPEC were ruled and approved on 2026-11-11 (rulings 43-47). Still open: how an Epic game run through Heroic gets a recipe and the `flat3d-run` wrapper (W1, #292).
-7. **SPEC re-approval (ruling 42).** The Musts that ruling 42 changed after the 2026-11-11 approval wait for your re-approval: M25 removed; M10, M11, M18, M24, M26, M27, M28 and M29 revised (SPEC.md, the line under the approval).
-8. **On-device checks.** Ready now (every WP they need is merged): Q0 (record the `TBD-at-pin` shas with `packaging/pin.sh --all-tbd`; the `geo11` pin has its version, 0.7.12, but its sha is still `TBD-at-pin`, and `control-fix`, `ac7-profile` and `lana-fix` are TBD throughout), Q2 (build and install `flat3d-uevr-inject.exe`; running `tools/build-win.sh --fetch-sdk` is you accepting the SDK licence), Q5 (Zero Company offline, Z1), Q13 (Spider-Man 2 offline, Step 0, Spidy 0.7.0) and Q16 (AppImage). Q1 (tools build) and Q14 (Decky) can run now but change again with WP-37, which drops gnirehtet. Waiting on code: Q3 link smoke (WP-09, WP-36), Q4 doctor (WP-29), Q6 UEVR live, Q9 Geo-11 and Q10 viewer (WP-31; Q9 also needs the `geo11` pin), Q12 RE overnight (WP-30), Q15 app window (WP-29); Q7, Q8 and Q11 follow Q6, Q9 and Q10.
+The roadmap-v2 owner decisions ([§7](plans/roadmap-v2/02-queues-and-decisions.md)); the pass ran on the defaults, so each is marked defaulted unless a ruling settled it.
+
+1. **OD1, the Decky `main.py` exec shim:** defaulted (a 30-line shim is allowed; the ruling 40 text amendment in DECISIONS is yours).
+2. **OD2, the Windows injector:** defaulted (our own `flat3d-uevr-inject`, WP-15).
+3. **OD3, the SPEC viewer line:** ruled, applied here (SPEC.md: "Linux-native PipeWire→OpenXR quad viewer on WiVRn").
+4. **OD4, Grace→Ready:** defaulted (unchanged; a launch in grace plays flat; follow-up issue, NP-9).
+5. **OD5, `UndoRecord.launch_options_before`:** defaulted (`""`; Decky strips our word).
+6. **OD6, recipe seeds location:** defaulted (`crates/engine/tests/fixtures/recipe-seeds/`, WP-26).
+7. **OD7, private-name policy:** defaulted (docs scrubbed, DECISIONS untouched and allow-listed; the allow-list shrunk here).
+8. **OD8, the `pin.sh --all-tbd` downloads and the AC7 manual prereqs:** defaulted (approved; runs as Q0 and Q8).
+9. **REA (ruling 22).** Approved in principle; installed but not registered. Registering it (`rea setup`) changes Claude Code's config permanently, so it waits for your yes. Without it, Ghidra runs headless directly.
+10. **AER (ruling 3): ruled.** Ruling 44 (2026-11-11) amended ruling 3: alternate-eye rendering counts as true stereo per game, only where no two-real-views route exists, at 30 fps per eye (Alan Wake 2's planned route).
+11. **Spidy's author: closed.** Not contacted (ruling 49, 2026-11-12: "We're not going to hear back from Spidys author."). A licence is not a blocker for using Spidy's code here (ruling 50).
+12. **Library drives.** ACE COMBAT 7 (A1, #40) and Spider-Man Remastered (Step 0, #5) need their library drive mounted or a fresh install.
+
+Issue housekeeping (§6) is not listed here: `tools/pm/issues_report.py` reports it.
+
+## Not in this pass
+
+IDs from [§7](plans/roadmap-v2/02-queues-and-decisions.md#not-in-this-pass); never renumbered or reused, and a closed item is struck through, not deleted.
+
+- **NP-1.** #27b port route (`crates/engine/src/injectors/port.rs` stays a stub): needs #22.
+- **NP-2.** #18-#23 port steps: need RE results (Q12).
+- **NP-3.** #29, #36, #47-#49 real recipes: locked tests land only at device works-now (Q7-Q11).
+- **NP-4.** #34 Z2b: only if #32 fails.
+- **NP-5.** #9 and after-1.0 #4, #8, #11-#14.
+- **NP-6.** Katanga probe / viewer option (a): the Linux viewer was chosen.
+- **NP-7.** Viewer status in `LinkSnapshot`: it would change locked snapshot JSON.
+- **NP-8.** Unifying `flat_reason`: locked rows and link-view tests.
+- **NP-9.** Grace→Ready change: OD4.
+- **NP-10.** #37 closure: needs the analysed exe pair. The column ships as "not yet found".
+- **NP-11.** Kaon .NET route: fallback only.
+- **NP-12.** CI Windows link: SDK licence, owner-only (Q2).
+- **NP-13.** Any real download: Q0.
+- **NP-14.** #17 tracker and #10 parent: stay open.

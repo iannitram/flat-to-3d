@@ -4,7 +4,6 @@ tools/docs/private-allow.txt
 decky/plugin.json	"author"
 .github/ISSUE_TEMPLATE/issue.md	Qwen brief
 AGENTS.md	Qwen brief
-docs/workbench.md	craft-build
 tools/check.sh	craft-build
 packaging/build-tools.sh	craft-build
 *	FLAT3D_BUILD_BOX
