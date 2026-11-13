@@ -24,6 +24,10 @@ const SETTINGS: &str = "flat3d-settings 1\nauto-3d\ton\ntunnel\ton\n";
 const RECIPE: &str = "name: Test game\nstereo-status: works-now\nstereo-route: UEVR\nstereo-engine: UE4\nstereo-api: dx11\nstereo-mod: none\nstereo-free: yes\nstereo-safe: yes\nstereo-checked: 2026-11-01\n";
 
 const NOW: u64 = 1000;
+
+/// What the route closure returns.
+type RouteResult = Result<(RouteEnv, WivrnDirs), String>;
+
 const SYSTEM_WIVRN: &str = "/var/lib/flatpak/app/io.github.wivrn.wivrn";
 
 struct Tmp(PathBuf);
@@ -141,7 +145,7 @@ fn uevr_env() -> RouteEnv {
 /// `prepare_with_route` with a Ready snapshot, default settings and the test recipe.
 fn prepare_ready(
     env: &BTreeMap<String, String>,
-    route: &mut dyn FnMut(u32, &Recipe) -> Result<(RouteEnv, WivrnDirs), String>,
+    route: &mut dyn FnMut(u32, &Recipe) -> RouteResult,
 ) -> Launch {
     let snapshot = ready(NOW);
     let settings = Settings::default();
@@ -541,9 +545,7 @@ fn reason_codes_cover_every_flat_launch() {
     unsafe_recipe.safe = "no".into();
     let mut no_appid = game_env();
     no_appid.remove("SteamAppId");
-    let mut never = |_: u32, _: &Recipe| -> Result<(RouteEnv, WivrnDirs), String> {
-        panic!("route called for a flat plan")
-    };
+    let mut never = |_: u32, _: &Recipe| -> RouteResult { panic!("route called for a flat plan") };
     let cases: Vec<(Launch, &str)> = vec![
         (
             prepare_with_route(
