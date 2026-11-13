@@ -46,12 +46,6 @@ pub fn steps(packages: Option<&Packages>, snapshot: Option<&LinkSnapshot>) -> Ve
             hint: "Install WiVRn on the Quest.",
         },
         Step {
-            title: "Tunnel app on the headset",
-            done: packages.is_some_and(|packages| packages.gnirehtet),
-            manual: false,
-            hint: "Install the gnirehtet app on the Quest.",
-        },
-        Step {
             title: "Seated boundary",
             done: false,
             manual: true,
@@ -190,10 +184,7 @@ mod tests {
 
     #[test]
     fn failed_packages_read_keeps_old() {
-        let old = Packages {
-            wivrn: true,
-            gnirehtet: false,
-        };
+        let old = Packages { wivrn: true };
         let mut state = SetupState {
             packages: Some(old),
             ..SetupState::default()

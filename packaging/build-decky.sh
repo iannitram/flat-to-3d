@@ -89,8 +89,7 @@ if [ "$NO_TOOLS" = 0 ]; then
     run cp "$TOOLS/$name" "$package/bin/tools/$name"
   done
   if [ -d "$TOOLS/lib" ]; then run cp -a "$TOOLS/lib/." "$package/bin/tools/lib/"; fi
-  run chmod 755 "$package/bin/tools/adb" "$package/bin/tools/gnirehtet"
-  run chmod 644 "$package/bin/tools/gnirehtet.apk"
+  run chmod 755 "$package/bin/tools/adb"
   if [ -d "$package/bin/tools/lib" ]; then run find "$package/bin/tools/lib" -type f -exec chmod 755 {} +; fi
 fi
 shopt -s nullglob

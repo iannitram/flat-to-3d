@@ -64,14 +64,8 @@ fn setting_get_and_set() {
         }
     );
     assert_eq!(SettingKey::Auto3d.as_str(), "auto-3d");
-    // `tunnel` is retired (#223) but still parses, as a no-op, until the app drops it (#226).
-    assert_eq!(
-        ok(&["setting", "set", "tunnel", "off"]),
-        LinkCommand::SettingSet {
-            key: SettingKey::Tunnel,
-            on: false
-        }
-    );
+    // `tunnel` was retired (#223), and the app no longer sends it (#226).
+    assert!(usage(&["setting", "set", "tunnel", "off"]).contains("setting set"));
     assert!(usage(&["setting", "set", "bogus", "off"]).contains("setting set"));
 }
 

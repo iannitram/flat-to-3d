@@ -146,6 +146,20 @@ pub fn link_commands(effect: &Effect) -> Vec<Vec<String>> {
     }
 }
 
+/// [`link_commands`] with the WiVRn start the service chose (the headset's app, the server
+/// flags): Start 3D's list and its reattach part come from `start_3d_commands_with`; every
+/// other effect runs what [`link_commands`] gives.
+pub(crate) fn link_commands_with(
+    effect: &Effect,
+    w: &crate::wivrn::WivrnStart,
+) -> Vec<Vec<String>> {
+    match effect {
+        Effect::StartLink => crate::link::start_3d_commands_with(w),
+        Effect::Reattach => crate::link::start_3d_commands_with(w)[2..].to_vec(),
+        Effect::StopLink | Effect::Notify(_) => link_commands(effect),
+    }
+}
+
 /// The toast text for a note, the same on every face.
 pub fn note_text(n: Note) -> &'static str {
     match n {

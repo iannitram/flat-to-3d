@@ -1,0 +1,1018 @@
+# Spider-Man 2 address map: the one owner of the SM2 addresses (WP-30).
+# tools/re/fill_map.py writes this file from a Version Tracking CSV and renders
+# docs/spiderman2/address-map.md (generated block) from it.
+
+[meta]
+herovr_rev = "82f3ffe4e4dc65d9f0df3b29918af2ccb7fc9859"
+
+[[item]]
+name = "stock camera fn (calls submit)"
+rem_rva = "0x1646e10"
+kind = "call"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "camera submit call site"
+rem_rva = "0x164703f"
+kind = "site"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "camera submit return"
+rem_rva = "0x1647044"
+kind = "site"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "view descriptor submit"
+rem_rva = "0x1899ab0"
+kind = "hook"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "lens ctor (12 args)"
+rem_rva = "0x187bb00"
+kind = "call"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "pose setter"
+rem_rva = "0x187ca10"
+kind = "call"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "frame function"
+rem_rva = "0x175a060"
+kind = "call"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "frame -> offscreen call site"
+rem_rva = "0x175aaa9"
+kind = "site"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "offscreen render setup (placeEyes hook)"
+rem_rva = "0x1920240"
+kind = "hook"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "history shift"
+rem_rva = "0x18a13c0"
+kind = "call"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "history shift per-view copy"
+rem_rva = "0x189ee00"
+kind = "check"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "view maintenance (ViewContextManager)"
+rem_rva = "0x18a0bb0"
+kind = "hook"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "create offscreen view"
+rem_rva = "0x18a09c0"
+kind = "call"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "view update (exposure copy)"
+rem_rva = "0x189bd30"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "occlusion builder"
+rem_rva = "0x189fed0"
+kind = "call"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "ViewContextManager global"
+rem_rva = "0x7a34dd0"
+kind = "data"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "view pool mask"
+rem_rva = "0x7a34dd8"
+kind = "data"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "offscreen slots (mgr+0x30)"
+rem_rva = "0x7a34e00"
+kind = "data"
+prio = 1
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "texture wrapper vtable"
+rem_rva = "0x4e56c80"
+kind = "vtable"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "copy view into render job"
+rem_rva = "0x19223e0"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "render job begin"
+rem_rva = "0x189e310"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "render job end"
+rem_rva = "0x189e3a0"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "buffer-set init"
+rem_rva = "0x1873470"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "buffer-set init return gate"
+rem_rva = "0x186c325"
+kind = "site"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "buffer-set sizes"
+rem_rva = "0x1874f40"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "target kind test"
+rem_rva = "0x1875270"
+kind = "check"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "kind-mask table"
+rem_rva = "0x3d11b18"
+kind = "data"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "TemporalAa"
+rem_rva = "0x1842e10"
+kind = "check"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "display setup"
+rem_rva = "0x1920310"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "enqueue render command"
+rem_rva = "0x187e130"
+kind = "call"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "tone map"
+rem_rva = "0x1846c20"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "adapted-lum read"
+rem_rva = "0x189c710"
+kind = "check"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "SubmitScene (shadows)"
+rem_rva = "0x19206a0"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "FitCascades"
+rem_rva = "0x170fbc0"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "RenderActor"
+rem_rva = "0x17991a0"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "CopyFinal (diag)"
+rem_rva = "0x186cc00"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "readback init (diag)"
+rem_rva = "0x186c670"
+kind = "call"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "DrawOff"
+rem_rva = "0x191afb0"
+kind = "call"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "DrawOn"
+rem_rva = "0x191b880"
+kind = "call"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "frame allocate (diag)"
+rem_rva = "0x1872860"
+kind = "call"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "render-instance table"
+rem_rva = "0x7a436e8"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "render-instance count"
+rem_rva = "0x7a43704"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "RenderAlloc ring create"
+rem_rva = "0x1872d90"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "ring create call site"
+rem_rva = "0x188a195"
+kind = "site"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "RenderAlloc per-frame rollover"
+rem_rva = "0x1872b90"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "rollover call site"
+rem_rva = "0x187e623"
+kind = "site"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "RenderAlloc allocator"
+rem_rva = "0x7938880"
+kind = "data"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD follower placement"
+rem_rva = "0x73ab80"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "instance SetTransform"
+rem_rva = "0x191c0e0"
+kind = "call"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD follower vtable"
+rem_rva = "0x38929c8"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "RTT stream update"
+rem_rva = "0x2104400"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "RTT stream vtable"
+rem_rva = "0x4f87960"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "Scaleform render command"
+rem_rva = "0x1d2b6c0"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "marker projection XY"
+rem_rva = "0x1f10ad0"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "marker projection"
+rem_rva = "0x1f10b60"
+kind = "hook"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD second movie"
+rem_rva = "0x7be3e00"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD res factor"
+rem_rva = "0x7a4ae50"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD frame counter"
+rem_rva = "0x7a30b00"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD list frames"
+rem_rva = "0x7be5740"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD counts"
+rem_rva = "0x7be3f38"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HUD items"
+rem_rva = "0x7be3f40"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "TimeScaleSystem::Update"
+rem_rva = "0x19bb430"
+kind = "hook"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "time: movss [rbx+18]"
+rem_rva = "0x19bb6ca"
+kind = "check"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "time: movsd clock"
+rem_rva = "0x19bb6d3"
+kind = "check"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "time: test physics flag"
+rem_rva = "0x19bb6db"
+kind = "check"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "time: movss [rbx+1c]"
+rem_rva = "0x19bb70f"
+kind = "check"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "time: lea havok step"
+rem_rva = "0x19bb717"
+kind = "check"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "havok step setter"
+rem_rva = "0x1822670"
+kind = "check"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "clock scale"
+rem_rva = "0x7a7fb90"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "frame game time (pause gate)"
+rem_rva = "0x7a7fbd8"
+kind = "data"
+prio = 2
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "clock 0x7a7fbf0"
+rem_rva = "0x7a7fbf0"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "havok step"
+rem_rva = "0x609a560"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "follow-camera commit"
+rem_rva = "0x1e1d600"
+kind = "gate"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "clear input"
+rem_rva = "0x1ce2f40"
+kind = "gate"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "input query A"
+rem_rva = "0x1cdfa70"
+kind = "gate"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "input query B"
+rem_rva = "0x1cdf840"
+kind = "gate"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "combat camera update"
+rem_rva = "0x5c2630"
+kind = "gate"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "camera setter"
+rem_rva = "0x191c590"
+kind = "gate"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "FollowCamera vtable"
+rem_rva = "0x3871fd8"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "CombatCamera vtable"
+rem_rva = "0x38720d0"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "HeroLocal vtable"
+rem_rva = "0x38a93c8"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "player vtable 0x38b2c98"
+rem_rva = "0x38b2c98"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "MoverStandard vtable"
+rem_rva = "0x4f70168"
+kind = "vtable"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "component registry"
+rem_rva = "0x7a44320"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[item]]
+name = "component registry 2"
+rem_rva = "0x7a44340"
+kind = "data"
+prio = 3
+sm2 = ""
+sig = ""
+conf = "pending"
+how = ""
+status = "pending"
+
+[[herovr]]
+id = "H1"
+what = "Runtime Direct3D 12 and DXGI queue discovery"
+check = "runtime"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H2"
+what = "512 MB render memory ring allocator"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H3"
+what = "Scene submit (5th argument)"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H4"
+what = "Display setup (5th argument)"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H5"
+what = "Pose setter (3 arguments)"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H6"
+what = "Game view kept (flag 32 never sent)"
+check = "no-row"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H7"
+what = "Eye-job offset in copyJob"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H8"
+what = "Buffer-size hook and output sizing"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H9"
+what = "Tone hook: copies the eye's view bytes into the job's view copy"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H10"
+what = "Temporal AA offscreen target kinds"
+check = "pending"
+item = ""
+evidence = ""
+
+[[herovr]]
+id = "H11"
+what = "Steam ticket guard (quit to menu)"
+check = "off-path"
+item = ""
+evidence = ""

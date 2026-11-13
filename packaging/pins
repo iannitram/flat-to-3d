@@ -14,13 +14,6 @@ android-tools.size: 19376140
 android-tools.sha256: 2c6de1abe16b211c7d9f59276217e14fd9e0e18b20e331d3c84358f5dffd576e
 android-tools.license: Apache-2.0
 
-gnirehtet.fetch: auto
-gnirehtet.version: 2.5.1
-gnirehtet.url: https://github.com/Genymobile/gnirehtet/releases/download/v2.5.1/gnirehtet-rust-linux64-v2.5.1.zip
-gnirehtet.size: 329080
-gnirehtet.sha256: dee55499ca4fef00ce2559c767d2d8130163736d43fdbce753e923e75309c275
-gnirehtet.license: Apache-2.0
-
 appimagetool.fetch: auto
 appimagetool.version: 1.9.1
 appimagetool.url: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage

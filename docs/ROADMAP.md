@@ -112,7 +112,7 @@ Fallback if F3 finds no two-eye picture: #11 (two-pass DX12 stereo).
 
 | Step | What | Depends on |
 |---|---|---|
-| W1 (#292) | Decision: how a non-Steam (Heroic) game gets a recipe key and the launch wrapper (Decisions for you, item 6) | the owner |
+| W1 (#292) | Decision: how a non-Steam (Heroic) game gets a recipe key and the launch wrapper (Decisions for you, item 6); the Heroic files an engine would read are in [the Heroic files note](notes/research/games/epic-alan-wake-2-heroic-files.md) (#277, unverified on the device) | the owner |
 | W2 (#293) | The launch path on the device, and a do-nothing proxy `version.dll` load check | - |
 | WR (#289) | Hook-point research on the installed game (ruling 52): `rend::View`'s setters and `renderWorldInternal` from Control's exports and the lambda RTTI names, the present hook below Streamline, one RenderDoc capture of the view constants, into `docs/hooks/epic-alan-wake-2.md` | the install (ruling 51) |
 | W3 (#299) | One-eye camera shift through the `rend::View` hook | WR, W2 |

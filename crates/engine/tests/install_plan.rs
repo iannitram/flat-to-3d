@@ -41,12 +41,41 @@ fn install_copies_the_binaries_then_the_tools() {
             ),
             p("/opt/f3d/flat3d-run", "/home/deck/.local/bin/flat3d-run"),
             p("/opt/f3d/tools/adb", &format!("{t}/adb")),
-            p("/opt/f3d/tools/gnirehtet", &format!("{t}/gnirehtet")),
-            p(
-                "/opt/f3d/tools/gnirehtet.apk",
-                &format!("{t}/gnirehtet.apk")
-            ),
         ]
+    );
+}
+
+#[test]
+fn the_udev_rule_is_the_packaging_file_one_line_for_meta_usb() {
+    assert_eq!(
+        UDEV_RULE_TEXT,
+        include_str!("../../../packaging/flat3d-quest.rules")
+    );
+    assert_eq!(
+        UDEV_RULE_TEXT,
+        "SUBSYSTEM==\"usb\", ATTR{idVendor}==\"2833\", TAG+=\"uaccess\"
+"
+    );
+    assert_eq!(UDEV_RULE_PATH, "/etc/udev/rules.d/70-flat3d-quest.rules");
+}
+
+#[test]
+fn install_stages_the_udev_rule_and_puts_it_in_with_one_sudo_prompt() {
+    let plan = install_plan(H, "/opt/f3d");
+    let staged = "/home/deck/.local/share/flat3d/flat3d-quest.rules";
+    assert_eq!(plan.udev_source, staged);
+    assert_eq!(plan.udev_rule, "/etc/udev/rules.d/70-flat3d-quest.rules");
+    assert_eq!(
+        plan.udev_commands,
+        vec![c(&[
+            "sudo",
+            "sh",
+            "-c",
+            "install -m 0644 \"$1\" \"$2\" && udevadm control --reload-rules && udevadm trigger --subsystem-match=usb --attr-match=idVendor=2833",
+            "sh",
+            staged,
+            "/etc/udev/rules.d/70-flat3d-quest.rules"
+        ])]
     );
 }
 
@@ -87,7 +116,7 @@ fn uninstall_disables_removes_and_reloads() {
         ])]
     );
     assert_eq!(u.after, vec![c(&["systemctl", "--user", "daemon-reload"])]);
-    assert_eq!(u.removes.len(), 6);
+    assert_eq!(u.removes.len(), 5);
     assert_eq!(
         u.removes[0],
         "/home/deck/.config/systemd/user/flat3d-link.service"
@@ -97,7 +126,27 @@ fn uninstall_disables_removes_and_reloads() {
         .contains(&"/home/deck/.local/bin/flat3d-run".to_string()));
     assert!(u
         .removes
-        .contains(&"/home/deck/.local/share/flat3d/bin/gnirehtet.apk".to_string()));
+        .contains(&"/home/deck/.local/share/flat3d/bin/adb".to_string()));
+    assert!(u
+        .removes
+        .contains(&"/home/deck/.local/share/flat3d/flat3d-quest.rules".to_string()));
+}
+
+#[test]
+fn uninstall_removes_the_udev_rule_with_one_sudo_prompt() {
+    let u = uninstall_plan(H);
+    assert_eq!(u.udev_rule, "/etc/udev/rules.d/70-flat3d-quest.rules");
+    assert_eq!(
+        u.udev_commands,
+        vec![c(&[
+            "sudo",
+            "sh",
+            "-c",
+            "rm -f \"$1\" && udevadm control --reload-rules",
+            "sh",
+            "/etc/udev/rules.d/70-flat3d-quest.rules"
+        ])]
+    );
 }
 
 #[test]

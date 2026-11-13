@@ -5,7 +5,7 @@ q = "Q1"
 issues = [127]
 device = ["build-box"]
 needs = ["WP-22"]
-done_when = "the script runs on a clean Deck and the three files exist and run `--version`; the owner picks the gnirehtet APK source (needs-owner-device, owner decision)."
+done_when = "the script runs on a clean Deck and adb exists and runs `version` (needs-owner-device). Ruling 42 makes adb the only tool, so the APK source question is void."
 
 [[step]]
 id = "build"
@@ -24,16 +24,8 @@ run = ["{repo}/dist/tools/adb", "version"]
 expect = "37\\.0\\.0"
 
 [[step]]
-id = "gnirehtet"
-kind = "cmd"
-who = "script"
-text = "Check gnirehtet usage."
-run = ["{repo}/dist/tools/gnirehtet"]
-expect = "usage"
-
-[[step]]
 id = "checksums"
 kind = "cmd"
 who = "script"
 text = "Confirm pinned outputs are recorded."
-run = ["grep", "-E", "adb|gnirehtet", "{repo}/dist/tools/SHA256SUMS"]
+run = ["grep", "-E", " adb$", "{repo}/dist/tools/SHA256SUMS"]
