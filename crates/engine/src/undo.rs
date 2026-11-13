@@ -182,8 +182,7 @@ impl UndoRecord {
         }
         for dir in &self.created_dirs {
             text.push_str(&format!(
-                "created-dir	{}
-",
+                "created-dir\t{}\n",
                 escape(&dir.to_string_lossy())
             ));
         }
@@ -335,10 +334,10 @@ pub fn put_back(rec: &UndoRecord) -> Vec<String> {
 ///
 /// Runs the file steps of [`undo_actions`] on disk: created files are removed, replaced files
 /// get their backups copied back, then the folders the apply made are removed deepest first;
-/// one that is not empty is kept and named in `restored` ("kept <dir> (not empty)"). The launch option step is not run here: the Decky plugin
-/// removes only our wrapper word from the line (code map). The record is deleted only after
-/// every file step has worked, so a failed undo can be run again; a file already gone or a
-/// backup already restored counts as done.
+/// one that is not empty is kept and named in `restored` ("kept <dir> (not empty)"). The
+/// launch option step is not run here: the Decky plugin removes only our wrapper word from the
+/// line (code map). The record is deleted only after every file step has worked, so a failed
+/// undo can be run again; a file already gone or a backup already restored counts as done.
 pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
     let path = record_path(data_dir, appid);
     let text = match fs::read_to_string(&path) {

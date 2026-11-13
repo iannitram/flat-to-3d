@@ -38,7 +38,7 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-15 | 3 | done | - | #236 |  |
 | WP-19 | 3 | done | - | #234 |  |
 | WP-26 | 3 | done | - | #237 |  |
-| WP-27 | 3 | done | - | #268 | follow-up: undo leaves empty folders the apply step made (record format); fixed in #325's PR (`created-dir` line, ruling 54) |
+| WP-27 | 3 | done | - | #268 | follow-up: undo leaves empty folders the apply step made (record format) |
 | WP-28 | 3 | done | - | #267 | closes #121, #75; merged before WP-36 |
 | WP-30 | 3 | done | - | #310 | refs #19, #37 |
 | WP-09 | 4 | done | - | #312 | refs #305 |
