@@ -21,7 +21,7 @@ Status: `todo`, `running`, `done`, `blocked`, `skipped`.
 | WP-12 | 2 | done | - | #246 |  |
 | WP-13 | 2 | done | - | #215 |  |
 | WP-14 | 2 | done | - | #217 | follow-up: apply_with never installs the fetched profile and replaces an existing config.txt; fixed in #278 (closes #275), which installs the profile and merges our keys into its config.txt |
-| WP-16 | 2 | done | - | #250 | follow-up: plan_files can pick a stale cache version; fix before the geo11 pin and Q9 |
+| WP-16 | 2 | done | - | #250 | follow-up: plan_files picking a stale cache version or a leftover .tmp folder is fixed (closes #307) |
 | WP-17 | 2 | done | - | #218 |  |
 | WP-18 | 2 | done | - | #220 |  |
 | WP-20 | 2 | done | - | #219 |  |

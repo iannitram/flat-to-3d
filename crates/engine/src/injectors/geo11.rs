@@ -7,6 +7,7 @@ use std::path::{Component, Path, PathBuf};
 use flat3d_viewer::spec::{Layout, ViewerSpec};
 
 use crate::api::ApiError;
+use crate::injectors::fetch;
 use crate::injectors::uevr::MARKER_FILE;
 use crate::injectors::RouteEnv;
 use crate::recipes::{RouteSettings, GEO11_KEYS};
@@ -273,8 +274,56 @@ fn sorted_entries(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(entries)
 }
 
+fn is_plain_folder_name(s: &str) -> bool {
+    !s.is_empty()
+        && !s.starts_with("TBD")
+        && s != "."
+        && s != ".."
+        && !s.contains(['/', '\\', ':', '\0'])
+}
+
+fn known_pin_version(key: &str) -> Option<String> {
+    let pins = fetch::parse_pins(fetch::PINS);
+    let pin = pins.get(key)?;
+    if is_plain_folder_name(&pin.version) {
+        Some(pin.version.clone())
+    } else {
+        None
+    }
+}
+
+fn should_skip_root_child(path: &Path) -> bool {
+    let Some(name) = path.file_name() else {
+        return false;
+    };
+    let lower = name.to_string_lossy().to_ascii_lowercase();
+    if lower.starts_with('.') || lower.ends_with(".tmp") {
+        return true;
+    }
+    if is_real_dir(path) && path.join(fetch::MARKER).is_file() {
+        return true;
+    }
+    false
+}
+
+fn cache_search_scope(cache_dir: &Path, key: &str) -> (PathBuf, bool) {
+    let key_dir = cache_dir.join(key);
+    if let Some(v) = known_pin_version(key) {
+        let version_dir = key_dir.join(v);
+        if is_real_dir(&version_dir) {
+            return (version_dir, false);
+        }
+    }
+    (key_dir, true)
+}
+
 /// Return the shallowest directory matching `name`, with sorted path order breaking ties.
-fn find_dir(root: &Path, max_depth: usize, name: &str) -> io::Result<Option<PathBuf>> {
+fn find_dir(
+    root: &Path,
+    max_depth: usize,
+    name: &str,
+    filter_root_children: bool,
+) -> io::Result<Option<PathBuf>> {
     if !root.is_dir() {
         return Ok(None);
     }
@@ -293,6 +342,9 @@ fn find_dir(root: &Path, max_depth: usize, name: &str) -> io::Result<Option<Path
         let mut next = Vec::new();
         for dir in level {
             for path in sorted_entries(&dir)? {
+                if filter_root_children && dir == root && should_skip_root_child(&path) {
+                    continue;
+                }
                 if is_real_dir(&path) {
                     next.push(path);
                 }
@@ -303,7 +355,12 @@ fn find_dir(root: &Path, max_depth: usize, name: &str) -> io::Result<Option<Path
     Ok(None)
 }
 
-fn find_file_parent(root: &Path, max_depth: usize, name: &str) -> io::Result<Option<PathBuf>> {
+fn find_file_parent(
+    root: &Path,
+    max_depth: usize,
+    name: &str,
+    filter_root_children: bool,
+) -> io::Result<Option<PathBuf>> {
     if !root.is_dir() {
         return Ok(None);
     }
@@ -312,6 +369,9 @@ fn find_file_parent(root: &Path, max_depth: usize, name: &str) -> io::Result<Opt
         level.sort();
         for dir in &level {
             if sorted_entries(dir)?.iter().any(|p| {
+                if filter_root_children && dir == root && should_skip_root_child(p) {
+                    return false;
+                }
                 p.is_file()
                     && p.file_name()
                         .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(name))
@@ -325,6 +385,9 @@ fn find_file_parent(root: &Path, max_depth: usize, name: &str) -> io::Result<Opt
         let mut next = Vec::new();
         for dir in level {
             for path in sorted_entries(&dir)? {
+                if filter_root_children && dir == root && should_skip_root_child(&path) {
+                    continue;
+                }
                 if is_real_dir(&path) {
                     next.push(path);
                 }
@@ -432,16 +495,16 @@ pub fn plan_files(
                 "geo11-fix must be a pin key ([a-z0-9-]+): {name}"
             )));
         }
-        let pin_root = cache_dir.join(name);
-        if !pin_root.is_dir() {
+        let (search_root, filter) = cache_search_scope(cache_dir, name);
+        if !search_root.is_dir() {
             return Err(not_found(format!(
                 "{name} is not fetched; run flat3d-inject setup fetch {name}"
             )));
         }
-        let found = find_file_parent(&pin_root, 3, "d3dx.ini")
-            .map_err(|e| io_error("search", &pin_root, &e))?
-            .or(find_file_parent(&pin_root, 3, "d3d11.dll")
-                .map_err(|e| io_error("search", &pin_root, &e))?);
+        let found = find_file_parent(&search_root, 3, "d3dx.ini", filter)
+            .map_err(|e| io_error("search", &search_root, &e))?
+            .or(find_file_parent(&search_root, 3, "d3d11.dll", filter)
+                .map_err(|e| io_error("search", &search_root, &e))?);
         if found.is_none() {
             return Err(not_found(format!(
                 "{name} is not fetched; run flat3d-inject setup fetch {name}"
@@ -458,8 +521,9 @@ pub fn plan_files(
     let overlay = if fix_has_dm {
         None
     } else {
-        let root = cache_dir.join("geo11");
-        let found = find_dir(&root, 3, "x64").map_err(|e| io_error("search", &root, &e))?;
+        let (search_root, filter) = cache_search_scope(cache_dir, "geo11");
+        let found = find_dir(&search_root, 3, "x64", filter)
+            .map_err(|e| io_error("search", &search_root, &e))?;
         if found.is_none() {
             return Err(not_found(
                 "geo11 is not fetched; run flat3d-inject setup fetch geo11",
