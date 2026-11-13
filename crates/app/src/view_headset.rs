@@ -16,6 +16,8 @@ pub fn view(s: &HeadsetState, now: u64) -> Element<'_, Msg> {
         .color(health_colour),
     ]
     .spacing(10);
+    // Read-only: Quest Tether's state as one line. No button, no switch, no hint.
+    content = content.push(text(v.quest_tether));
     if v.start && !s.busy {
         content = content.push(button("Start 3D").on_press(Msg::StartPressed));
     }

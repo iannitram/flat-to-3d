@@ -1,6 +1,7 @@
 //! Start 3D and Stop 3D over WiVRn's wired mode (`adb reverse tcp:9757`).
 
 pub mod adb;
+pub mod quest_tether;
 pub mod wivrn;
 pub use wivrn::{
     detect_quest_app, detect_server, FlatpakScope, QuestApp, WivrnDirs, WivrnStart, QUEST_APPS,
