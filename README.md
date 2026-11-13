@@ -8,23 +8,30 @@ True stereo (alternate-eye rendering counts only for a game with no two-real-vie
 
 ## Build and test
 
-Run `tools/check.sh`; the Rust suite can also be run with `cargo test --workspace`.
+- `tools/check.sh`: the one gate that CI and people run (`--only rust|py|decky`).
+- `cargo test --workspace --locked`: the Rust suite.
+- `cargo test -p flat3d-app`: the desktop app's page logic.
+- `cargo build -p flat3d-viewer --features xr,capture`: the viewer's device build, run inside the distrobox build container (it needs the OpenXR and PipeWire libraries).
+- `tools/build-win.sh`: cross-builds the Windows binaries (the UEVR injector) with clang-cl and xwin.
 
 ## Repository layout
 
 | Path | What |
 |---|---|
-| `crates/` | Rust engine, desktop app, viewer and injector |
-| `decky/` | Game Mode panel |
-| `recipes/` | Per-game stereo routes |
-| `packaging/` | Build and install scripts |
-| `sessions/` | Device test procedures |
-| `games/` | Per-game profiles and fixes |
-| `tools/` | Checks, research and build utilities |
-| `docs/` | Specification, roadmap and technical maps |
-| `cmake/` | Cross-compilation toolchain |
-| `third_party/` | Pinned upstream source |
-| `.github/` | CI workflows |
+| `crates/engine/` | the engine: Rust crate `flat3d-inject`, binaries `flat3d-inject` and `flat3d-run` |
+| `crates/app/` | the desktop app (iced) for Desktop Mode |
+| `crates/viewer/` | `flat3d-viewer`, the SBS screen viewer for Geo-11 games |
+| `crates/uevr-inject/` | `flat3d-uevr-inject.exe`, the UEVR injector run under Proton |
+| `decky/` | the Game Mode panel |
+| `packaging/` | pinned downloads, build and install scripts |
+| `sessions/` | on-device check sessions |
+| `tools/` | checks, research and build utilities |
+| `games/` | per-game profiles, fixes and the Spider-Man 2 port |
+| `recipes/` | per-game stereo routes |
+| `docs/` | roadmap, code map, rulings and research |
+| `.github/` | CI workflows and the issue template |
+| `cmake/` | the cross-compilation toolchain |
+| `third_party/` | pinned upstream source |
 
 ## Credits and license
 
