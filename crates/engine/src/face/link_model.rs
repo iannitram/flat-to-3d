@@ -22,5 +22,20 @@ pub fn link_view(snap: Option<LinkSnapshot>, now: u64) -> LinkView {
             .as_ref()
             .map(|snapshot| snapshot.adb_source)
             .unwrap_or(AdbSource::Missing),
+        quest_tether: quest_tether_line(
+            snapshot
+                .as_ref()
+                .and_then(|snapshot| snapshot.quest_tether.as_deref()),
+        )
+        .to_string(),
+    }
+}
+
+/// The Quest Tether line both faces draw: its state as a read-only fact, nothing to press.
+fn quest_tether_line(state: Option<&str>) -> &'static str {
+    match state {
+        Some("connected") => "Quest Tether: connected",
+        Some(_) => "Quest Tether: not connected",
+        None => "Quest Tether: not installed",
     }
 }

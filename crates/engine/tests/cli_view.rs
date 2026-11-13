@@ -121,7 +121,7 @@ fn bad_view_args_are_usage_errors() {
 }
 
 fn expected_stopped() -> Value {
-    json!({"state":"stopped","label":"Stopped","hint":"Press Start 3D to bring the headset link up.","start":true,"stop":false,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"auto_3d":false,"adb_source":"missing"})
+    json!({"state":"stopped","label":"Stopped","hint":"Press Start 3D to bring the headset link up.","start":true,"stop":false,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"auto_3d":false,"adb_source":"missing","quest_tether":"Quest Tether: not installed"})
 }
 
 #[test]
@@ -143,7 +143,7 @@ fn link_model_handles_absent_stale_and_fresh_snapshots() {
     fresh.adb_source = AdbSource::Bundled;
     assert_eq!(
         serde_json::to_value(link_model::link_view(Some(fresh), now)).unwrap(),
-        json!({"state":"ready","label":"Ready","hint":"Press Play on a 3D Ready game.","start":false,"stop":true,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"auto_3d":true,"adb_source":"bundled"})
+        json!({"state":"ready","label":"Ready","hint":"Press Play on a 3D Ready game.","start":false,"stop":true,"health":{"battery":"unknown","temp":"unknown","zone":"unknown","colour":"#b0b0b0"},"auto_3d":true,"adb_source":"bundled","quest_tether":"Quest Tether: not installed"})
     );
 }
 

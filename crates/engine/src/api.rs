@@ -84,6 +84,9 @@ pub struct LinkView {
     pub health: crate::face::view::HealthView,
     pub auto_3d: bool,
     pub adb_source: AdbSource,
+    /// The one Quest Tether line, read-only: "Quest Tether: connected", "... not connected" or
+    /// "... not installed".
+    pub quest_tether: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -286,6 +289,10 @@ pub struct LinkSnapshot {
     pub health: Option<Health>,
     pub events: Vec<LinkEvent>,
     pub updated: u64,
+    /// Quest Tether's `state` text as last read, read-only (`None` = not installed). Nothing in
+    /// the engine acts on it. Left out of the file when `None`, so old files and readers agree.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quest_tether: Option<String>,
 }
 
 impl LinkSnapshot {
@@ -300,6 +307,7 @@ impl LinkSnapshot {
             health: None,
             events: Vec::new(),
             updated: now,
+            quest_tether: None,
         }
     }
 

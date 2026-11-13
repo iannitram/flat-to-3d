@@ -19,6 +19,7 @@ use crate::api::{LinkEvent, LinkSnapshot, LinkState};
 use crate::exec::LinkRunner as CommandRunner;
 use crate::link;
 use crate::link::adb::{AdbChoice, AdbRunner};
+use crate::link::quest_tether::quest_tether_status;
 use crate::link::Headset;
 use crate::state::{EventRing, Request};
 use crate::switches::Settings;
@@ -220,7 +221,14 @@ pub struct Service<R: CommandRunner, F: Feed> {
     /// The WiVRn app found on a headset (serial, package), so the dumpsys probes run once per
     /// headset.
     quest_app: Option<(String, String)>,
+    /// Quest Tether's state as last read and when it was asked (read-only; nothing here acts on
+    /// it).
+    quest_tether: Option<String>,
+    quest_tether_asked: Option<u64>,
 }
+
+/// Quest Tether is asked for its state at most this often (seconds).
+const QUEST_TETHER_EVERY_SECS: u64 = 10;
 
 impl<R: CommandRunner, F: Feed> Service<R, F> {
     pub fn new(paths: Paths, runner: Rc<RefCell<R>>, feed: F, adb: AdbChoice) -> Self {
@@ -242,6 +250,8 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             ring: EventRing::new(),
             health: HealthLoop::new(None),
             quest_app: None,
+            quest_tether: None,
+            quest_tether_asked: None,
         }
     }
 
@@ -264,6 +274,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             game_3d_running: modes.0,
             game_flat_running: modes.1,
         };
+        self.read_quest_tether(now);
         if let Some(devices) = self.feed.poll() {
             match classify(&devices) {
                 Seen::Ready(serial) => {
@@ -297,6 +308,21 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         }
         self.fire(now, Event::Tick);
         self.publish(now)
+    }
+
+    /// Ask Quest Tether for its state, at most every ten seconds, and keep the `state` text for
+    /// the snapshot. A missing program, a failed run or junk reads as not installed, quietly.
+    /// Nothing reads the result except the faces.
+    fn read_quest_tether(&mut self, now: u64) {
+        let due = self
+            .quest_tether_asked
+            .is_none_or(|asked| now.saturating_sub(asked) >= QUEST_TETHER_EVERY_SECS);
+        if !due {
+            return;
+        }
+        self.quest_tether_asked = Some(now);
+        self.quest_tether =
+            quest_tether_status(&mut Shared(Rc::clone(&self.runner))).map(|status| status.state);
     }
 
     fn unplug(&mut self, now: u64) {
@@ -480,6 +506,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             health: tick.health.clone(),
             events: self.ring.events().to_vec(),
             updated: now,
+            quest_tether: self.quest_tether.clone(),
         }
     }
 

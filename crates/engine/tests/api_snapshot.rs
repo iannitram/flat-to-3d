@@ -22,6 +22,7 @@ fn full() -> LinkSnapshot {
             text: "t".into(),
         }],
         updated: 77,
+        quest_tether: None,
     }
 }
 
