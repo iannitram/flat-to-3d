@@ -30,6 +30,7 @@ fn record(home: &Path, appid: u32, created: Vec<PathBuf>) {
             launch_options_before: String::new(),
             created,
             replaced: vec![],
+            created_dirs: vec![],
         }
         .to_text(),
     )

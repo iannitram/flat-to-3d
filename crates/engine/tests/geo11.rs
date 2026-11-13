@@ -306,8 +306,8 @@ fn apply_undo_restores_snapshot_and_sidecar() {
     undo_game(&data, 123).unwrap();
     assert_eq!(snapshot(&r), before);
     assert_eq!(fs::read(game.join("dxgi.dll")).unwrap(), b"old dxgi");
-    assert!(game.join("ShaderFixes").is_dir());
-    assert_eq!(fs::read_dir(game.join("ShaderFixes")).unwrap().count(), 0);
+    // The folder the apply made goes too (created-dir line, owner ruling 2026-11-12).
+    assert!(!game.join("ShaderFixes").exists());
     assert_eq!(
         env.env,
         [("WINEDLLOVERRIDES".into(), "d3d11,nvapi64=n,b".into())]
