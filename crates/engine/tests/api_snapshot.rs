@@ -83,11 +83,11 @@ fn the_small_reports_have_these_keys() {
     );
     assert_eq!(
         serde_json::to_value(SettingState {
-            key: "tunnel".into(),
+            key: "auto-3d".into(),
             on: true
         })
         .unwrap(),
-        json!({"key": "tunnel", "on": true})
+        json!({"key": "auto-3d", "on": true})
     );
     let r = InstallReport {
         written: vec!["a".into()],

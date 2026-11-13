@@ -225,11 +225,7 @@ pub fn perform(effect: Effect) -> Message {
                     .get("wivrn")
                     .and_then(Value::as_bool)
                     .ok_or_else(|| "bad packages data: wivrn".to_string())?;
-                let gnirehtet = data
-                    .get("gnirehtet")
-                    .and_then(Value::as_bool)
-                    .ok_or_else(|| "bad packages data: gnirehtet".to_string())?;
-                Ok(Packages { wivrn, gnirehtet })
+                Ok(Packages { wivrn })
             })
             .map_or_else(
                 |e| Message::Setup(setup_page::Msg::Packages(Err(e))),

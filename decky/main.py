@@ -37,7 +37,6 @@ def _fix_modes() -> None:
         ENGINE,
         os.path.join(engine_dir, "flat3d-run"),
         os.path.join(engine_dir, "tools", "adb"),
-        os.path.join(engine_dir, "tools", "gnirehtet"),
     )
     for path in paths:
         try:

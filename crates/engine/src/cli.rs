@@ -354,7 +354,7 @@ pub static COMMANDS: &[CommandSpec] = &[
         id: "setup packages",
         group: "Setup",
         args: "",
-        output: "{wivrn,gnirehtet,missing}",
+        output: "{wivrn,missing}",
         effects: PROBE,
     },
     CommandSpec {

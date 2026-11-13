@@ -11,29 +11,17 @@ fn the_command() {
 }
 
 #[test]
-fn both_installed() {
-    let out = "package:com.oculus.vrshell\npackage:org.meumeu.wivrn.github\npackage:com.genymobile.gnirehtet\n";
+fn wivrn_installed() {
+    let out = "package:com.oculus.vrshell\npackage:org.meumeu.wivrn.github\n";
     let p = parse_packages(out);
-    assert_eq!(
-        p,
-        Packages {
-            wivrn: true,
-            gnirehtet: true
-        }
-    );
+    assert_eq!(p, Packages { wivrn: true });
     assert!(missing(&p).is_empty());
 }
 
 #[test]
 fn look_alikes_do_not_count() {
-    let out = "package:org.meumeu.wivrn.github.debug\npackage:com.genymobile.gnirehtet2\n";
-    assert_eq!(
-        parse_packages(out),
-        Packages {
-            wivrn: false,
-            gnirehtet: false
-        }
-    );
+    let out = "package:org.meumeu.wivrn.github.debug\npackage:org.meumeu.wivrn\n";
+    assert_eq!(parse_packages(out), Packages { wivrn: false });
 }
 
 #[test]
@@ -44,36 +32,11 @@ fn windows_line_endings_are_fine() {
 
 #[test]
 fn missing_names_in_order() {
-    assert_eq!(
-        missing(&Packages {
-            wivrn: false,
-            gnirehtet: false
-        }),
-        vec!["WiVRn", "gnirehtet"]
-    );
-    assert_eq!(
-        missing(&Packages {
-            wivrn: true,
-            gnirehtet: false
-        }),
-        vec!["gnirehtet"]
-    );
-    assert_eq!(
-        missing(&Packages {
-            wivrn: false,
-            gnirehtet: true
-        }),
-        vec!["WiVRn"]
-    );
+    assert_eq!(missing(&Packages { wivrn: false }), vec!["WiVRn"]);
+    assert!(missing(&Packages { wivrn: true }).is_empty());
 }
 
 #[test]
 fn nothing_installed() {
-    assert_eq!(
-        parse_packages(""),
-        Packages {
-            wivrn: false,
-            gnirehtet: false
-        }
-    );
+    assert_eq!(parse_packages(""), Packages { wivrn: false });
 }
