@@ -65,6 +65,8 @@ Control Ultimate Edition (870780) is installed too and was inspected the same wa
 
 What this gives us (inferred): the two games share the `rend::View` class and the same constant names, four years apart. Control's DX12 renderer DLL is a labelled map of that class. The project's cross-build matcher ([tools/xmatch](../../../../tools/xmatch), written to carry Spider-Man Remastered names into Spider-Man 2) can be pointed at Control's exported `rend::View` setters to find their Alan Wake 2 twins. That is far cheaper than a blind search. The match is not certain: the class may have changed, and small setters may be inlined in the newer build.
 
+*(rev 2026-11-16)* Result of the WR step (#289): the setters are not inlined. `rend::View::setWorldToView`, `setViewToWorld`, `setViewToClip` and `renderWorldInternal` were found by structural match and lambda RTTI. In Alan Wake 2, `rend::View` holds its `m::View` at `+0`, not `+0x10` as in Control, so every member offset is Control's minus `0x10`. Addresses, patterns and the layout: [hook map](../../../hooks/epic-alan-wake-2.md).
+
 ## 3. Existing ways to get true stereo
 
 | Tool | Kind | Version and date | Licence and price | Verdict for this game |
@@ -154,8 +156,8 @@ proxy-dll: version.dll
 
 1. Start the game once from the Steam shortcut and record what the engine can see: the process tree, which Proton and prefix are used, and whether a Steam launch-option wrapper reaches `AlanWake2.exe`.
 2. Start it with a do-nothing proxy `version.dll` (logs one line, forwards every call) and the DLL override. Confirms the load path and that nothing checks the module list.
-3. Take a RenderDoc capture under vkd3d-proton and read `g_mWorldToView` and `g_mViewToClip` from one world draw. Confirms the constant layout and the matrix convention.
-4. Run the cross-build matcher from Control's `renderer_rmdwin10_f.dll` exports to `AlanWake2.exe` and count how many `rend::View` functions match.
+3. Take a RenderDoc capture under vkd3d-proton and read `g_mWorldToView` and `g_mViewToClip` from one world draw. Confirms the constant layout and the matrix convention. *(rev 2026-11-16)* The CPU side is now read from the code (row vectors, no transpose on upload; see the hook map); the capture is still needed for the GPU-side packing and the projection's depth range.
+4. Run the cross-build matcher from Control's `renderer_rmdwin10_f.dll` exports to `AlanWake2.exe` and count how many `rend::View` functions match. *(rev 2026-11-16)* Done by hand in WR (#289): the three setters, the two `m::View` setters below them and `renderWorldInternal` were found. Byte matching does not carry over, because Control is SSE code and Alan Wake 2 is AVX.
 5. With the hook, shift the camera by a fixed amount for every frame (one eye only). Confirms the right hook point: the whole picture must shift, with correct culling and shadows.
 6. Alternate the shift per frame with no upscaler history, and look for ghosting, eye-flips and effects that stay mono.
 7. Measure the frame rate in SBS at the settings in [games_group_b.md](../games_group_b.md), with frame generation off.
