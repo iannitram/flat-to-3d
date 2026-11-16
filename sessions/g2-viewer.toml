@@ -5,7 +5,7 @@ q = "Q10"
 issues = [44]
 device = ["build-box", "z13", "quest2"]
 needs = ["WP-17", "WP-18", "WP-19"]
-done_when = "Planet of Lana's Geo-11 picture shows on a still screen in the headset with depth, head movement not steering it (`needs-owner-device`)."
+done_when = "Control's Geo-11 picture shows on a still screen in the headset with depth, head movement not steering it (`needs-owner-device`)."
 after = ["g1-geo11"]
 
 [[step]]

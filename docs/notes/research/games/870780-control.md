@@ -180,7 +180,7 @@ Three things the recipe format cannot say yet:
 
 Proposed issues (titles only):
 
-- G1: prove Geo-11 under Proton on Control, not Planet of Lana (rewrite #43 and `sessions/g1-geo11.toml`)
+- G1: prove Geo-11 under Proton on Control, not Planet of Lana (rewrite #43 and `sessions/g1-geo11.toml`; session file done in #329)
 - Recipes: a launch-argument key, so a route can ask for `-dx11`
 - Geo-11 route: restore the removed proxy DLL and the launch argument on undo, and never copy Geo-11's own `dxgi.dll` loader
 - Pins: fill `geo11` 0.7.12 and `control-fix` 1.01 (url, size, sha256)

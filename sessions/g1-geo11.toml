@@ -5,14 +5,20 @@ q = "Q9"
 issues = [43, 52]
 device = ["z13"]
 needs = ["WP-16"]
-done_when = "an SBS capture with visible depth from Planet of Lana under Proton (`needs-owner-device`).; tests on a fake game folder assert the files, the env returned, viewer start and a clean undo; on the device it sets up Planet of Lana the way #43 found works (`needs-owner-device`)."
+done_when = "an SBS capture with visible depth from Control (`Control_DX11.exe`) under Proton (`needs-owner-device`).; tests on a fake game folder assert the files, the env returned, viewer start and a clean undo; on the device it sets up Control (`Control_DX11.exe`) the way #43 found works (`needs-owner-device`)."
 after = ["q0"]
 
 [[step]]
 id = "pins"
 kind = "ask"
 who = "you"
-text = "Install Geo-11 0.7.12 and lana-fix."
+text = "Install Geo-11 0.7.12 and control-fix."
+
+[[step]]
+id = "remove-helix"
+kind = "ask"
+who = "you"
+text = "Remove HelixSR dxgi.dll first."
 
 [[step]]
 id = "sbs-config"
@@ -25,7 +31,7 @@ gate = true
 id = "route-exe"
 kind = "check"
 who = "you"
-text = "Confirm the works-now route names Planet of Lana.exe as the Geo-11 executable."
+text = "Confirm the works-now route names Control_DX11.exe as the Geo-11 executable."
 gate = true
 
 [[step]]
@@ -34,7 +40,7 @@ kind = "measure"
 who = "you"
 text = "Measure disparity from SBS desktop screenshot."
 tool = "disparity"
-input = "{state}/captures/lana-*.png"
+input = "{state}/captures/control-*.png"
 args = ["--layout", "sbs"]
 optional = false
 

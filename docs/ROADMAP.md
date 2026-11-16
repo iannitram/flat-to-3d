@@ -83,7 +83,7 @@ ACE COMBAT 7 (Steam 502500): Unreal 4, DX11, UEVR with the Nexus "UEVR Compatibi
 
 Geo-11 (free DX11 stereo driver, says Proton works) writes the two views side by side; an SBS screen viewer puts them on the fixed screen. Spec M21, M22.
 
-Control is the one Geo-11 game left in 1.0 (ruling 43), so it takes G1, the first Geo-11 test, which was planned on Planet of Lana. What that changes: G1 now needs Control's community fix and `Control_DX11.exe`, and G4 no longer has a simpler game before it. The issue titles, the session files (`sessions/g1-geo11.toml`, `g2-viewer.toml`, `g3-lana.toml`), the `lana-fix` pin and the Planet of Lana recipe seed still name Planet of Lana; they are changed in follow-up work, not here. The SBS viewer (G2) stays in 1.0: besides Control it is planned to show 007 First Light's and Alan Wake 2's side-by-side picture. Peers: Blackskydk/FlatToDepth, artumino/VRScreenCap (MIT).
+Control is the one Geo-11 game left in 1.0 (ruling 43), so it takes G1, the first Geo-11 test, which was planned on Planet of Lana. What that changes: G1 now needs Control's community fix and `Control_DX11.exe`, and G4 no longer has a simpler game before it. `sessions/g1-geo11.toml` and `sessions/g2-viewer.toml` name Control (#329); `sessions/g3-lana.toml`, the `lana-fix` pin and the Lana recipe seed stay for Planet of Lana's after-1.0 work. The titles of issues #43 and #44 are the project manager's to change. The SBS viewer (G2) stays in 1.0: besides Control it is planned to show 007 First Light's and Alan Wake 2's side-by-side picture. Peers: Blackskydk/FlatToDepth, artumino/VRScreenCap (MIT).
 
 | Step | What | Depends on |
 |---|---|---|
@@ -240,7 +240,7 @@ From [§5](plans/roadmap-v2/02-queues-and-decisions.md), in order; the Driver co
 | Q8 | AC7 | `tools/session/session.py run sessions/a1-install.toml`; `tools/session/session.py run sessions/a2-uevr.toml`; `tools/session/session.py run sessions/a3-sortie.toml` (OD8 prereqs) | Q6 | #40,#41,#42,#47 |
 | Q9 | Geo-11 | `tools/session/session.py run sessions/g1-geo11.toml` (fps.py, disparity.py) | 16,27,31 | #43,#52 |
 | Q10 | viewer | `tools/session/session.py run sessions/g2-viewer.toml` (built with `--features xr,capture` in the build container) | 17,18,19,31 | #44 |
-| Q11 | Lana / Control | `tools/session/session.py run sessions/g3-lana.toml`; `tools/session/session.py run sessions/g4-control.toml` | Q9,Q10 | #45,#48,#46,#49 |
+| Q11 | Lana / Control | `g3-lana.toml` is after 1.0 (#45, #48); Control is `g4-control.toml` (#46, #49) | Q9,Q10 | #45,#48,#46,#49 |
 | Q12 | RE overnight | `tools/session/session.py run sessions/q12.toml` (`tools/re/analyze.sh all`, then `tools/re/fill_map.py --check`) | 30 | #19 (advances #37) |
 | Q13 | SM2 offline, Step 0, Spidy 0.7.0 | `tools/session/session.py run sessions/sm2-offline.toml`; `tools/session/session.py run sessions/step0.toml`; `tools/session/session.py run sessions/spidy-070.toml` | 24 | #7,#5,#155 |
 | Q14 | Decky | `tools/session/session.py run sessions/decky.toml` | 21,22,32 | #130-#134 |

@@ -36,6 +36,7 @@ geo11.sha256: TBD-at-pin
 geo11.license: unstated
 geo11.page: TBD-at-pin
 
+# Planet of Lana's fix, after 1.0 (ruling 43); 1.0's Geo-11 game uses control-fix.
 lana-fix.fetch: auto
 lana-fix.version: TBD-at-pin
 lana-fix.url: TBD-at-pin
