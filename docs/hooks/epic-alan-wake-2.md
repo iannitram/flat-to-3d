@@ -55,7 +55,7 @@ In Alan Wake 2, `rend::View` holds its `m::View` at `+0`. Offsets are from the `
 | `+0x1d0` | world-to-clip | 4x4, double |
 | `+0x250` | clip-to-world | 4x4, double |
 
-Every offset is Control's minus `0x10` (Control's `rend::View` keeps its `m::View` at `+0x10`).
+Each offset in this double table is Control's minus `0x10` (Control's `rend::View` keeps its `m::View` at `+0x10`). The float copies below do not follow that rule.
 
 **Float shader copies.** The constant upload function `0x21f0110` hands each float matrix to the constant-provider call `0x209a900`. Each constant's name comes from a lazily built static descriptor; for each one, the guarded first-use block was followed to its name string:
 
@@ -92,5 +92,5 @@ From the CPU code (status `verified` for what the code does; the GPU side is a `
 
 ## Counts
 
-- `verified`: 7 hook rows (renderWorldInternal, the two `rend::View` setters, the two `m::View` setters, setViewToClip, the present function and call site), the double layout, and 8 float slots.
+- `verified`: 7 hook rows (renderWorldInternal, the two `rend::View` setters, the two `m::View` setters, setViewToClip, the present function and call site), the double layout, and 6 float slots.
 - `lead`: the FSR frame-generation swap chain path, the `rend::`/`m::` level of setViewToClip, the run-time proxy swap chain, 8 float slots, and the GPU-side matrix convention (needs the capture).
