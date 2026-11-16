@@ -25,6 +25,7 @@ Abbreviations: **UEVR** = praydog's Unreal Engine VR injector. **SBS** = side-by
 
 ### Observed (installed copy)
 - Real process: `SWZeroCompany/Binaries/Win64/SWZeroCompany.exe`. The root `SWZeroCompany.exe` (186 KB) is the usual Unreal bootstrap.
+- The install has no `-Win64-Shipping` exe (manifests checked 2026-11-16), so the UEVR profile folder is `SWZeroCompany`.
 - The main exe imports 41 DLLs and none is an anti-cheat or DRM module. The exe is Authenticode signed.
 
 ### Inferences
@@ -130,6 +131,7 @@ stereo-mod: https://github.com/joeyhodge/UEVR
 stereo-free: yes
 stereo-safe: yes
 stereo-checked: 2026-11-11
+# The game exe is SWZeroCompany/Binaries/Win64/SWZeroCompany.exe with no -Win64-Shipping suffix (checked on the install 2026-11-16, build 26445778); the process name is to be confirmed in Q6.
 uevr-exe: SWZeroCompany
 uevr-rendering: native
 uevr-2d-screen: yes
