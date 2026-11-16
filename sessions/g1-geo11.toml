@@ -18,7 +18,7 @@ text = "Install Geo-11 0.7.12 and control-fix."
 id = "remove-helix"
 kind = "ask"
 who = "you"
-text = "Remove HelixSR dxgi.dll first."
+text = "Remove the HelixSR Scaler test files (dxgi.dll, HelixSR/, OptiScaler.ini) with the game folder's own HelixSR-Scaler-remove.sh first."
 
 [[step]]
 id = "sbs-config"

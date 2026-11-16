@@ -19,7 +19,7 @@ cause = "Check service logs and headset connection."
 id = "remove-helix"
 kind = "ask"
 who = "you"
-text = "Remove HelixSR dxgi.dll first."
+text = "Remove the HelixSR Scaler test files (dxgi.dll, HelixSR/, OptiScaler.ini) with the game folder's own HelixSR-Scaler-remove.sh first."
 
 [[step]]
 id = "depth"
