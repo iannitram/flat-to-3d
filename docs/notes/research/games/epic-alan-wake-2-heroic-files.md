@@ -2,7 +2,7 @@
 
 Research date: 2026-11-12. Issue #277 (from-peer, learn). This note feeds the open decision W1 (#292, [ROADMAP](../../../ROADMAP.md) Decisions item 6) and adds to [epic-alan-wake-2.md](epic-alan-wake-2.md), section "The launcher gap". No engine code follows from it until W1 is decided.
 
-Words used: **read from Kaon** means I read the peer's code at the commit below; **read from Heroic** means I read Heroic's own type declarations; **unverified** means no one has looked at the file on the handheld's Heroic install yet. Every row below is unverified.
+Words used: **read from Kaon** means I read the peer's code at the commit below; **read from Heroic** means I read Heroic's own type declarations; **checked on the device** means I read the handheld's Heroic install on 2026-11-16, read-only; **unverified** means that part has not been checked on the handheld. Rows 1, 2 and 4 are checked on the device; row 3 is partly checked; row 5 is unverified.
 
 ## Source and licence
 
@@ -16,27 +16,29 @@ Kaon looks in two config roots and uses both when both exist:
 
 | Install kind | Config root | Status |
 |---|---|---|
-| Native (deb, AppImage, tarball) | `~/.config/heroic` | unverified, from Kaon |
-| Flatpak | `~/.var/app/com.heroicgameslauncher.hgl/config/heroic` | unverified, from Kaon |
+| Native (deb, AppImage, tarball) | `~/.config/heroic` | not present on the handheld; from Kaon |
+| Flatpak | `~/.var/app/com.heroicgameslauncher.hgl/config/heroic` | checked on the device; Heroic 2.22.4 |
 
-Which one the handheld uses is not known yet (device row 4 below).
+The handheld has only the Flatpak config root (device row 4, checked 2026-11-16).
 
 ## 2. The files for one Epic game
 
 | What the engine needs | File under the config root | Keys | Status |
 |---|---|---|---|
-| Is it installed, and where | `legendaryConfig/legendary/installed.json` | one entry per game, named by the game's Epic `app_name`. Each entry has `app_name`, `title`, `install_path`, `executable` and `platform` (`Windows` or `Win32` for a Windows build) | unverified, from Kaon |
-| The game's exe | the same entry | `executable` is relative to `install_path`; join the two | unverified, from Kaon |
-| The prefix | `GamesConfig/<app_name>.json` | the settings sit under a top-level key equal to the `app_name`; `winePrefix` is the prefix folder | unverified, from Kaon |
-| The Proton or Wine build | the same file | `wineVersion.bin` is the build's launcher path; `wineVersion.type` says `proton` or `wine` (the type is read from Heroic) | unverified, from Kaon and Heroic |
-| The per-game wrapper (the Steam launch-option equivalent) | the same file | key `wrapperOptions`, a list of `{ "exe": ..., "args": ... }` pairs (read from Heroic; Kaon at fa4e22a does not read it) | unverified; the key name and format are the open part |
-| Extra environment variables for the game | the same file | `enviromentOptions` (spelled so in Heroic's source), a list of `{ "key": ..., "value": ... }` | unverified, from Heroic |
+| Is it installed, and where | `legendaryConfig/legendary/installed.json` | one entry per game, named by the game's Epic `app_name`. Each entry has `app_name`, `title`, `install_path`, `executable` and `platform` (`Windows` or `Win32` for a Windows build) | checked on the device; entry also has the listed optional fields below |
+| The game's exe | the same entry | `executable` is relative to `install_path`; join the two | checked on the device |
+| The prefix | `GamesConfig/<app_name>.json` | the settings sit under a top-level key equal to the `app_name`; `winePrefix` is the prefix folder | checked on the device |
+| The Proton or Wine build | the same file | `wineVersion.bin` is the build's launcher path; `wineVersion.type` says `proton` or `wine` (the type is read from Heroic) | checked on the device; object has `bin`, `name`, `type` |
+| The per-game wrapper (the Steam launch-option equivalent) | the same file | key `wrapperOptions`, a list of `{ "exe": ..., "args": ... }` pairs (read from Heroic; Kaon at fa4e22a does not read it) | key checked on device; entry format unverified |
+| Extra environment variables for the game | the same file | `enviromentOptions` (spelled so in Heroic's source), a list of `{ "key": ..., "value": ... }` | checked on the device |
 
 Notes on the rows:
 
 - Kaon also reads `legendaryConfig/legendary/metadata/<app_name>.json`, for artwork only. The engine does not need it.
-- Alan Wake 2's own `app_name` is a code Epic assigns. It is not in the research note, so the first device row below has to read it.
-- Heroic's `GameSettings` also has `launcherArgs` (arguments given to the game), `targetExe` and `beforeLaunchScriptPath` / `afterLaunchScriptPath`. They are named here only because W1 may prefer one of them to `wrapperOptions`; nothing has been read about how Heroic applies them.
+- Alan Wake 2's `app_name` is `dc9d2e595d0e4650b35d659f90d41059`.
+- Heroic's `GameSettings` also has `launcherArgs` (arguments given to the game), `targetExe` and `beforeLaunchScriptPath` / `afterLaunchScriptPath`. On the device, `launcherArgs` and `targetExe` are absent or null; the script paths are empty strings. They are named here only because W1 may prefer one of them to `wrapperOptions`; nothing has been read about how Heroic applies them.
+- `installed.json` also has `can_run_offline`, `launch_parameters`, `base_urls`, `egl_guid`, `install_size`, `install_tags`, `is_dlc`, `is_preloaded`, `manifest_path`, `needs_verification`, `prereq_info`, `requires_ot`, `save_path` and `uninstaller`.
+- The settings file has top-level keys `app_name`, `version` and `explicit`; `wrapperOptions` exists and is an empty list. `enviromentOptions` has `{ "key", "value" }` entries.
 - The wrapper pair's meaning is inferred: `exe` is the program put in front of the game's command and `args` are its arguments, as a Steam `%command%` prefix would be. Not read yet: whether Heroic splits `args` on spaces, how it orders several pairs, and whether a wrapper runs inside or outside Proton. Those decide whether `flat3d-run` can be the wrapper.
 
 ## 3. Flatpak paths
@@ -47,6 +49,8 @@ Heroic in a Flatpak writes the sandbox's view of a path into its JSON files, for
 2. Use the rewritten path only if it exists; otherwise keep the original.
 
 It applies to `install_path`, `winePrefix` and `wineVersion.bin`. Kaon also keeps the sandbox spelling, because a command run inside the sandbox needs it.
+
+On this install all three paths exist as written, so the rewrite was not needed here; it remains a fallback for other installs.
 
 ## 4. Kaon's note on Proton
 
@@ -62,10 +66,10 @@ What this means here: a tool that needs the game's prefix and Proton (for exampl
 
 ## 6. Device rows owed
 
-Check these on the handheld's Heroic install, read-only, with the game installed. Until each is done, the table rows stay unverified. Record key names and shapes only; do not paste file contents into the repo.
+I checked these on the handheld's Heroic install on 2026-11-16, read-only. Record key names and shapes only; do not paste file contents into the repo.
 
-1. `legendaryConfig/legendary/installed.json`: the Alan Wake 2 entry, with its `app_name`, `install_path`, `executable` and `platform`.
-2. `GamesConfig/<app_name>.json`: `winePrefix`, `wineVersion.bin` and `wineVersion.type`.
-3. The same file's wrapper setting: the key name and format (the open part). Set one wrapper in Heroic's game settings, save, and see which key changes.
-4. Which config root exists: native, Flatpak or both.
-5. Whether a wrapper set in Heroic reaches `AlanWake2.exe` or only Heroic's start script (device test 1 in the research note).
+1. Done (2026-11-16): `installed.json` entry and its key names and shapes.
+2. Done (2026-11-16): `GamesConfig/<app_name>.json` settings and the `winePrefix` and `wineVersion` fields.
+3. Half done (2026-11-16): `wrapperOptions` exists and is an empty list. The entry format still needs the owner to set one wrapper in Heroic's game settings.
+4. Done (2026-11-16): only the Flatpak config root exists.
+5. Still owed: whether a wrapper set in Heroic reaches `AlanWake2.exe` or only Heroic's start script (device test 1 in the research note); this needs the game started with a wrapper set.
