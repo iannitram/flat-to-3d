@@ -12,7 +12,7 @@ Each finding is marked **observed** (seen in the installed files or in a cited s
 - It is **Unreal 4.18**, internal project name `Nimbus`, one 62 MB exe at the install root, no PDB, DX11 by default.
 - UEVR's **2D Screen Mode keeps two real views, but only on OpenXR**. I read this in UEVR's source, which settles the conflict recorded in the tools survey. On OpenVR the screen gets the left view only.
 - The community profile (keton) is a config plus one plugin DLL. The plugin acts **only in the cockpit view**, and the cockpit view also needs four pak mods and a finished campaign. The chase view and the HUD-only view need none of that (inferred).
-- Recommended for 1.0: UEVR nightly, OpenXR, native stereo, 2D Screen Mode, chase or HUD-only view, the profile's config values, no pak mods. Fallback: the engine's own two-view path (`-emulatestereo`) shown through the SBS viewer.
+- Recommended for 1.0: UEVR nightly, OpenXR, native stereo, 2D Screen Mode, chase or HUD-only view, the profile's config values, no pak mods. Fallback: the engine's own two-view path (`-emulatestereo`) shown through the SBS viewer; the hook research (2026-11-16, [hook map](../../../hooks/502500-ace-combat-7.md)) found that path is not reachable in this exe, so the fallback becomes a stereo device of our own written into the engine's device slot.
 - Biggest risk: at true scale a flight game has almost no visible depth beyond the player's own aircraft, so the picture may look flat until the eye separation is raised.
 
 ## 1. Identity
@@ -68,7 +68,7 @@ Installed at `<Steam library>/steamapps/common/ACE COMBAT 7/` on a removable lib
 ### Engine version and build
 
 - Build paths in the exe read `++UE4+Release-4.18` (the PhysX build tree) and `bns_ws\update12\Nimbus\Main\UE4\...` (the game's own tree). So: Unreal 4.18, project `Nimbus`, branch `update12`.
-- Game classes are prefixed `Nimbus` (`ANimbusPlayerController`, `ANimbusPlayerCameraManager`, `ANimbusHUD`). The community plugin hooks these by name (section 3).
+- Game classes are prefixed `Nimbus` (`ANimbusPlayerController`, `ANimbusPlayerCameraManager`, `ANimbusHUD`). The community plugin finds the player controller and camera manager by name, through their Blueprint subclasses (section 3). Correction from the [hook map](../../../hooks/502500-ace-combat-7.md) (2026-11-16): the plugin never names `ANimbusHUD`.
 - Engine modules compiled in: `D3D11RHI`, `D3D12RHI`, `VulkanRHI`, `OpenGLDrv`, `OnlineSubsystemSteam`, `CriWare`, `TrueSkyPlugin`, Wwise audio, and `HeadMountedDisplay`.
 
 ### Stereo and VR code compiled in
@@ -76,7 +76,7 @@ Installed at `<Steam library>/steamapps/common/ACE COMBAT 7/` on a removable lib
 - Engine stereo switches: `emulatestereo` (command line), `r.EnableStereoEmulation`, `vr.bEnableStereo`, `vr.bEnableHMD`, `vr.InstancedStereo`, `vr.MirrorMode`, `vr.SpectatorScreenMode`, `vr.WorldToMetersScale`, `vr.MonoscopicFarField`.
 - The PS4 VR mode is still in the PC exe: source path `Nimbus\Source\Nimbus\VR\NimbusBlueprintLibraryVR.cpp`, settings `Neo.VR.Mission.RenderSetting`, `Neo.VR.Hangar.RenderSetting`, `Neo.VR.AirShow.RenderSetting` and `ace.vr.r.PS4VROverlayAdditiveBlend`, `bEnableMorpheus`, the shader `PostProcessHMDMorpheus.usf`, and dozens of `Psvr...` menu text keys.
 - **No PC headset plugin**: no SteamVR, OpenVR or OpenXR module, DLL or string, and no Oculus plugin module (only the engine's built-in Oculus shader names). The engine's "HMD module not found" message is present. So the VR mode has no device to run on without a tool such as UEVR (inferred).
-- Because `emulatestereo` is present, the engine's built-in fake stereo device is very likely compiled in, as it is in Zero Company (inferred; without a PDB the class cannot be named).
+- ~~Because `emulatestereo` is present, the engine's built-in fake stereo device is very likely compiled in.~~ Wrong (observed 2026-11-16, [hook map](../../../hooks/502500-ace-combat-7.md)): the `emulatestereo` and `r.EnableStereoEmulation` strings are present but no code reads them, and the fake device's own strings and constants are absent. The engine's `StereoRenderingDevice` slot (`GEngine + 0xAC8`) and the renderer's calls through it are there; this matches UEVR's "nonstandard" path for this game.
 
 ### Proton prefix and Steam state
 
@@ -155,7 +155,7 @@ The Nexus pages return HTTP 403 to a plain fetch, so their version, date and pri
 
 ### The engine's own stereo path
 
-- `-emulatestereo` on the command line makes Unreal 4 create its fake stereo device: two views side by side in the game window, a fixed eye offset, and a projection meant for a headset lens (inferred from the engine version; the strings are in the exe).
+- `-emulatestereo` on the command line makes Unreal 4 create its fake stereo device: two views side by side in the game window, a fixed eye offset, and a projection meant for a headset lens (inferred from the engine version; the strings are in the exe). The [hook map](../../../hooks/502500-ace-combat-7.md) found no code that reads the switch, so in this exe it very likely does nothing (observed statically, 2026-11-16; test 2 below still settles it).
 - It is free, needs no injected code, and its output is a side-by-side picture that the SBS viewer built for the Geo-11 route can show.
 - Faults to expect (inferred): the wide, off-centre projection will look wrong on a flat screen; the HUD may be drawn once across both halves; the eye offset is not adjustable without a hook.
 
@@ -192,6 +192,8 @@ Whether to ship the plugin DLL: it is harmless outside the cockpit view, but it 
 1. Add `-emulatestereo` to the launch options and look at the window. This costs one launch.
 2. If the picture is two usable halves, show it through the SBS viewer.
 3. If the projection or eye offset is wrong, replace the fake stereo device's view-offset and projection functions with our own, as planned for Zero Company (#34). Without a PDB the two functions must be found by pattern scan; UEVR's scanner already finds the same functions in 4.18, so the patterns exist.
+
+   Update 2026-11-16 ([hook map](../../../hooks/502500-ace-combat-7.md)): those two functions are not in this exe, and UEVR's scanner does not find them here either; it takes its nonstandard path instead. The route that remains is a device of our own written to `GEngine + 0xAC8`, with view offset in vtable slot 5 and projection in slot 7. The map has the call sites and patterns.
 
 ### Risks
 

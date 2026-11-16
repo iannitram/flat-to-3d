@@ -142,7 +142,7 @@ The owner, 2026-11-12: "Hook points should be steps in the build where research 
 | Game | Step | Map | Before |
 |---|---|---|---|
 | STAR WARS Zero Company | ZR (#285) | `docs/hooks/2075800-star-wars-zero-company.md` | Z2, Z2b |
-| ACE COMBAT 7 | AR (#286) | `docs/hooks/502500-ace-combat-7.md` | A2 |
+| ACE COMBAT 7 | AR (#286) | [hooks/502500-ace-combat-7.md](hooks/502500-ace-combat-7.md) | A2 |
 | Control | GR (#287) | `docs/hooks/870780-control.md` (Geo-11's D3D11 entry and the fix's shaders) | G1 |
 | 007 First Light | FR (#288) | `docs/hooks/3768760-007-first-light.md` | F3 |
 | Spider-Man 2 | Step 2r (#283) | [spiderman2/address-map.md](spiderman2/address-map.md) | Step 3 ([plan](spiderman2/plan.md)) |
