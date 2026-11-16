@@ -33,7 +33,7 @@ Tools: `pefile` (imports, sections, exports, version resource), `capstone` (disa
 | H10 | Contrast: `d3d_rmdwin10_f.dll` (DX12 build) imports `d3d12.dll` and `dxgi.dll` (`CreateDXGIFactory1`) | G1 (why `-dx11` is needed) | none | not applicable | `pefile` import table | verified | agrees |
 | H11 | Shipping state: no PDB; the exe names `W:\p7\main\code\remedy\bin\v141\RmdWin7\Final\Game_rmdwin7_f.pdb`; no Steam DRM wrapper section (sections `.text .rdata .data .pdata .rsrc .reloc`) | Context | none | not applicable | `pefile` sections, string search | verified | agrees |
 | H12 | Install facts the note states: Steam build id 21225456, file version 0.0.518.2177, exe link time stamp 2025-03-23 | Header | none | not applicable | `appmanifest_870780.acf`, version resource, PE header | verified | agrees |
-| H13 | Local shader store, the static source for the shader comparison: `data/shaders/build/pc_dx11/` holds 93 `.obj` files with 8,620 `DXBC` blobs in the clear (`pc_dxil/` is the DX12 set) | S1 below | n/a (folder) | `44 58 42 43` (`DXBC`) at each blob start | file listing and byte count | lead: not yet hashed | new |
+| H13 | Local shader store, the static source for the shader comparison: `data/shaders/build/pc_dx11/` holds 93 `.obj` files with 8,620 `DXBC` blobs in the clear (`pc_dxil/` is the DX12 set) | the shaders section | n/a (folder) | `44 58 42 43` (`DXBC`) at each blob start | file listing and byte count | lead: 1,448 blobs hashed, none tie to a fix name (see the shaders section) | new |
 
 ## The D3D11 entry point
 
@@ -41,20 +41,21 @@ Geo-11's proxy `d3d11.dll` takes the entry `d3d_rmdwin7_f.dll` already asks the 
 
 ## The fix's shaders
 
+Fix 1.01 archive, fetched 2026-11-16 into a scratch folder and read only (never run, never extracted into the game folder): `Control_3D-VisionReadyFix_1.01_by_Losti_Masterotaku.zip`, 3,296,439 bytes (matches the size in the research note), SHA-256 `c5da0ef29396a8b819b830ac022a7057d6b9ad9371271e85e67f3a37d43f410d`. 79 entries; `ShaderFixes/` carries 38 distinct 16-hex-digit hash names (in `ShaderFixes/`, `Fixed/`, `BlindAdded/` and `velocity/`), and its `d3dx.ini` names 11 hashes in `[ShaderOverride*]` sections, 3 of them not among the file names (`51a0e7e40feb54d8`, `8e5f898b6e17813c`, `c8ec58c11309d727`). The fix's hash list is therefore 41 hashes. The fix also uses `Control_ShaderRegEx_Losti.ini` (pattern matches, no hashes), which a changed build can still satisfy.
+
 | Item | Count |
 |---|---|
-| Fix 1.01 `ShaderFixes` hashes loaded by the current build (matched) | not measured |
-| Fix 1.01 hashes the current build no longer loads (missing) | not measured |
-| Missing hashes | none listed: the fix's hash list was not available (see below) |
+| Fix 1.01 hashes (the list to match) | 41 |
+| Matched by the current build's shipped blobs | not established (lead) |
+| Missing | not established (lead) |
 
-Status: **lead** (S1 and S2). The fix 1.01 archive (`Control_3D-VisionReadyFix_1.01_by_Losti_Masterotaku.zip`, 3,296,439 bytes) is not on this machine and downloading it was not permitted in this pass, so its `ShaderFixes` hash list could not be read. The repo's own copy of the fix's file list names only `a-ps.txt` as a sample. Nothing was guessed.
+The game's shipped DX11 shader store, `data/shaders/build/pc_dx11/` (93 `.obj` files), holds 1,448 distinct complete `DXBC` blobs (each `DXBC` magic with version 1 and a size that fits the file; none rejected).
 
-What is left, in order:
+**Algorithm: lead, not proven.** The fix's own `d3dx.ini` says `shader_hash = 3dmigoto`, "unseeded software FNV-1". I implemented 64-bit FNV-1 (checked on the input `a`: `af63bd4c8601b7be`, the published test value) and hashed every blob as the whole blob, without the 32-byte header, the `SHEX` chunk alone, all chunk bodies, and with the checksum zeroed; each also with FNV-1a, plus the first and second half of the embedded checksum as the "embedded" mode. Result: 0 of 41 hashes matched in every variant. No blob could be tied to any fix file name, so the algorithm is not proven on a pair, and "0 matched, 41 missing" would be a guess: it is equally what a wrong algorithm or a blob store that differs from what the game hands `CreateShader` would give. A structural tie by signature and opcode sequence (for `0f85c5964dc694e8-vs.txt`) found no blob with the same declarations either, which fits the shaders having changed since 2019 but does not prove it.
 
-- S1 (static, no game run): with the archive, list the 16-hex-digit file names in `ShaderFixes/`; extract the 8,620 `DXBC` blobs from `data/shaders/build/pc_dx11/*.obj` (H13), hash each the way 3DMigoto does (the algorithm has to be confirmed on a shader whose dump name is known, not assumed), and report matched and missing. Needs no game run, so it can be done on this machine.
-- S2 (runtime check, optional): one run of `Control_DX11.exe` under Proton with 3DMigoto's shader dump on a copy of the install, to confirm which of the matched hashes are really bound in play. Needs `gpu.lock` and a copy of the game folder.
+Hashes still unresolved (all 41): 07bbcbe1081b2e36 0c244087e65a8216 0eb60eb0900b8b83 0f85c5964dc694e8 18871c97b0d1329d 2080fecb3bc6e5ce 231b52404fd8c808 258ceaf3cbbbb628 25cfd289ef18d6bd 3080543ba7c4fbca 358ef8dd04db5b13 43215a37c5f86d02 4329e81f4a8dbc2e 43dddbaa9dd3c724 492f2b4d2e5525e0 51a0e7e40feb54d8 658da279b93f8a97 697e1271a2c7e362 6d3b0d226e3088f3 6fd060fea0abbec4 753d2f895722e9cc 75887bd2c74cb817 7b3ac696247a4fee 8e5f898b6e17813c 91f7ac3ed6076ad8 9388cfb4f8322e47 97ee73b31d6636a0 984e68b076e9682a a82f71377859114d bac044a8fd814d90 be918c8aa24d489d c7082e41037b226f c84aa5f5375fd55c c8ec58c11309d727 ce87520b1da360f9 ceaea1e776139ae5 d783b038c947682d da8e42f518ed6870 f33aa45fe10f486e fc040d831798c94d fd964e83e6606243
 
-Hash lists, once known, go in this section; no code reads a `lead`.
+What is left (a run is now needed): one run of `Control_DX11.exe` under Proton with 3DMigoto's shader dump on a copy of the install, which gives the game's real runtime hashes; comparing them with the 41 settles both the algorithm (any match proves it) and the counts. Needs `gpu.lock`; the dump must not touch the game folder.
 
 ## Checklist against the research note
 
@@ -68,4 +69,4 @@ Hash lists, once known, go in this section; no code reads a `lead`.
 | No `dxgi.dll` or `nvapi64.dll` import | agrees (H9) |
 | `d3d_rmdwin10_f.dll` imports `d3d12.dll` and `dxgi.dll` | agrees (H10) |
 | No Steam DRM wrapper section; PDB path stripped | agrees (H11) |
-| Fix 1.01's shaders still load on this build (from user reports) | not checked (S1, S2) |
+| Fix 1.01's shaders still load on this build (from user reports) | not checked: no hash ties to a shipped blob; run needed |
