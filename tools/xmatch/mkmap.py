@@ -11,8 +11,8 @@ pn = {1: 'Steps 1-3: camera, frame entry, view setup', 2: 'Steps 4-5: eye views,
       3: 'Step 6-7 and removable: HUD, game-time checks, shadows, diagnostics, gate extras'}
 for p in (1, 2, 3):
     print('\n### Priority %d. %s\n' % (p, pn[p]))
-    print('| Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found |')
-    print('|---|---|---|---|---|---|---|---|')
+    print('| Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found | Status | Spidy bytes at SM2 address |')
+    print('|---|---|---|---|---|---|---|---|---|---|')
     for name, rva, kind, prio, hx in T:
         if prio != p:
             continue
@@ -20,7 +20,7 @@ for p in (1, 2, 3):
         sm2 = e.get('sm2')
         if isinstance(sm2, list):
             sm2 = ', '.join(sm2)
-        print('| %s | %s | `%s` | %s | %s | %s | %s | %s |' % (
+        print('| %s | %s | `%s` | %s | %s | %s | %s | %s | %s | %s |' % (
             name, kind, hex(rva), ('`%s`' % hx.replace(' ', '')) if hx else '-',
             ('`%s`' % sm2) if sm2 else 'pending', ('`%s`' % e['sig']) if e.get('sig') else '-',
-            e.get('conf', 'pending'), e.get('how', '-')))
+            e.get('conf', 'pending'), e.get('how', '-'), e.get('status', 'pending'), e.get('spidy', '-')))

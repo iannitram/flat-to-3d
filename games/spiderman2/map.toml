@@ -76,33 +76,41 @@ name = "frame function"
 rem_rva = "0x175a060"
 kind = "call"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2afa730"
+sig = "488bc448894808555356574154415541564157488da8c8feffff"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): disassembly; calls offscreen render setup at 0x2afb395 and SubmitScene at 0x2afb45e"
+status = "verified"
+date = "2026-11-16"
+unique = true
 
 [[item]]
 name = "frame -> offscreen call site"
 rem_rva = "0x175aaa9"
 kind = "site"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2afb395"
+sig = "e8????????c78548010000ffffffff488d8d48010000e8????????"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): the call to offscreen render setup inside the frame function; returns to 0x2afb39a"
+status = "verified"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "offscreen render setup (placeEyes hook)"
 rem_rva = "0x1920240"
 kind = "hook"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2d01600"
+sig = "48895c2408574883ec2033db488d3d????????33c94533c0"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): loops the 8 offscreen slots and calls 0x2c65b50 (view, isLast), which calls SubmitScene"
+status = "verified"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "history shift"
@@ -131,11 +139,14 @@ name = "view maintenance (ViewContextManager)"
 rem_rva = "0x18a0bb0"
 kind = "hook"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c9d4f0"
+sig = "48895c240848896c24104889742418574883ec508b0d????????"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): called from the frame function at 0x2afac29; updates every live pool view, then every offscreen slot"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "agrees"
 
 [[item]]
 name = "create offscreen view"
@@ -175,33 +186,39 @@ name = "ViewContextManager global"
 rem_rva = "0x7a34dd0"
 kind = "data"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0xc2ca220"
+sig = "48895c240848896c24104889742418574883ec508b0d????????"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): ViewContextManager init 0x2c9cfc0 (string) stores it; pool views at [mgr], stride 0x1e20; pattern is the referencing function at 0x2c9d4f0"
+status = "verified"
+date = "2026-11-16"
+unique = true
 
 [[item]]
 name = "view pool mask"
 rem_rva = "0x7a34dd8"
 kind = "data"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0xc2ca228"
+sig = "48895c240848896c24104889742418574883ec508b0d????????"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): mgr+8, bt-tested per pool index; pattern is the referencing function at 0x2c9d4f0"
+status = "verified"
+date = "2026-11-16"
+unique = true
 
 [[item]]
 name = "offscreen slots (mgr+0x30)"
 rem_rva = "0x7a34e00"
 kind = "data"
 prio = 1
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0xc2ca250"
+sig = "48895c240848896c24104889742418574883ec508b0d????????"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): mgr+0x30, 8 offscreen view pointers walked by index; pattern is the referencing function at 0x2c9d4f0"
+status = "verified"
+date = "2026-11-16"
+unique = true
 
 [[item]]
 name = "texture wrapper vtable"
@@ -307,66 +324,84 @@ name = "TemporalAa"
 rem_rva = "0x1842e10"
 kind = "check"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c2dc60"
+sig = "488bc4488958085556574154415541564157488da8e8feffff4881ece0010000c5f82970b8c5f82978a8"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): render command registration table (0x2c83840): name TemporalAa, id 0xb1, this handler"
+status = "verified"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "display setup"
 rem_rva = "0x1920310"
 kind = "hook"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2d016d0"
+sig = "4d85c00f84????????488954241056"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): called from SubmitScene; enqueues cmd 0xaf (PrepareSrgbOverlay) on view+0x1850 and 0xb1 (TemporalAa) on view+0x18d0"
+status = "verified"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "enqueue render command"
 rem_rva = "0x187e130"
 kind = "call"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c77810"
+sig = "48895c240848896c2410488974241857415641574883ec200fb7410c"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): (cmdlist, id, r8, r9); writes into the command table 0xc2c4ff8 that the registration table fills"
+status = "verified"
+date = "2026-11-16"
+unique = true
+spidy = "agrees"
 
 [[item]]
 name = "tone map"
 rem_rva = "0x1846c20"
 kind = "hook"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c37140"
+sig = "488bc44889580855565741544155415641574881ec90000000"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): registration table: name ToneMap, id 0xac, this handler; not yet shown to be the hooked function"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "adapted-lum read"
 rem_rva = "0x189c710"
 kind = "check"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c98350"
+sig = "488bc4488958084889681048897018488978204154415641574883ec70418bd8"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): the one function that references the string Adapted Lum"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "SubmitScene (shadows)"
 rem_rva = "0x19206a0"
 kind = "hook"
 prio = 3
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2d01b30"
+sig = "488bc4488958104889701848897820554154415541564157488da8c8fdffff"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): references the strings Submit Scene %s and Unnamed ViewContext; called from the frame function and from 0x2c65b50"
+status = "verified"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "FitCascades"
@@ -395,11 +430,14 @@ name = "CopyFinal (diag)"
 rem_rva = "0x186cc00"
 kind = "hook"
 prio = 3
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c656d0"
+sig = "40534883ec30f681e4da010020488bd9"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): tests view flag 0x20 at view+0x1dae4 and enqueues on view+0x18d0; called right after SubmitScene in 0x2c65b50"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "readback init (diag)"
@@ -472,55 +510,69 @@ name = "RenderAlloc ring create"
 rem_rva = "0x1872d90"
 kind = "hook"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c6c110"
+sig = "48895c240848896c2410488974241857415641574883ec30488bd9e8????????84c0"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): references RenderAlloc; called once from render init 0x2c85720 with the allocator global"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "agrees"
 
 [[item]]
 name = "ring create call site"
 rem_rva = "0x188a195"
 kind = "site"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c857b8"
+sig = "e8????????84c074ad448b0d????????"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): the call to ring create in render init 0x2c85720"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "RenderAlloc per-frame rollover"
 rem_rva = "0x1872b90"
 kind = "hook"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c6bf10"
+sig = "48895c2408574883ec3083791800"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): references RenderAlloc; called once per frame from 0x2c77a80 with the allocator global"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "rollover call site"
 rem_rva = "0x187e623"
 kind = "site"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2c77d24"
+sig = "e8????????488d0d????????e8????????488d0d????????e8????????c7433801000000"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): the call to the rollover in 0x2c77a80"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "differs"
 
 [[item]]
 name = "RenderAlloc allocator"
 rem_rva = "0x7938880"
 kind = "data"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0xc15d780"
+sig = "48895c240848896c2410488974241857415641574883ec504c8bf2"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): lea rcx before both RenderAlloc calls (0x2c77d1d, 0x2c857b1); pattern is the referencing function at 0x2c77a80"
+status = "verified"
+date = "2026-11-16"
+unique = true
 
 [[item]]
 name = "HUD follower placement"
@@ -681,11 +733,14 @@ name = "TimeScaleSystem::Update"
 rem_rva = "0x19bb430"
 kind = "hook"
 prio = 2
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x2db5e90"
+sig = "488bc44889581855565741544155415641574881ecd0000000c5f82970b8488db968050000"
+conf = "own analysis"
+how = "tools/xmatch/probe.py (dis, callers, pattern): the function that references the string TimeScaleSystem Update; not a TimeScaleSystem vtable slot"
+status = "lead"
+date = "2026-11-16"
+unique = true
+spidy = "agrees"
 
 [[item]]
 name = "time: movss [rbx+18]"
@@ -912,11 +967,12 @@ name = "MoverStandard vtable"
 rem_rva = "0x4f70168"
 kind = "vtable"
 prio = 3
-sm2 = ""
-sig = ""
-conf = "pending"
-how = ""
-status = "pending"
+sm2 = "0x85d24d8"
+sig = "RTTI MoverStandard"
+conf = "own analysis"
+how = "tools/xmatch/vt.py: RTTI complete-object-locator walk"
+status = "verified"
+date = "2026-11-16"
 
 [[item]]
 name = "component registry"

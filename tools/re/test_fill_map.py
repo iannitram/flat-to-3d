@@ -108,13 +108,13 @@ class VtAndRender(Tmp):
         vt = fill_map.load_vt(self.csv)
         items = fill_map.join(targets, small_map())
         self.assertEqual(fill_map.render_table(1, items, vt), (
-            "| Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found |\n"
-            "|---|---|---|---|---|---|---|---|\n"
-            "| stock camera fn (calls submit) | call | `0x1646e10` | - | `0x2c76310` | - | vt 0.90 | Combined Function and Data Reference Match |\n"
-            "| camera submit call site | site | `0x164703f` | `e86c2a2500` | `0x2c00230` | - | vt 1.00 | Exact Function Instructions Match |\n"))
+            "| Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found | Status | Spidy bytes at SM2 address |\n"
+            "|---|---|---|---|---|---|---|---|---|---|\n"
+            "| stock camera fn (calls submit) | call | `0x1646e10` | - | `0x2c76310` | - | vt 0.90 | Combined Function and Data Reference Match | found | - |\n"
+            "| camera submit call site | site | `0x164703f` | `e86c2a2500` | `0x2c00230` | - | vt 1.00 | Exact Function Instructions Match | found | - |\n"))
         self.assertEqual(fill_map.render_table(2, items, {}), (
             fill_map.TABLE_HEAD +
-            "| view update (exposure copy) | hook | `0x189bd30` | `48895c240848897c2410` | pending | - | pending | - |\n"))
+            "| view update (exposure copy) | hook | `0x189bd30` | `48895c240848897c2410` | pending | - | pending | - | pending | - |\n"))
 
     def test_splice_is_idempotent_and_keeps_text_outside_the_markers(self):
         block = fill_map.render_block(fill_map.join(fill_map.load_targets(self.targets), small_map()), {}, small_map()["herovr"])
@@ -144,7 +144,7 @@ class VtAndRender(Tmp):
         r = subprocess.run([sys.executable, str(ROOT / "tools/xmatch/mkmap.py")], capture_output=True, text=True, check=True)
         targets = fill_map.load_targets(TARGETS)
         d = fill_map.load_map(MAP)
-        pending = {**d, "item": [{**i, "sm2": "", "sig": "", "conf": "pending", "how": ""} for i in d["item"]]}
+        pending = {**d, "item": [{**i, "sm2": "", "sig": "", "conf": "pending", "how": "", "status": "pending", "spidy": ""} for i in d["item"]]}
         self.assertEqual(fill_map.render_block(fill_map.join(targets, pending), {}, []), r.stdout[1:] + "\n")
 
 
@@ -257,6 +257,29 @@ class Lints(unittest.TestCase):
         self.assertEqual(len(errs), 1)
         self.assertIn("[[item]] 'a': found without verified_by", errs[0])
 
+    def test_verified_row_passes(self):
+        d = self.base()
+        d["item"][0].update(status="verified", sm2="0x99", sig="4883ec28", unique=True, how="probe.py dis", date="2026-11-16", spidy="differs")
+        self.assertEqual(fill_map.lint(d, self.T), [])
+
+    def test_verified_without_unique_pattern(self):
+        d = self.base()
+        d["item"][0].update(status="verified", sm2="0x99", sig="4883ec28", how="probe.py dis", date="2026-11-16")
+        self.assertLint(d, "[[item]] 'a': verified without unique = true")
+
+    def test_lead_without_how_or_date(self):
+        d = self.base()
+        d["item"][0].update(status="lead", sm2="0x99")
+        errs = fill_map.lint(d, self.T)
+        self.assertEqual(len(errs), 2)
+        self.assertIn("lead without how", errs[0])
+        self.assertIn("lead without date", errs[1])
+
+    def test_spidy_check_is_agrees_or_differs(self):
+        d = self.base()
+        d["item"][0].update(spidy="0x19206a0")
+        self.assertLint(d, "[[item]] 'a': spidy '0x19206a0'")
+
     def test_lint_exits_1_from_the_cli(self):
         with tempfile.TemporaryDirectory() as t:
             t = pathlib.Path(t)
@@ -292,7 +315,7 @@ class Toml(unittest.TestCase):
         targets = fill_map.load_targets(TARGETS)
         self.assertEqual(len(d["item"]), 85)
         self.assertEqual([i["rem_rva"] for i in d["item"]], [hex(t[1]) for t in targets])
-        self.assertEqual({i["status"] for i in d["item"]}, {"pending"})
+        self.assertLessEqual({i["status"] for i in d["item"]}, set(fill_map.STATUS))
         self.assertEqual([h["id"] for h in d["herovr"]], ["H%d" % n for n in range(1, 12)])
         checks = {h["id"]: h["check"] for h in d["herovr"]}
         self.assertEqual(checks, {"H1": "runtime", "H6": "no-row", "H11": "off-path",
