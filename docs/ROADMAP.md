@@ -23,9 +23,9 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 <a id="where-it-stands"></a>
 
-## Where it stands (2026-11-12)
+## Where it stands (2026-11-16)
 
-The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (they still need the `after-1.0` label); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue.
+The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (labelled `after-1.0`); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue.
 
 **Roadmap v2, `main` at `3025963`.** The per-WP table with PR numbers is [`progress.md`](plans/roadmap-v2/progress.md); the waves are [below](#waves). One bullet per wave:
 
@@ -37,6 +37,7 @@ The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-
 - **Wave 4:** WP-09 watch service, the 3D half (#312), WP-29 `doctor` and `setup` (#317), WP-31 the wrapper applies the route (#313), WP-32 (#251), WP-33 (#272).
 - **Wave 5:** WP-38 the Quest Tether status line, read-only: PR #318 open, not merged.
 - **Wave 6:** WP-34 the docs sync after the pass (#319, this change). WP-39 is after 1.0, in no wave.
+- **After the pass (2026-11-16):** the Heroic files for Alan Wake 2 checked on the handheld, except the wrapper entry format and the wrapper launch test (#330, refs #277); Zero Company's `uevr-exe` confirmed as the `Binaries/Win64` exe with no Shipping suffix (#331, closes #276); the G1 and G2 sessions name Control, with Planet of Lana's session, pin and seed kept for after 1.0 (#332, closes #329).
 - **Device work pending: Q0-Q16** ([below](#owner-device-queue)). Every merged WP with a device half says `Refs`, so its issue stays open until its Q row passes (ruling D5).
 
 Not built in this pass: the `port` route (#27b, NP-1). CI runs on GitHub-hosted `ubuntu-24.04` runners (ruling 48, #270). Spider-Man 2 Step 1 is done except for the full-hash manifest; see [the workbench](workbench.md). Device sessions are defined in `sessions/*.toml` and run with `tools/session/session.py`; `flat3d-inject doctor` is the local readiness report.
@@ -240,7 +241,7 @@ From [§5](plans/roadmap-v2/02-queues-and-decisions.md), in order; the Driver co
 | Q8 | AC7 | `tools/session/session.py run sessions/a1-install.toml`; `tools/session/session.py run sessions/a2-uevr.toml`; `tools/session/session.py run sessions/a3-sortie.toml` (OD8 prereqs) | Q6 | #40,#41,#42,#47 |
 | Q9 | Geo-11 | `tools/session/session.py run sessions/g1-geo11.toml` (fps.py, disparity.py) | 16,27,31 | #43,#52 |
 | Q10 | viewer | `tools/session/session.py run sessions/g2-viewer.toml` (built with `--features xr,capture` in the build container) | 17,18,19,31 | #44 |
-| Q11 | Lana / Control | `g3-lana.toml` is after 1.0 (#45, #48); Control is `g4-control.toml` (#46, #49) | Q9,Q10 | #45,#48,#46,#49 |
+| Q11 | Control (Lana after 1.0) | `tools/session/session.py run sessions/g4-control.toml` (Control, #46, #49); `sessions/g3-lana.toml` stays for Planet of Lana after 1.0 (#45, #48) | Q9,Q10 | #46,#49 (#45,#48 after 1.0) |
 | Q12 | RE overnight | `tools/session/session.py run sessions/q12.toml` (`tools/re/analyze.sh all`, then `tools/re/fill_map.py --check`) | 30 | #19 (advances #37) |
 | Q13 | SM2 offline, Step 0, Spidy 0.7.0 | `tools/session/session.py run sessions/sm2-offline.toml`; `tools/session/session.py run sessions/step0.toml`; `tools/session/session.py run sessions/spidy-070.toml` | 24 | #7,#5,#155 |
 | Q14 | Decky | `tools/session/session.py run sessions/decky.toml` | 21,22,32 | #130-#134 |

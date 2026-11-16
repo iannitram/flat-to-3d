@@ -19,7 +19,7 @@ cause = "Check service logs and headset connection."
 id = "remove-helix"
 kind = "ask"
 who = "you"
-text = "Remove HelixSR dxgi.dll first."
+text = "Remove the HelixSR Scaler test files (dxgi.dll, HelixSR/, OptiScaler.ini) first: in the game folder (`<Steam library>/steamapps/common/Control/`), run its own remover, `bash HelixSR-Scaler-remove.sh` (no arguments; it is part of the HelixSR test, not this repo)."
 
 [[step]]
 id = "depth"
