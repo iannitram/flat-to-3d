@@ -59,6 +59,8 @@ Installed: yes, at `<Steam library>/steamapps/common/Star Wars Zero Company/`. I
 | `FSlateRHIRenderer::DrawWindow_RenderThread` | `0x627d610` | named |
 | `GSystemResolution` | `0xf100900` | named |
 
+Checked again on 2026-11-16 (step ZR, #285): every RVA in this table agrees with the PDB and the exe bytes, and so do the SHA-256, the PDB GUID, the build id and the CL. The patterns and the checklist are in [the hook map](../../../hooks/2075800-star-wars-zero-company.md).
+
 ### How `-emulatestereo` behaves in this build (observed from the disassembly)
 - `InitializeHMDDevice` builds the fake stereo device when the command line has `emulatestereo` **or** the console variable `r.EnableStereoEmulation` is not zero. Otherwise it goes on to the `nohmd` and `hmd=` checks. This runs once at engine start.
 - The device is made with 2 views. Each view is half the system resolution wide. Field of view, eye offset and two more values come from the project's `GeneralProjectSettings` object: the exe carries the names `EyeOffsetForFakeStereoRenderingDevice`, `FOVForFakeStereoRenderingDevice`, `DifferenceBetweenEyesForFakeStereoRenderingDevice` and `TopFOVRatioForFakeStereoRenderingDevice`.
