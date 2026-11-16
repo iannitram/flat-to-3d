@@ -112,6 +112,22 @@ def found_fields(row):
             "similarity": sim, "confidence": conf, "correlator": corr}
 
 
+# Fields that describe one SM2 address; a VT row that moves sm2 makes them stale (sig is kept as "").
+ADDRESS_FIELDS = ("unique", "date", "spidy")
+
+
+def apply_vt(it, row):
+    """`it` with VT row `row` applied; when the row moves sm2, the old address's fields are dropped."""
+    new = found_fields(row)
+    out = dict(it)
+    if str(out.get("sm2", "")) != new["sm2"]:
+        for k in ADDRESS_FIELDS:
+            out.pop(k, None)
+        out["sig"] = ""
+    out.update(new)
+    return out
+
+
 def merge(d, vt, verified_by):
     """A copy of map `d` with every item that has a VT row (by Remastered RVA) set to found."""
     out = dict(d)
@@ -120,7 +136,7 @@ def merge(d, vt, verified_by):
         it = dict(it)
         row = vt.get(rva_of(it))
         if row is not None:
-            it.update(found_fields(row))
+            it = apply_vt(it, row)
             it["verified_by"] = verified_by
         items.append(it)
     out["item"] = items
@@ -215,7 +231,7 @@ def join(targets, d):
 def _row(it, vt):
     r = rva_of(it)
     if vt and r in vt:
-        it = {**it, **found_fields(vt[r])}
+        it = apply_vt(it, vt[r])
     hx = it.get("bytes", "")
     sm2, sig, how = it.get("sm2", ""), it.get("sig", ""), it.get("how", "")
     if it.get("date") and how:

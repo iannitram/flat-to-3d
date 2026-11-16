@@ -16,14 +16,48 @@ from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CS_OP_MEM, CS_OP_IMM
 from capstone.x86 import X86_REG_RIP
 
 md = Cs(CS_ARCH_X86, CS_MODE_64); md.detail = True
+lite = Cs(CS_ARCH_X86, CS_MODE_64)
 p = TVA = TRAW = TSZ = None
+_bounds = {}
 
 
 def open_exe(path):
     global p, TVA, TRAW, TSZ
     p = PE(path)
     TVA, TRAW, TSZ = p.text()
+    _bounds.clear()
     return p
+
+
+def region(rva):
+    """The linear-decode range holding rva: its .pdata entry, else the gap between two entries."""
+    b = p.func_at(rva)
+    if b:
+        return b
+    i = int(np.searchsorted(p.starts, rva, side='right'))
+    lo = int(p.funcs[i - 1, 1]) if i > 0 else TVA
+    hi = int(p.starts[i]) if i < len(p.starts) else TVA + TSZ
+    return lo, hi
+
+
+def boundaries(rva):
+    """Instruction starts of rva's region, decoded linearly from the region start
+    (an undecodable byte is stepped over as one byte)."""
+    r = region(rva)
+    got = _bounds.get(r)
+    if got is None:
+        lo, hi = r
+        code = p.bytes(lo, hi - lo) or b''
+        got, off = set(), 0
+        while off < len(code):
+            n = 0
+            for a, size, _, _ in lite.disasm_lite(code[off:], lo + off):
+                got.add(a); n += size
+            if off + n < len(code):
+                n += 1  # step over the undecodable byte
+            off += n
+        _bounds[r] = got
+    return got
 
 
 def fn(rva):
@@ -101,7 +135,8 @@ def strs(needle, limit=50):
 
 
 def xrefs(targets):
-    """Verified code refs (call/jmp rel32 and RIP-relative operands) to each target rva.
+    """Verified code refs (call/jmp rel32 and RIP-relative operands) to each target rva; each site
+    must be an instruction start in its region's linear decode (see boundaries).
     Returns {target: [(insn_rva, mnemonic, op_str)]}."""
     targets = set(int(t) for t in targets)
     cand = set()
@@ -115,6 +150,8 @@ def xrefs(targets):
             for back in range(1, 4 + 3):
                 st = pos - back
                 code = p.bytes(st, 16)
+                if not code:
+                    continue
                 try:
                     i = next(md.disasm(code, st))
                 except StopIteration:
@@ -129,7 +166,8 @@ def xrefs(targets):
                     for op in i.operands:
                         if op.type == CS_OP_MEM and op.mem.base == X86_REG_RIP and i.disp_offset == back:
                             tgt = i.address + i.size + op.mem.disp
-                if tgt in targets and p.bytes(st, 1)[0] not in (0x26, 0x2e, 0x36, 0x3e, 0x64, 0x65):
+                if tgt in targets and p.bytes(st, 1)[0] not in (0x26, 0x2e, 0x36, 0x3e, 0x64, 0x65) \
+                        and st in boundaries(st):
                     best[pos] = (st, tgt, i.mnemonic, i.op_str)
     for pos, (st, tgt, mn, op) in best.items():
         res[tgt].append((st, mn, op))
@@ -178,7 +216,7 @@ def count_pattern(raw, mask, limit=3):
     while o != -1:
         s = o - a0
         seg = tb[s:s + len(raw)]
-        if all((x & m) == (y & m) for x, y, m in zip(seg, raw, mask)):
+        if s >= start and s + len(raw) <= end and len(seg) == len(raw) and all((x & m) == (y & m) for x, y, m in zip(seg, raw, mask)):
             hits.append(p.rva_of(s))
             if len(hits) >= limit:
                 break

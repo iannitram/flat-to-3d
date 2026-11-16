@@ -156,10 +156,10 @@ class AnalyzeSh(unittest.TestCase):
         self.assertEqual(sorted(found), ["0x1646e10", "0x164703f"])
         self.assertEqual(found["0x1646e10"]["sm2"], "0x2c76310")
         self.assertTrue(found["0x1646e10"]["verified_by"].startswith("vt-matches.csv sha256:"))
-        doc = (repo / "docs/spiderman2/address-map.md").read_text(encoding="utf-8")
-        row = next(l for l in doc.splitlines() if l.startswith("| camera submit call site |"))
-        self.assertTrue(row.startswith("| camera submit call site | site | `0x164703f` | `e86c2a2500` | `0x2c00230` |"), row)
-        self.assertIn("vt 1.00", row)
+        self.assertEqual(found["0x164703f"]["sig"], "")
+        self.assertNotIn("spidy", found["0x164703f"])
+        self.assertIn("| camera submit call site | site | `0x164703f` | `e86c2a2500` | `0x2c00230` | - | vt 1.00 |",
+                      (repo / "docs/spiderman2/address-map.md").read_text(encoding="utf-8"))
         for rel in ("games/spiderman2/map.toml", "docs/spiderman2/address-map.md"):
             self.assertNotEqual((repo / rel).read_bytes(), (ROOT / rel).read_bytes(), rel)
 

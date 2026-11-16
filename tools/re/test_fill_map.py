@@ -116,6 +116,26 @@ class VtAndRender(Tmp):
             fill_map.TABLE_HEAD +
             "| view update (exposure copy) | hook | `0x189bd30` | `48895c240848897c2410` | pending | - | pending | - | pending | - |\n"))
 
+    def test_vt_replacing_an_address_drops_the_old_address_fields(self):
+        old = item("cam", "0x10", status="lead", sm2="0xd39a99", sig="e8????????", unique=True,
+                   date="2026-11-16", spidy="differs", how="probe.py dis")
+        row = (0x2c00230, "ACCEPTED", 1.0, 10.0, "Exact Function Instructions Match")
+        out = fill_map.merge({"item": [old]}, {0x10: row}, "r")["item"][0]
+        self.assertEqual(out["sm2"], "0x2c00230")
+        self.assertEqual(out["sig"], "")
+        for k in ("unique", "date", "spidy"):
+            self.assertNotIn(k, out)
+        self.assertEqual(out["how"], "Exact Function Instructions Match")
+        rendered = fill_map._row({**old, "bytes": ""}, {0x10: row})
+        self.assertIn("| `0x2c00230` | - | vt 1.00 |", rendered)
+        self.assertTrue(rendered.endswith("| found | - |\n"), rendered)
+
+    def test_vt_on_the_same_address_keeps_its_fields(self):
+        old = item("cam", "0x10", sm2="0x2c00230", sig="e8????????", unique=True, date="2026-11-16", spidy="agrees")
+        row = (0x2c00230, "ACCEPTED", 1.0, 10.0, "c")
+        out = fill_map.merge({"item": [old]}, {0x10: row}, "r")["item"][0]
+        self.assertEqual((out["sig"], out["unique"], out["date"], out["spidy"]), ("e8????????", True, "2026-11-16", "agrees"))
+
     def test_splice_is_idempotent_and_keeps_text_outside_the_markers(self):
         block = fill_map.render_block(fill_map.join(fill_map.load_targets(self.targets), small_map()), {}, small_map()["herovr"])
         once = fill_map.splice(DOC_TEXT, block)

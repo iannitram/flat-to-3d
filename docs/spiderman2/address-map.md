@@ -189,7 +189,7 @@ The list is a checklist for what our analysis must locate, by port step:
 
 Checked on 2026-11-16 against the peer lists named in #336. None of these is a row's source, and no peer text is copied here.
 
-- **HEROVR v0.0.81** (GPL-3.0): its view submit, SubmitScene and TemporalAa addresses **agree** with our `display setup`, `SubmitScene (shadows)` and `TemporalAa` rows. Its SubmitScene is not the Remastered address that the issue lists. Its lens ctor and pose setter also **agree** with our `lens ctor (12 args)` and `pose setter` rows. We reached both from our verified per-slot offscreen function before comparing. Which exe build HEROVR targets has not been checked against our SHA-256.
+- **HEROVR v0.0.81** (GPL-3.0): its view submit, SubmitScene and TemporalAa addresses **agree** with our `view descriptor submit`, `SubmitScene (shadows)` and `TemporalAa` rows. Its SubmitScene is not the Remastered address that the issue lists. Its lens ctor and pose setter also **agree** with our `lens ctor (12 args)` and `pose setter` rows. We reached both from our verified per-slot offscreen function before comparing. Which exe build HEROVR targets has not been checked against our SHA-256.
 - **SpidyVR** newer than our pinned 0.3.8 (0.7.0 read, 0.8.7 out 2026-11-16) and **MilesVR** (a SpidyVR port to Miles Morales): not yet checked. They are a later checklist pass.
 
 ## Next leg: exact steps
