@@ -38,12 +38,16 @@ HEADER = ("# Spider-Man 2 address map: the one owner of the SM2 addresses (WP-30
 # Headings, header and separator as tools/xmatch/mkmap.py prints them.
 PN = {1: 'Steps 1-3: camera, frame entry, view setup', 2: 'Steps 4-5: eye views, render jobs, buffers, memory, pause gate',
       3: 'Step 6-7 and removable: HUD, game-time checks, shadows, diagnostics, gate extras'}
-TABLE_HEAD = ('| Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found |\n'
-              '|---|---|---|---|---|---|---|---|\n')
+TABLE_HEAD = ('| Item | Kind | Remastered RVA | Spidy checks these bytes there | SM2 address | SM2 pattern | Confidence | How found | Status | Spidy bytes at SM2 address |\n'
+              '|---|---|---|---|---|---|---|---|---|---|\n')
 HEROVR_HEADING = "### Checked against HEROVR's list"
 HEROVR_HEAD = '| HEROVR item | Our row | Check | Evidence |\n|---|---|---|---|\n'
 
-STATUS = ("pending", "found")
+STATUS = ("pending", "found", "verified", "lead")
+# verified: our own tool output shows it (ruling 52); lead: our own analysis points at it, not yet shown.
+OWN = ("verified", "lead")
+SPIDY = ("agrees", "differs")
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 CHECKS = ("found", "not-found", "pending", "runtime", "off-path", "no-row")
 HEX_RUN = re.compile(r"[0-9a-fA-F]{5,}")
 BARE_KEY = re.compile(r"[A-Za-z0-9_-]+")
@@ -108,6 +112,22 @@ def found_fields(row):
             "similarity": sim, "confidence": conf, "correlator": corr}
 
 
+# Fields that describe one SM2 address; a VT row that moves sm2 makes them stale (sig is kept as "").
+ADDRESS_FIELDS = ("unique", "date", "spidy")
+
+
+def apply_vt(it, row):
+    """`it` with VT row `row` applied; when the row moves sm2, the old address's fields are dropped."""
+    new = found_fields(row)
+    out = dict(it)
+    if str(out.get("sm2", "")) != new["sm2"]:
+        for k in ADDRESS_FIELDS:
+            out.pop(k, None)
+        out["sig"] = ""
+    out.update(new)
+    return out
+
+
 def merge(d, vt, verified_by):
     """A copy of map `d` with every item that has a VT row (by Remastered RVA) set to found."""
     out = dict(d)
@@ -116,7 +136,7 @@ def merge(d, vt, verified_by):
         it = dict(it)
         row = vt.get(rva_of(it))
         if row is not None:
-            it.update(found_fields(row))
+            it = apply_vt(it, row)
             it["verified_by"] = verified_by
         items.append(it)
     out["item"] = items
@@ -165,6 +185,20 @@ def lint(d, targets):
                 errs.append(f"[[item]] {name!r}: found without {', '.join(miss)} (not a computed match); fix: run fill_map.py --vt <csv> from a VT run, or set status = \"pending\"")
             if not it.get("verified_by"):
                 errs.append(f"[[item]] {name!r}: found without verified_by; fix: run fill_map.py --vt <csv> so the match carries its CSV receipt, or set status = \"pending\"")
+        if st in OWN:
+            if not it.get("how"):
+                errs.append(f"[[item]] {name!r}: {st} without how; fix: name our tool and method (ruling 52)")
+            if not DATE.fullmatch(str(it.get("date", ""))):
+                errs.append(f"[[item]] {name!r}: {st} without date; fix: set date = \"YYYY-MM-DD\" (the day our tool found it)")
+            if not it.get("sm2"):
+                errs.append(f"[[item]] {name!r}: {st} without sm2; fix: set sm2 to the SM2 RVA our tool found")
+        if st == "verified":
+            if not it.get("sig"):
+                errs.append(f"[[item]] {name!r}: verified without sig; fix: add the SM2 pattern (or the RTTI name for a vtable)")
+            elif it.get("kind") != "vtable" and it.get("unique") is not True:
+                errs.append(f"[[item]] {name!r}: verified without unique = true; fix: check the pattern has one hit in .text, then set unique = true")
+        if it.get("spidy", "") not in ("",) + SPIDY:
+            errs.append(f"[[item]] {name!r}: spidy {it.get('spidy')!r}; fix: use one of {', '.join(SPIDY)} (a checklist column, never a source)")
     for h in d.get("herovr", []):
         hid = h.get("id", "?")
         if h.get("evidence") == "herovr":
@@ -197,14 +231,16 @@ def join(targets, d):
 def _row(it, vt):
     r = rva_of(it)
     if vt and r in vt:
-        it = {**it, **found_fields(vt[r])}
+        it = apply_vt(it, vt[r])
     hx = it.get("bytes", "")
     sm2, sig, how = it.get("sm2", ""), it.get("sig", ""), it.get("how", "")
-    return '| %s | %s | `%s` | %s | %s | %s | %s | %s |\n' % (
+    if it.get("date") and how:
+        how = f"{how} ({it['date']})"
+    return '| %s | %s | `%s` | %s | %s | %s | %s | %s | %s | %s |\n' % (
         it.get("name", ""), it.get("kind", ""), it.get("rem_rva", ""),
         ('`%s`' % hx.replace(' ', '')) if hx else '-',
         ('`%s`' % sm2) if sm2 else 'pending', ('`%s`' % sig) if sig else '-',
-        it.get("conf", "pending"), how if how else '-')
+        it.get("conf", "pending"), how if how else '-', it.get("status", "pending"), it.get("spidy") or '-')
 
 
 def render_table(prio: int, items, vt) -> str:
