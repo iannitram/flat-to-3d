@@ -1,4 +1,4 @@
-# Seed (OD6): untested until sessions/g4-control.toml passes; real recipe lands in recipes/ at works-now.
+# Seed (OD6): untested until sessions/g1-geo11.toml and sessions/g4-control.toml pass; real recipe lands in recipes/ at works-now.
 name: Control
 stereo-status: untested
 stereo-route: geo-11 + sbs viewer
