@@ -21,6 +21,17 @@ peer: Blackskydk/FlatToDepth | MIT | Windows: Geo-11 per-eye output on a big Ope
 peer: artumino/VRScreenCap | MIT | Rust OpenXR SBS/Katanga screen viewer; reference for the fixed-screen layer and SBS viewer
 peer: Raicuparta/rai-pal | GPL-3.0 | the model for game detection and the Inject flow
 
+## Found by the 2026-11-16 hook survey (awaiting owner approval; not in SPEC.md)
+
+Details: [peer-hook-survey-2026-11-16.md](docs/notes/research/peer-hook-survey-2026-11-16.md). Peer addresses are leads to verify (ruling 52), never sources.
+
+peer: oneup03/UU3D | NOASSERTION (custom non-commercial terms; no copying) | UEVR fork that outputs stereo 3D to a screen (SBS, TAB, anaglyph, 3D TV) with no headset; carries the Zero Company UE 5.6.1 hooks (builds 197649, 199049); lead for #33 and the generic 3D TV path
+peer: joeyhodge/UEVR | NOASSERTION | UEVR fork (branch ue57performance) with per-build Zero Company RVAs in src/mods/vr/SWZeroCompanyBinary.hpp; CL 199049 newest (2026-11-16); lead for #285 and Z2b
+peer: Beren5556/AC7VRDLSS-Downloads | MIT | ACE COMBAT 7 UEVR profile with cloud-material stereo workaround and camera/aircraft helpers; native sources private; lead for #286
+peer: RealChrizzl/hitman-vr-foveation-fix | MIT | Hitman 3 VR device layout and signatures (WNO flag, view count, masks); Glacier-shared lead for #288
+peer: piepieonline/h3_vr_foveation | MIT | ZHMModSDK port of the above; signatures in src/Layout.h; lead for #288
+peer: OrfeasZ/ZKntSDK | none stated | 007 First Light mod loader: pattern hooks UpdateStreamlineConstants, SPassExecution_ExecutePass, RenderManager and CameraManagerMain globals; lead for #288
+
 ## Also seen (not scanned)
 
 - nautymac/GeoGamingHub (none): Windows one-app stereo installer that picks Geo-11 / OGL3D / VK3D / DX12_3D per game; DX12 and Vulkan parts are binaries only, unverified
@@ -31,4 +42,6 @@ peer: Raicuparta/rai-pal | GPL-3.0 | the model for game detection and the Inject
 - Spear0070/HeadStartVR (MIT): Windows UEVR launcher that waits for the headset before injecting; idea for Start 3D
 - wayvr-org/wayvr (GPL-3.0): Linux desktop screens inside WiVRn/Monado; overlay patterns
 - OmenDjinn/overstrike-linux (GPL-3.0): Linux Insomniac mod manager; mod-install conventions
+- Dekita/SWZeroCompanySDK (none), klukule/SWZCModKit (none), arctco/zcom-mod-manager (GPL-3.0): Zero Company class SDK and mod loaders; naming only, no stereo
+- howesjamie5-code/MilesVR (GPL-3.0): SpidyVR port to Miles Morales; second data point for Remastered-family matching
 - ThreeDeeJay/VKS3D (GPL-3.0): Vulkan-level stereo layer (from the 2026-10-18 research); Linux builds unreported
