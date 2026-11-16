@@ -357,7 +357,8 @@ def main() -> int:
         print("---|---|---|---|---")
         for row in rows:
             blockers = ", ".join(f"#{n}" for n in row["blockers"])
-            print(f"{row['number']} | {row['title'].replace('|', '\\|')} | {row['status']} | {blockers} | {'yes' if row['device'] else ''}")
+            title = row['title'].replace('|', '\\|')
+            print(f"{row['number']} | {title} | {row['status']} | {blockers} | {'yes' if row['device'] else ''}")
     return 0
 
 
