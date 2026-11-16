@@ -16,19 +16,32 @@ peer: IlyaMez/SpidyVR | GPL-3.0 | our upstream; pinned v0.3.8 (aed5c0c), read v0
 peer: lecutis7of9/HEROVR | GPL-3.0 | SpidyVR ported to Spider-Man 2 on Windows: render probe, eye hooks, FXAA/CAS on the eyes, RT off; learn only (ruling 2026-10-31), its addresses come from the closed SM2VR mod
 peer: LorenDB/kaon | GPL-3.0 | Linux UEVR manager for Proton: Steam scan, UEVR + .NET install, launch options; reference for Zero Company Z2 and the Inject engine
 peer: WiVRn/WiVRn | GPL-3.0 | our streamer; wired mode and the dashboard's adb automation are what Start 3D wraps
-peer: praydog/UEVR | NOASSERTION | the Zero Company route; watch nightlies for UE 5.6 and 2D Screen Mode depth
+peer: praydog/UEVR | NOASSERTION on GitHub; LICENSE "All rights reserved"; no copying | the Zero Company route; watch nightlies for UE 5.6 and 2D Screen Mode depth
 peer: Blackskydk/FlatToDepth | MIT | Windows: Geo-11 per-eye output on a big OpenXR screen with a Steam scan; closest to the generic 3D TV (#9)
 peer: artumino/VRScreenCap | MIT | Rust OpenXR SBS/Katanga screen viewer; reference for the fixed-screen layer and SBS viewer
 peer: Raicuparta/rai-pal | GPL-3.0 | the model for game detection and the Inject flow
 
+## Found by the 2026-11-16 hook survey (awaiting owner approval; not in SPEC.md)
+
+Details: [peer-hook-survey-2026-11-16.md](docs/notes/research/peer-hook-survey-2026-11-16.md). Peer addresses are leads to verify (ruling 52), never sources.
+
+peer: oneup03/UU3D | NOASSERTION on GitHub; UEVR "All rights reserved" plus non-commercial terms (LICENSE-UU3D.md); no copying | UEVR fork that outputs stereo 3D to a screen (SBS, TAB, anaglyph, 3D TV) with no headset; carries the Zero Company UE 5.6.1 hooks (builds 197649, 199049); lead for #33 and the generic 3D TV path
+peer: joeyhodge/UEVR | NOASSERTION on GitHub; UEVR LICENSE "All rights reserved"; no copying | UEVR fork (branch ue57performance) with per-build Zero Company RVAs in src/mods/vr/SWZeroCompanyBinary.hpp; CL 199049 newest (2026-11-16); lead for #285 and Z2b
+peer: Beren5556/AC7VRDLSS-Downloads | MIT | ACE COMBAT 7 UEVR profile with cloud-material stereo workaround and camera/aircraft helpers; native sources private; lead for #286
+peer: RealChrizzl/hitman-vr-foveation-fix | MIT | Hitman 3 VR device layout and signatures (WNO flag, view count, masks); Glacier-shared lead for #288
+peer: piepieonline/h3_vr_foveation | MIT | ZHMModSDK port of the above; signatures in src/Layout.h; lead for #288
+peer: OrfeasZ/ZKntSDK | GPL-3.0-or-later (its LICENSE; GitHub shows NOASSERTION); learn only, no copying | 007 First Light mod loader: pattern hooks UpdateStreamlineConstants, SPassExecution_ExecutePass, RenderManager and CameraManagerMain globals; lead for #288
+
 ## Also seen (not scanned)
 
 - nautymac/GeoGamingHub (none): Windows one-app stereo installer that picks Geo-11 / OGL3D / VK3D / DX12_3D per game; DX12 and Vulkan parts are binaries only, unverified
-- bo3b/3Dmigoto (NOASSERTION): the DX11 stereo-fix base under Geo-11
-- iprjkt/3DMigoto-Linux (NOASSERTION): 3DMigoto for Wine/Proton/DXVK; brand new, stereo not shown
+- bo3b/3Dmigoto (GPL-3.0 per its LICENSE; GitHub shows NOASSERTION): the DX11 stereo-fix base under Geo-11
+- iprjkt/3DMigoto-Linux (GPL-3.0 per its LICENSE; GitHub shows NOASSERTION): 3DMigoto for Wine/Proton/DXVK; brand new, stereo not shown
 - Supreeeme/xrizer (GPL-3.0): OpenVR-to-OpenXR shim WiVRn recommends for Proton; a dependency if a mod touches OpenVR
 - yakuda-stack/yakuda-connect (GPL-3.0): desktop one-click WiVRn + xrizer launcher; SteamOS untested
 - Spear0070/HeadStartVR (MIT): Windows UEVR launcher that waits for the headset before injecting; idea for Start 3D
 - wayvr-org/wayvr (GPL-3.0): Linux desktop screens inside WiVRn/Monado; overlay patterns
 - OmenDjinn/overstrike-linux (GPL-3.0): Linux Insomniac mod manager; mod-install conventions
+- Dekita/SWZeroCompanySDK (no licence file), klukule/SWZCModKit (no licence file), arctco/zcom-mod-manager (GPL-3.0, learn only): Zero Company class SDK and mod loaders; naming only, no stereo
+- howesjamie5-code/MilesVR (GPL-3.0, learn only): SpidyVR port to Miles Morales; second data point for Remastered-family matching
 - ThreeDeeJay/VKS3D (GPL-3.0): Vulkan-level stereo layer (from the 2026-10-18 research); Linux builds unreported
