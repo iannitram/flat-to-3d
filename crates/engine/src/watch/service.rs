@@ -356,8 +356,10 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                 }
                 Effect::StopLink => {
                     // A server unit that is already gone reads as stopped, so a second Stop 3D
-                    // logs nothing.
-                    if let Err(e) = link::stop_3d(&mut self.own_adb()) {
+                    // logs nothing. The app is the one cached for this headset, so Stop 3D
+                    // probes nothing (the headset may be gone).
+                    let app = self.stop_app();
+                    if let Err(e) = link::stop_3d_with(&mut self.own_adb(), &app) {
                         self.log(now, &format!("stop: {}", e.message));
                     }
                 }
@@ -439,6 +441,16 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         }
     }
 
+    /// The app a Stop 3D force-stops: the one cached for this serial, else WiVRn's default
+    /// app. Unlike `wivrn_start` it never probes the headset (which may be gone).
+    fn stop_app(&self) -> String {
+        self.quest_app
+            .as_ref()
+            .filter(|(serial, _)| *serial == self.serial)
+            .map(|(_, package)| package.clone())
+            .unwrap_or_else(|| link::WIVRN_APP.to_string())
+    }
+
     fn adb_run(&self, command: &[String]) -> Result<String, String> {
         crate::link::adb::run(
             &mut Shared(Rc::clone(&self.runner)),
@@ -458,7 +470,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                 now,
                 "3D link did not start; stopping it so Start 3D can retry",
             );
-            let commands = crate::link::stop_3d_commands();
+            let commands = crate::link::stop_3d_commands_with(&self.stop_app());
             let _ = self.run_steps(now, &commands, false);
             self.watch = Watch {
                 phase: Phase::Plugged,
