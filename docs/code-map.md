@@ -165,8 +165,8 @@ Binaries that do not go through `parse_any`:
 | Code | Exit | Retryable | Fix (`api::error_help`) |
 |---|---:|---|---|
 | `usage` | 2 | no | check the command against the usage line in the message |
-| `not-built` | 2 | no | the message names the work package that builds it |
-| `not-found` | 1 | no | check the name or path; `flat3d-inject list` shows installed games |
+| `not-built` | 2 | no | this part is not built yet; the message names the work package that builds it |
+| `not-found` | 1 | no | check the name or path in the message; `flat3d-inject list` shows the installed games |
 | `bad-recipe` | 1 | no | fix the recipe file named in the message |
 | `refused` | 1 | no | do what the message names first, then run the command again |
 | `link-not-ready` | 1 | yes | `systemctl --user restart flat3d-link.service` |
