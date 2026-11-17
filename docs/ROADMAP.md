@@ -25,7 +25,7 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 ## Where it stands (2026-11-16)
 
-The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (labelled `after-1.0`); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue.
+The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (labelled `after-1.0`); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue. The stores ruling 55 leaves out of 1.0 are `after-1.0` too: Microsoft Store / Game Pass #357, Mac App Store #358, Battle.net #359 (1.0 builds Steam and Heroic/Epic in #356).
 
 **Roadmap v2, `main` at `3025963`.** The per-WP table with PR numbers is [`progress.md`](plans/roadmap-v2/progress.md); the waves are [below](#waves). One bullet per wave:
 
