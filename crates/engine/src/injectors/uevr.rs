@@ -370,7 +370,7 @@ fn write_all_text(
 /// create is recorded in `created`. A second apply is refused, whichever of the two happened
 /// the first time, until the first one is undone: otherwise the second record would back up
 /// our own profile and undo would leave the game in 3D. On failure nothing is left changed.
-/// Fetching UEVR and .NET into the prefix is not done here (the device half of #51).
+/// It fetches nothing: `ensure_applied` fetches the pins first (WP-13, WP-15, WP-31; #278).
 pub fn apply(
     compatdata: &Path,
     appid: u32,
