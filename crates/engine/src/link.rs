@@ -111,6 +111,11 @@ pub fn start_3d_commands_with(s: &WivrnStart) -> Vec<Vec<String>> {
 
 /// The commands Stop 3D runs, in order (pure: tests assert on this list).
 pub fn stop_3d_commands() -> Vec<Vec<String>> {
+    stop_3d_commands_with(WIVRN_APP)
+}
+
+/// The commands Stop 3D runs for `app`, in order (pure: tests assert on this list).
+pub fn stop_3d_commands_with(app: &str) -> Vec<Vec<String>> {
     let port = format!("tcp:{WIVRN_PORT}");
     let unit = format!("{WIVRN_UNIT}.service");
     vec![
@@ -119,7 +124,7 @@ pub fn stop_3d_commands() -> Vec<Vec<String>> {
             "shell".into(),
             "am".into(),
             "force-stop".into(),
-            WIVRN_APP.into(),
+            app.to_string(),
         ],
         vec!["adb".into(), "reverse".into(), "--remove".into(), port],
         vec!["systemctl".into(), "--user".into(), "stop".into(), unit],
@@ -205,7 +210,12 @@ fn unit_already_gone(stderr: &str) -> bool {
 /// server stop) decides: success or a narrowly recognized missing unit is `Stopped`;
 /// other failures are a [`LinkError`] naming it.
 pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
-    let commands = stop_3d_commands();
+    stop_3d_with(runner, WIVRN_APP)
+}
+
+/// [`stop_3d`] for a named app: the same three steps with `app` in the force-stop.
+pub fn stop_3d_with(runner: &mut dyn CommandRunner, app: &str) -> Result<LinkState, LinkError> {
+    let commands = stop_3d_commands_with(app);
     let (last, before) = commands
         .split_last()
         .expect("stop_3d_commands is not empty");

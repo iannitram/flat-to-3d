@@ -356,8 +356,10 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                 }
                 Effect::StopLink => {
                     // A server unit that is already gone reads as stopped, so a second Stop 3D
-                    // logs nothing.
-                    if let Err(e) = link::stop_3d(&mut self.own_adb()) {
+                    // logs nothing. The app is the one cached for this headset, so Stop 3D
+                    // probes nothing (the headset may be gone).
+                    let app = self.stop_app();
+                    if let Err(e) = link::stop_3d_with(&mut self.own_adb(), &app) {
                         self.log(now, &format!("stop: {}", e.message));
                     }
                 }
@@ -439,6 +441,16 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
         }
     }
 
+    /// The app a Stop 3D force-stops: the one cached for this serial, else WiVRn's default
+    /// app. Unlike `wivrn_start` it never probes the headset (which may be gone).
+    fn stop_app(&self) -> String {
+        self.quest_app
+            .as_ref()
+            .filter(|(serial, _)| *serial == self.serial)
+            .map(|(_, package)| package.clone())
+            .unwrap_or_else(|| link::WIVRN_APP.to_string())
+    }
+
     fn adb_run(&self, command: &[String]) -> Result<String, String> {
         crate::link::adb::run(
             &mut Shared(Rc::clone(&self.runner)),
@@ -458,7 +470,7 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
                 now,
                 "3D link did not start; stopping it so Start 3D can retry",
             );
-            let commands = crate::link::stop_3d_commands();
+            let commands = crate::link::stop_3d_commands_with(&self.stop_app());
             let _ = self.run_steps(now, &commands, false);
             self.watch = Watch {
                 phase: Phase::Plugged,
@@ -819,6 +831,16 @@ mod service_tests {
         fake.borrow_mut().fail = None;
         let retried = service.tick(601, &s, Some(Request::Start3d), (false, false));
         assert_eq!(retried.state, LinkState::Ready);
+    }
+
+    #[test]
+    fn stop_app_uses_the_cached_app_only_for_its_own_serial() {
+        let (_fake, mut service) = service("stop-app-serial", vec![]);
+        service.serial = "SER".to_string();
+        service.quest_app = Some(("OTHER".to_string(), "org.meumeu.wivrn".to_string()));
+        assert_eq!(service.stop_app(), link::WIVRN_APP);
+        service.quest_app = Some(("SER".to_string(), "org.meumeu.wivrn".to_string()));
+        assert_eq!(service.stop_app(), "org.meumeu.wivrn");
     }
 
     #[test]
