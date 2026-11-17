@@ -32,6 +32,25 @@ pub fn ensure_applied(
     p: &EnginePaths,
     r: &mut dyn CommandRunner,
 ) -> Result<RouteEnv, String> {
+    ensure_applied_in(
+        game,
+        recipe,
+        settings,
+        p,
+        r,
+        &fetch::parse_pins(fetch::PINS),
+    )
+}
+
+/// Like [`ensure_applied`], using the supplied pin table.
+pub fn ensure_applied_in(
+    game: &Game,
+    recipe: &Recipe,
+    settings: &RouteSettings,
+    p: &EnginePaths,
+    r: &mut dyn CommandRunner,
+    pins: &std::collections::BTreeMap<String, fetch::Pin>,
+) -> Result<RouteEnv, String> {
     if let Some(env) = reuse(game.appid, recipe, settings, p) {
         return Ok(env);
     }
@@ -67,7 +86,7 @@ pub fn ensure_applied(
         }
     };
     for key in keys {
-        let pin = fetch::pin(&key).map_err(fetch_error_string)?;
+        let pin = fetch::pin_in(pins, &key).map_err(fetch_error_string)?;
         fetch::fetch(&pin, p, r).map_err(fetch_error_string)?;
     }
     let (record, env) = match route {
@@ -76,12 +95,13 @@ pub fn ensure_applied(
             (applied.record, env)
         }
         Route::Geo11 => {
-            let (applied, env) = geo11::apply(
+            let (applied, env) = geo11::apply_in(
                 &p.cache(),
                 &game.install_dir,
                 game.appid,
                 settings,
                 &p.viewer_bin(),
+                pins,
             )?;
             (applied.record, env)
         }

@@ -282,8 +282,10 @@ fn is_plain_folder_name(s: &str) -> bool {
         && !s.contains(['/', '\\', ':', '\0'])
 }
 
-fn known_pin_version(key: &str) -> Option<String> {
-    let pins = fetch::parse_pins(fetch::PINS);
+fn known_pin_version(
+    pins: &std::collections::BTreeMap<String, fetch::Pin>,
+    key: &str,
+) -> Option<String> {
     let pin = pins.get(key)?;
     if is_plain_folder_name(&pin.version) {
         Some(pin.version.clone())
@@ -306,9 +308,13 @@ fn should_skip_root_child(path: &Path) -> bool {
     false
 }
 
-fn cache_search_scope(cache_dir: &Path, key: &str) -> (PathBuf, bool) {
+fn cache_search_scope(
+    cache_dir: &Path,
+    key: &str,
+    pins: &std::collections::BTreeMap<String, fetch::Pin>,
+) -> (PathBuf, bool) {
     let key_dir = cache_dir.join(key);
-    if let Some(v) = known_pin_version(key) {
+    if let Some(v) = known_pin_version(pins, key) {
         let version_dir = key_dir.join(v);
         if is_real_dir(&version_dir) {
             return (version_dir, false);
@@ -464,6 +470,15 @@ pub fn plan_files(
     game_dir: &Path,
     m: &RouteSettings,
 ) -> Result<Vec<FileStep>, String> {
+    plan_files_in(cache_dir, game_dir, m, &fetch::parse_pins(fetch::PINS))
+}
+
+pub fn plan_files_in(
+    cache_dir: &Path,
+    game_dir: &Path,
+    m: &RouteSettings,
+    pins: &std::collections::BTreeMap<String, fetch::Pin>,
+) -> Result<Vec<FileStep>, String> {
     let settings = Geo11Settings::from_route(m)?;
     let exe = m
         .get("geo11-exe")
@@ -502,7 +517,7 @@ pub fn plan_files(
                 "geo11-fix must be a pin key ([a-z0-9-]+): {name}"
             )));
         }
-        let (search_root, filter) = cache_search_scope(cache_dir, name);
+        let (search_root, filter) = cache_search_scope(cache_dir, name, pins);
         if !search_root.is_dir() {
             return Err(not_found(format!(
                 "{name} is not fetched; run flat3d-inject setup fetch {name}"
@@ -531,7 +546,7 @@ pub fn plan_files(
     let overlay = if fix_has_dm {
         None
     } else {
-        let (search_root, filter) = cache_search_scope(cache_dir, "geo11");
+        let (search_root, filter) = cache_search_scope(cache_dir, "geo11", pins);
         let found = find_dir(&search_root, 3, "x64", filter)
             .map_err(|e| io_error("search", &search_root, &e))?;
         if found.is_none() {
@@ -675,8 +690,26 @@ pub fn apply(
     m: &RouteSettings,
     viewer_exe: &Path,
 ) -> Result<(Applied, RouteEnv), String> {
+    apply_in(
+        cache_dir,
+        game_dir,
+        appid,
+        m,
+        viewer_exe,
+        &fetch::parse_pins(fetch::PINS),
+    )
+}
+
+pub fn apply_in(
+    cache_dir: &Path,
+    game_dir: &Path,
+    appid: u32,
+    m: &RouteSettings,
+    viewer_exe: &Path,
+    pins: &std::collections::BTreeMap<String, fetch::Pin>,
+) -> Result<(Applied, RouteEnv), String> {
     viewer_check(viewer_exe).map_err(|e| format!("{}: {}", e.code, e.message))?;
-    let steps = plan_files(cache_dir, game_dir, m)?;
+    let steps = plan_files_in(cache_dir, game_dir, m, pins)?;
     let exe = m.get("geo11-exe").expect("plan_files checked exe");
     let e = game_dir
         .join(exe)
