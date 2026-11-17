@@ -2,6 +2,44 @@
 
 pub const WRAPPER: &str = "flat3d-run";
 
+/// One launch line we changed, keyed by Steam app id and kept until uninstall.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LaunchRecord {
+    pub before: String,
+    pub applied: String,
+}
+
+pub fn record_path(data_dir: &std::path::Path, appid: u32) -> std::path::PathBuf {
+    data_dir
+        .join("launch-options")
+        .join(format!("{appid}.json"))
+}
+
+/// Save the exact source line and the transformed line so uninstall can restore untouched
+/// options verbatim while respecting edits made after the wrapper was added.
+pub fn save_record(
+    data_dir: &std::path::Path,
+    appid: u32,
+    before: &str,
+    applied: &str,
+) -> Result<(), crate::api::ApiError> {
+    use std::fs;
+    let path = record_path(data_dir, appid);
+    fs::create_dir_all(path.parent().expect("launch record path has parent"))
+        .map_err(|e| crate::api::ApiError::new("io", &format!("{}: {e}", path.display())))?;
+    if path.exists() {
+        return Ok(());
+    }
+    let record = LaunchRecord {
+        before: before.to_string(),
+        applied: applied.to_string(),
+    };
+    let text =
+        serde_json::to_vec(&record).map_err(|e| crate::api::ApiError::new("io", &e.to_string()))?;
+    crate::fsx::write_atomic(&path, &text)
+        .map_err(|e| crate::api::ApiError::new("io", &format!("{}: {e}", path.display())))
+}
+
 const COMMAND: &str = "%command%";
 
 /// The words of `options`, split on whitespace outside double quotes. A quoted value such as

@@ -4,7 +4,7 @@ use crate::{
     face::{self, headset_view, link_model, toasts},
 };
 
-const VIEW_USAGE: &str = "usage: flat3d-inject view | rows [--filter <status>|all] | launch add|remove --options <string> | collection [--current <appids>] | toasts <last_seq> | logs [--limit <n>]";
+const VIEW_USAGE: &str = "usage: flat3d-inject view | rows [--filter <status>|all] | launch add|remove [--appid <appid>] --options <string> | collection [--current <appids>] | toasts <last_seq> | logs [--limit <n>]";
 
 fn usage() -> String {
     VIEW_USAGE.to_string()
@@ -24,17 +24,28 @@ pub fn parse(args: &[String]) -> Option<Result<ViewCommand, String>> {
             }),
             _ => Err(usage()),
         },
-        "launch" => match args {
-            [_, verb, flag, options]
-                if flag == "--options" && (verb == "add" || verb == "remove") =>
-            {
-                Ok(ViewCommand::Launch {
-                    add: verb == "add",
-                    options: options.clone(),
-                })
+        "launch" => {
+            let parse = |verb: &str, options: &String, appid: Option<&String>| {
+                let appid = appid.map(|value| value.parse::<u32>()).transpose();
+                match appid {
+                    Ok(appid) if verb == "add" || verb == "remove" => Ok(ViewCommand::Launch {
+                        add: verb == "add",
+                        options: options.clone(),
+                        appid,
+                    }),
+                    _ => Err(usage()),
+                }
+            };
+            match args {
+                [_, verb, flag, options] if flag == "--options" => parse(verb, options, None),
+                [_, verb, app_flag, appid, flag, options]
+                    if app_flag == "--appid" && flag == "--options" =>
+                {
+                    parse(verb, options, Some(appid))
+                }
+                _ => Err(usage()),
             }
-            _ => Err(usage()),
-        },
+        }
         "collection" => match args {
             [_] => Ok(ViewCommand::Collection { current: None }),
             [_, flag, csv] if flag == "--current" => {
@@ -89,12 +100,21 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
         .map_err(|e| ApiError::new("command-failed", &e.to_string())),
         ViewCommand::Rows { filter } => serde_json::to_value(rows(p, filter, now)?)
             .map_err(|e| ApiError::new("command-failed", &e.to_string())),
-        ViewCommand::Launch { add, options } => {
+        ViewCommand::Launch {
+            add,
+            options: original,
+            appid,
+        } => {
             let options = if *add {
-                crate::launch_options::add_wrapper_at(options, &p.wrapper_bin().to_string_lossy())
+                crate::launch_options::add_wrapper_at(original, &p.wrapper_bin().to_string_lossy())
             } else {
-                crate::launch_options::remove_wrapper(options)
+                crate::launch_options::remove_wrapper(original)
             };
+            if *add && options.as_str() != original {
+                if let Some(appid) = appid {
+                    crate::launch_options::save_record(&p.data, *appid, original, &options)?;
+                }
+            }
             serde_json::to_value(api::LaunchText { options })
                 .map_err(|e| ApiError::new("command-failed", &e.to_string()))
         }

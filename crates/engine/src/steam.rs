@@ -199,6 +199,195 @@ fn block<'a>(pairs: &'a [Pair], key: &str) -> Option<&'a [Pair]> {
     })
 }
 
+/// Remove a recorded game's wrapper from one Steam `localconfig.vdf`. `None` means Steam no
+/// longer has that app's launch-options entry. The returned text is the updated KeyValues file.
+pub fn remove_recorded_wrapper(
+    text: &str,
+    appid: u32,
+    record: &crate::launch_options::LaunchRecord,
+) -> Result<Option<String>, String> {
+    let Some((options, span)) = launch_options_span(text, appid)? else {
+        return Ok(None);
+    };
+    let restored = if options == record.applied {
+        record.before.clone()
+    } else {
+        crate::launch_options::remove_wrapper(&options)
+    };
+    if options == restored {
+        return Ok(None);
+    }
+    let encoded = restored.replace('\\', "\\\\").replace('"', "\\\"");
+    let mut output = String::with_capacity(text.len() + encoded.len());
+    output.push_str(&text[..span.start]);
+    output.push_str(&encoded);
+    output.push_str(&text[span.end..]);
+    Ok(Some(output))
+}
+
+fn launch_options_span(
+    text: &str,
+    appid: u32,
+) -> Result<Option<(String, std::ops::Range<usize>)>, String> {
+    #[derive(Debug)]
+    enum SpanToken {
+        Text(String, std::ops::Range<usize>),
+        Open,
+        Close,
+    }
+    fn tokenize_spanned(text: &str) -> Option<Vec<SpanToken>> {
+        let mut tokens = Vec::new();
+        let mut chars = text.char_indices().peekable();
+        while let Some((_, c)) = chars.peek().copied() {
+            match c {
+                c if c.is_whitespace() || c == '\u{feff}' => {
+                    chars.next();
+                }
+                '/' => {
+                    chars.next();
+                    if chars.next().map(|(_, c)| c) != Some('/') {
+                        return None;
+                    }
+                    for (_, c) in chars.by_ref() {
+                        if c == '\n' {
+                            break;
+                        }
+                    }
+                }
+                '{' => {
+                    chars.next();
+                    tokens.push(SpanToken::Open);
+                }
+                '}' => {
+                    chars.next();
+                    tokens.push(SpanToken::Close);
+                }
+                '"' => {
+                    let (quote_at, _) = chars.next()?;
+                    let mut value = String::new();
+                    let end = loop {
+                        let (at, c) = chars.next()?;
+                        match c {
+                            '"' => break at,
+                            '\\' => match chars.peek().copied() {
+                                Some((_, next @ ('\\' | '"'))) => {
+                                    chars.next();
+                                    value.push(next);
+                                }
+                                _ => value.push('\\'),
+                            },
+                            c => value.push(c),
+                        }
+                    };
+                    let start = quote_at + 1;
+                    tokens.push(SpanToken::Text(value, start..end));
+                }
+                _ => return None,
+            }
+        }
+        Some(tokens)
+    }
+    fn block_end(tokens: &[SpanToken], open: usize) -> Option<usize> {
+        let mut depth = 0usize;
+        for (index, token) in tokens.iter().enumerate().skip(open) {
+            match token {
+                SpanToken::Open => depth += 1,
+                SpanToken::Close => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(index);
+                    }
+                }
+                SpanToken::Text(_, _) => {}
+            }
+        }
+        None
+    }
+    fn options_in_app(
+        tokens: &[SpanToken],
+        start: usize,
+        end: usize,
+        appid: &str,
+    ) -> Option<(String, std::ops::Range<usize>)> {
+        let mut pos = start;
+        while pos < end {
+            let SpanToken::Text(key, _) = tokens.get(pos)? else {
+                return None;
+            };
+            pos += 1;
+            match tokens.get(pos)? {
+                SpanToken::Text(_, _) => pos += 1,
+                SpanToken::Open => {
+                    let close = block_end(tokens, pos)?;
+                    if key == appid {
+                        let mut field = pos + 1;
+                        while field < close {
+                            let SpanToken::Text(name, _) = tokens.get(field)? else {
+                                return None;
+                            };
+                            field += 1;
+                            match tokens.get(field)? {
+                                SpanToken::Text(value, span)
+                                    if name.eq_ignore_ascii_case("LaunchOptions") =>
+                                {
+                                    return Some((value.clone(), span.clone()));
+                                }
+                                SpanToken::Text(_, _) => field += 1,
+                                SpanToken::Open => field = block_end(tokens, field)? + 1,
+                                SpanToken::Close => return None,
+                            }
+                        }
+                        return None;
+                    }
+                    pos = close + 1;
+                }
+                SpanToken::Close => return None,
+            }
+        }
+        None
+    }
+    fn find_apps(
+        tokens: &[SpanToken],
+        start: usize,
+        end: usize,
+        appid: &str,
+    ) -> Option<(String, std::ops::Range<usize>)> {
+        let mut pos = start;
+        while pos < end {
+            let SpanToken::Text(key, _) = tokens.get(pos)? else {
+                return None;
+            };
+            pos += 1;
+            match tokens.get(pos)? {
+                SpanToken::Text(_, _) => pos += 1,
+                SpanToken::Open => {
+                    let close = block_end(tokens, pos)?;
+                    let found = if key.eq_ignore_ascii_case("apps") {
+                        options_in_app(tokens, pos + 1, close, appid)
+                    } else {
+                        None
+                    };
+                    if found.is_some() {
+                        return found;
+                    }
+                    if let Some(found) = find_apps(tokens, pos + 1, close, appid) {
+                        return Some(found);
+                    }
+                    pos = close + 1;
+                }
+                SpanToken::Close => return None,
+            }
+        }
+        None
+    }
+
+    if parse(text).is_none() {
+        return Err("malformed localconfig.vdf".to_string());
+    }
+    let tokens = tokenize_spanned(text).ok_or_else(|| "malformed localconfig.vdf".to_string())?;
+    Ok(find_apps(&tokens, 0, tokens.len(), &appid.to_string()))
+}
+
 /// How deeply blocks may nest. Steam's files nest three or four levels; deeper is malformed, and
 /// the limit keeps a hostile file from overflowing the stack.
 const MAX_DEPTH: usize = 64;

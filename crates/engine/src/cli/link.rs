@@ -192,10 +192,14 @@ fn run_with(
         }
         LinkCommand::Uninstall => {
             let home = ctx.paths.home.to_string_lossy();
-            let report = crate::install::execute_uninstall(
-                &crate::install::uninstall_plan(&home),
-                ctx.runner,
-            )?;
+            let mut plan = crate::install::uninstall_plan(&home);
+            plan.launch_records = ctx
+                .paths
+                .data
+                .join("launch-options")
+                .to_string_lossy()
+                .into_owned();
+            let report = crate::install::execute_uninstall(&plan, ctx.runner)?;
             serde_json::to_value(report)
                 .map_err(|error| ApiError::new("command-failed", &error.to_string()))?
         }

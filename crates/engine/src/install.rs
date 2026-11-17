@@ -228,6 +228,7 @@ pub fn execute_uninstall(
             notes.push(format!("tolerated {argv}: {}", last_line(&out.stderr)));
         }
     }
+    remove_recorded_launch_options(plan)?;
     let mut paths = plan.removes.clone();
     if let Ok(contents) = fs::read_to_string(&plan.manifest) {
         paths.extend(contents.lines().map(str::to_string));
@@ -285,6 +286,76 @@ pub fn execute_uninstall(
         ran,
         summary: notes.join("; "),
     })
+}
+
+fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api::ApiError> {
+    use std::{fs, io::ErrorKind, path::Path};
+    let records = Path::new(&plan.launch_records);
+    let entries = match fs::read_dir(records) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(io_error(&plan.launch_records, &error, FIX_UNINSTALL)),
+    };
+    let steam = Path::new(&plan.home).join(crate::steam::DEFAULT_STEAM_ROOT);
+    let userdata = match fs::read_dir(steam.join("userdata")) {
+        Ok(entries) => entries.filter_map(Result::ok).collect::<Vec<_>>(),
+        Err(error) if error.kind() == ErrorKind::NotFound => Vec::new(),
+        Err(error) => {
+            return Err(io_error(
+                &steam.display().to_string(),
+                &error,
+                FIX_UNINSTALL,
+            ))
+        }
+    };
+    for entry in entries {
+        let entry = entry.map_err(|error| io_error(&plan.launch_records, &error, FIX_UNINSTALL))?;
+        let Some(appid) = entry
+            .path()
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .and_then(|value| value.parse::<u32>().ok())
+        else {
+            continue;
+        };
+        let text = fs::read_to_string(entry.path()).map_err(|error| {
+            io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
+        })?;
+        let record: crate::launch_options::LaunchRecord =
+            serde_json::from_str(&text).map_err(|error| {
+                crate::api::ApiError::new(
+                    "command-failed",
+                    &format!("invalid launch-options record for {appid}: {error}"),
+                )
+            })?;
+        for user in &userdata {
+            let config = user.path().join("config/localconfig.vdf");
+            let current = match fs::read_to_string(&config) {
+                Ok(text) => text,
+                Err(error) if error.kind() == ErrorKind::NotFound => continue,
+                Err(error) => {
+                    return Err(io_error(
+                        &config.display().to_string(),
+                        &error,
+                        FIX_UNINSTALL,
+                    ))
+                }
+            };
+            if let Some(updated) =
+                crate::steam::remove_recorded_wrapper(&current, appid, &record)
+                    .map_err(|error| crate::api::ApiError::new("command-failed", &error))?
+            {
+                fs::write(&config, updated).map_err(|error| {
+                    io_error(&config.display().to_string(), &error, FIX_UNINSTALL)
+                })?;
+            }
+        }
+        fs::remove_file(entry.path()).map_err(|error| {
+            io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
+        })?;
+    }
+    let _ = fs::remove_dir(records);
+    Ok(())
 }
 
 const IO_INSTALL: &str = "make that folder writable, then re-run flat3d-inject install";
@@ -484,6 +555,8 @@ pub struct UninstallPlan {
     pub after: Vec<Vec<String>>,
     pub home: String,
     pub manifest: String,
+    /// Per-game launch-option records written when the Decky plugin adds our wrapper.
+    pub launch_records: String,
     /// Flat to 3D's udev rule; removed (one sudo prompt) only when it is there.
     pub udev_rule: String,
     pub udev_commands: Vec<Vec<String>>,
@@ -510,6 +583,7 @@ pub fn uninstall_plan(home: &str) -> UninstallPlan {
             .collect()],
         home: home.to_string(),
         manifest: format!("{home}/.local/share/flat3d/installed.txt"),
+        launch_records: format!("{home}/.local/share/flat3d/launch-options"),
         udev_rule: UDEV_RULE_PATH.to_string(),
         udev_commands: vec![[
             "sudo",
