@@ -52,7 +52,8 @@ step_clippy_capture() {
 }
 step_clippy_msvc() {
   if rustup target list --installed | grep -qx x86_64-pc-windows-msvc; then
-    cargo clippy --locked -p flat3d-uevr-inject --target x86_64-pc-windows-msvc -- -D warnings
+    cargo clippy --locked -p flat3d-uevr-inject --target x86_64-pc-windows-msvc -- -D warnings \
+      && cargo clippy --locked -p flat3d-aw2-proxy --target x86_64-pc-windows-msvc --all-targets -- -D warnings
   else step_why='x86_64-pc-windows-msvc target is missing'; step_fix='rustup target add x86_64-pc-windows-msvc'; return 90; fi
 }
 step_test() {

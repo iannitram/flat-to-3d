@@ -105,7 +105,7 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `games/control/` | planned | where the Geo-11 fix comes from (fetched, never vendored unless its license allows), settings | M22 |
 | `games/planet-of-lana/` | planned, after 1.0 (ruling 43) | the same for Planet of Lana's Geo-11 fix | M23 (moved out of 1.0) |
 | `games/007-first-light/` | planned | our `dinput8.dll` proxy that switches the engine's dormant VR device to its `stereo3d` mode, settings (planned route, untested) | M31 |
-| `games/alan-wake-2/` | planned | our alternate-eye hook on the engine's camera class and its proxy DLL, settings (planned route, untested; ruling 44) | M32 |
+| `games/alan-wake-2/` | present (the proxy only) | `proxy/`, `flat3d-aw2-proxy` (#293): our do-nothing `version.dll` proxy, which logs one line on load and forwards every export to the system copy; the alternate-eye hook on the engine's camera class stays planned (planned route, untested; ruling 44); device check: W2 | M32 |
 | `games/spiderman2/` | planned | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `crates/viewer/` | present | Linux-native PipeWire→OpenXR quad viewer on WiVRn: `flat3d-viewer` (features `xr`,`capture`); layout/status/spec pure; device check Q10 | M21 |
 | `crates/uevr-inject/` | present | `flat3d-uevr-inject.exe` (WP-15), a small Windows binary run under Proton that injects UEVR into the running game; cross-built by `tools/build-win.sh`; device check: Q2 | M14 |
