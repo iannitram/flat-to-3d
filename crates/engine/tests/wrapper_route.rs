@@ -184,6 +184,7 @@ fn env_map(launch: &Launch) -> BTreeMap<String, String> {
 }
 
 // 1
+// Catches: slug-named recipes being missed by the real wrapper lookup.
 #[test]
 fn a_slug_named_recipe_is_found_and_reaches_the_route() {
     let tmp = Tmp::new();
@@ -199,6 +200,7 @@ fn a_slug_named_recipe_is_found_and_reaches_the_route() {
 }
 
 // 2
+// Catches: a missing settings file being treated as invalid instead of using defaults.
 #[test]
 fn a_missing_settings_file_is_not_invalid_settings() {
     let tmp = Tmp::new();
@@ -215,6 +217,7 @@ fn a_missing_settings_file_is_not_invalid_settings() {
 }
 
 // 3
+// Catches: applying the route or running injectors while the headset link is not ready.
 #[test]
 fn a_link_that_is_not_ready_never_calls_the_route() {
     for link in [
@@ -257,6 +260,7 @@ fn a_link_that_is_not_ready_never_calls_the_route() {
 }
 
 // 4
+// Catches: allowing an expired link snapshot to proceed to route application.
 #[test]
 fn a_stale_snapshot_plays_flat() {
     let snapshot = ready(100);
@@ -276,6 +280,7 @@ fn a_stale_snapshot_plays_flat() {
 }
 
 // 5
+// Catches: treating an absent link snapshot as a 3D launch.
 #[test]
 fn no_snapshot_plays_flat() {
     let settings = Settings::default();
@@ -295,6 +300,7 @@ fn no_snapshot_plays_flat() {
 }
 
 // 6
+// Catches: dropping route environment, system WiVRn paths, or the base Proton environment.
 #[test]
 fn three_d_takes_the_route_env_and_the_system_wivrn_folder() {
     let mut env = game_env();
@@ -321,6 +327,7 @@ fn three_d_takes_the_route_env_and_the_system_wivrn_folder() {
 }
 
 // 7
+// Catches: propagating route application failures as anything other than a flat fallback.
 #[test]
 fn a_route_error_plays_flat() {
     let launch = prepare_ready(&game_env(), &mut |_, _| {
@@ -330,6 +337,7 @@ fn a_route_error_plays_flat() {
 }
 
 // 8
+// Catches: failing to turn WiVRn detection errors into a flat fallback.
 #[test]
 fn a_wivrn_error_plays_flat() {
     let launch = prepare_ready(&game_env(), &mut |_, _| Err("wivrn: not installed".into()));
@@ -337,6 +345,7 @@ fn a_wivrn_error_plays_flat() {
 }
 
 // 9
+// Catches: trying route setup when HOME is empty.
 #[test]
 fn an_empty_home_plays_flat_without_the_route() {
     let mut env = game_env();
@@ -351,6 +360,7 @@ fn an_empty_home_plays_flat_without_the_route() {
 }
 
 // 10
+// Catches: leaking route environment or a sidecar into a flat launch spec.
 #[test]
 fn exec_spec_with_flat_drops_the_sidecar() {
     let route = RouteEnv {
@@ -380,6 +390,7 @@ fn three_d() -> Plan {
 }
 
 // 11
+// Catches: modifying the route's sidecar arguments before the bin adds its pid flag.
 #[test]
 fn a_sidecar_is_copied_verbatim() {
     let sidecar = s(&["/b/flat3d-viewer", "--layout", "sbs", "--source", "auto"]);
@@ -394,6 +405,7 @@ fn a_sidecar_is_copied_verbatim() {
 }
 
 // 12
+// Catches: duplicate base and route entries when the route overrides FS_RW.
 #[test]
 fn a_route_fs_rw_replaces_the_base_entry() {
     let route = RouteEnv {
@@ -413,6 +425,7 @@ fn a_route_fs_rw_replaces_the_base_entry() {
 }
 
 // 13
+// Catches: unset keys overriding env entries or appearing more than once.
 #[test]
 fn a_key_in_env_and_unset_stays_only_in_env() {
     let route = RouteEnv {
@@ -426,6 +439,7 @@ fn a_key_in_env_and_unset_stays_only_in_env() {
 }
 
 // 14
+// Catches: missing reason and note metadata or run.log output for a flat launch.
 #[test]
 fn run_with_writes_the_reason_to_the_record_and_run_log() {
     let tmp = Tmp::new();
@@ -455,6 +469,7 @@ fn run_with_writes_the_reason_to_the_record_and_run_log() {
 }
 
 // 15
+// Catches: a run.log write failure preventing or repeating the launcher call.
 #[test]
 fn the_launcher_runs_once_when_the_log_dir_is_a_file() {
     let tmp = Tmp::new();
@@ -472,6 +487,7 @@ fn the_launcher_runs_once_when_the_log_dir_is_a_file() {
 }
 
 // 16
+// Catches: a failed sidecar leaving a 3D record or route environment on the game command.
 #[test]
 fn a_sidecar_error_rewrites_the_record_to_flat() {
     let tmp = Tmp::new();
@@ -507,6 +523,7 @@ fn a_sidecar_error_rewrites_the_record_to_flat() {
 }
 
 // 17
+// Catches: missing, unstable, or incorrect flat reason codes in run records.
 #[test]
 fn reason_codes_cover_every_flat_launch() {
     assert_eq!(
@@ -651,6 +668,7 @@ fn reason_codes_cover_every_flat_launch() {
 }
 
 // 18
+// Catches: wrong sidecar executable resolution, argument ordering, or --until-pid handling.
 #[test]
 fn sidecar_argv_resolves_the_program_and_appends_until_pid() {
     let exe_dir = Path::new("/opt/flat3d");
@@ -701,6 +719,7 @@ const STAND_IN: &str = "printf \"%s\\n\" \"$@\" > \"$OUT\"; exit 3";
 
 // 19
 #[cfg(unix)]
+// Catches: the bin changing original argv or failing to record a flat launch before exec.
 #[test]
 fn the_bin_plays_flat_with_argv_and_env_untouched() {
     let tmp = Tmp::new();
@@ -740,6 +759,7 @@ fn the_bin_plays_flat_with_argv_and_env_untouched() {
 
 // 20
 #[cfg(unix)]
+// Catches: HOME path errors blocking the original game command or omitting the diagnostic.
 #[test]
 fn the_bin_without_home_still_runs_the_game() {
     let tmp = Tmp::new();
@@ -757,6 +777,7 @@ fn the_bin_without_home_still_runs_the_game() {
 }
 
 // 21
+// Catches: inherited dll overrides replacing the route's value or surviving for the same dll.
 #[test]
 fn an_inherited_winedlloverrides_is_merged_and_the_route_wins() {
     let geo11 = || {
