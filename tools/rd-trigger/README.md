@@ -2,7 +2,7 @@
 
 Asks a running program that has RenderDoc's capture layer loaded to capture a frame, with no key press. RenderDoc's own capture keys are F12 and Print Screen; on the Z13, F12 is also airplane mode and there is no Print Screen key.
 
-Needs the host's RenderDoc 1.46 (`/usr/lib/librenderdoc.so`, as SteamOS ships it). `build.sh` compiles in the `craft-build` distrobox and, on first run, fetches only the v1.46 API headers into `~/.cache/renderdoc-v1.46-src` (or `$RD_SRC`).
+Needs the host's RenderDoc 1.46 (`/usr/lib/librenderdoc.so`, as SteamOS ships it). `build.sh` compiles in the distrobox build container (`$FLAT3D_BUILD_BOX`, default craft-build) and, on first run, fetches only the v1.46 API headers into `~/.cache/renderdoc-v1.46-src` (or `$RD_SRC`).
 
 ```bash
 tools/rd-trigger/build.sh                 # builds tools/rd-trigger/rd-trigger
