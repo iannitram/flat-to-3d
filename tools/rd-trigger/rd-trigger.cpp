@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
   env.enumerateGPUs = false;
   RENDERDOC_InitialiseReplay(env, rdcarray<rdcstr>());
 
-  // Use the newest target: the game, not a launcher that may also have the layer loaded.
+  // Use the highest ident (usually the newest target): the game, not a launcher that may also have the layer loaded.
   // Skip our own process in case the marker is not honoured.
   uint32_t ident = 0, last = 0;
   while ((ident = RENDERDOC_EnumerateRemoteTargets(rdcstr(), ident)) != 0) {
@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
   ITargetControl *tc = RENDERDOC_CreateTargetControl(rdcstr(), last, rdcstr("rd-trigger"), true);
   if (!tc || !tc->Connected()) {
     fprintf(stderr, "rd-trigger: could not connect to target %u\n", last);
+    if (tc) tc->Shutdown();
     RENDERDOC_ShutdownReplay();
     return 1;
   }
