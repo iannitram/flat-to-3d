@@ -321,12 +321,11 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
         let text = fs::read_to_string(entry.path()).map_err(|error| {
             io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
         })?;
-        let record: crate::launch_options::LaunchRecord = match serde_json::from_str(&text) {
-            Ok(record)
-                if record.version == crate::launch_options::LAUNCH_RECORD_VERSION =>
-            {
-                record
-            }
+        let record: crate::launch_options::LaunchRecord = match serde_json::from_str::<
+            crate::launch_options::LaunchRecord,
+        >(&text)
+        {
+            Ok(record) if record.version == crate::launch_options::LAUNCH_RECORD_VERSION => record,
             Ok(record) => {
                 eprintln!(
                     "warning: skipping launch-options record for {appid}: unsupported version {}",

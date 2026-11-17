@@ -178,7 +178,10 @@ fn uninstall_splices_only_the_raw_wrapper_token_in_crlf_config() {
     let config_path = home.join(".local/share/Steam/userdata/1/config/localconfig.vdf");
     fs::create_dir_all(config_path.parent().unwrap()).unwrap();
     let appid = 51;
-    let wrapper = home.join(".local/bin/flat3d-run").to_string_lossy().into_owned();
+    let wrapper = home
+        .join(".local/bin/flat3d-run")
+        .to_string_lossy()
+        .into_owned();
     let before = r#"~/lsfg env DXVK_CONFIG=\"dxgi.maxFrameRate=90\" C:\foo %command%"#;
     let applied = launch_options::add_wrapper_at(before, &wrapper);
     launch_options::save_record(&home.join(".local/share/flat3d"), appid, before, &applied)
@@ -239,19 +242,36 @@ fn adding_a_wrapper_overwrites_the_existing_launch_record() {
     // Catches: a stale before/applied pair survives when the same app receives a newer launch line.
     let (_root, home, _src) = setup("record-overwrite");
     let data = home.join(".local/share/flat3d");
-    launch_options::save_record(&data, 81, "old %command%", "flat3d-run old %command%")
-        .unwrap();
-    launch_options::save_record(&data, 81, "new %command%", "flat3d-run new %command%")
-        .unwrap();
+    launch_options::save_record(&data, 81, "old %command%", "flat3d-run old %command%").unwrap();
+    launch_options::save_record(&data, 81, "new %command%", "flat3d-run new %command%").unwrap();
 
-    let record: launch_options::LaunchRecord = serde_json::from_slice(
-        &fs::read(launch_options::record_path(&data, 81)).unwrap(),
-    )
-    .unwrap();
+    let record: launch_options::LaunchRecord =
+        serde_json::from_slice(&fs::read(launch_options::record_path(&data, 81)).unwrap()).unwrap();
     assert_eq!(record.before, "new %command%");
     assert_eq!(record.applied, "flat3d-run new %command%");
     let old: launch_options::LaunchRecord =
-        serde_json::from_str(r#"{"before":"old","applied":"flat3d-run old"}"#)
-            .unwrap();
+        serde_json::from_str(r#"{"before":"old","applied":"flat3d-run old"}"#).unwrap();
     assert_eq!(old.version, launch_options::LAUNCH_RECORD_VERSION);
+}
+
+#[test]
+fn unedited_line_with_quotes_and_backslashes_is_restored_byte_for_byte() {
+    // Catches: the restore of an unedited line re-encoding the original, so `C:\foo` becomes
+    // `C:\\foo` or an escaped quote loses its backslash.
+    let (_root, home, src) = setup("restore-escapes");
+    let no_rule = install_home(&home, &src);
+    let config_path = home.join(".local/share/Steam/userdata/1/config/localconfig.vdf");
+    fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+    let raw_before = r#"~/lsfg env DXVK_CONFIG=\"dxgi.maxFrameRate=90\" C:\foo \n %command%"#;
+    let before = r#"~/lsfg env DXVK_CONFIG="dxgi.maxFrameRate=90" C:\foo \n %command%"#;
+    let applied = apply(&home, 61, before);
+    let raw_applied = applied.replace('"', "\\\"");
+    fs::write(&config_path, config(&[(61, &raw_applied)])).unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        config(&[(61, raw_before)])
+    );
 }
