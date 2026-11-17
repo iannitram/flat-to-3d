@@ -46,9 +46,7 @@ pub fn parse(args: &[String]) -> Option<Result<ViewCommand, String>> {
                     options: opt,
                 })
             }
-            [_, verb, app]
-                if (verb == "add" || verb == "remove") && app.starts_with("epic:") =>
-            {
+            [_, verb, app] if (verb == "add" || verb == "remove") && app.starts_with("epic:") => {
                 Ok(ViewCommand::Launch {
                     add: verb == "add",
                     options: app.clone(),

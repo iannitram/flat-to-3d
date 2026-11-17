@@ -279,7 +279,8 @@ impl UndoRecord {
             }
             (None, None) => return Err("missing appid".to_string()),
         };
-        let launch_options = launch_options_before.ok_or_else(|| "missing launch-options".to_string())?;
+        let launch_options =
+            launch_options_before.ok_or_else(|| "missing launch-options".to_string())?;
 
         Ok(UndoRecord {
             appid,
@@ -414,12 +415,8 @@ pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, Ap
         }
         Err(e) => return Err(io_error("cannot read", &path, &e)),
     };
-    let record = UndoRecord::from_text(&text).map_err(|m| {
-        ApiError::new(
-            "command-failed",
-            &format!("undo record for {label}: {m}"),
-        )
-    })?;
+    let record = UndoRecord::from_text(&text)
+        .map_err(|m| ApiError::new("command-failed", &format!("undo record for {label}: {m}")))?;
     if &record.key() != key {
         return Err(ApiError::new(
             "command-failed",
@@ -468,10 +465,7 @@ pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, Ap
                 changes, appid
             ),
         ),
-        StoreKey::Epic(name) => (
-            0,
-            format!("{} change(s) put back for epic:{name}", changes),
-        ),
+        StoreKey::Epic(name) => (0, format!("{} change(s) put back for epic:{name}", changes)),
     };
     Ok(UndoResult {
         appid,

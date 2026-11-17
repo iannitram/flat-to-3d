@@ -2,7 +2,8 @@
 //! All tests use temp folders under CARGO_TARGET_TMPDIR; no device, no real HOME.
 
 use flat3d_inject::api::UndoResult;
-use flat3d_inject::cli::view::{self, Ctx};
+use flat3d_inject::cli::view;
+use flat3d_inject::cli::Ctx;
 use flat3d_inject::cli::ViewCommand;
 use flat3d_inject::heroic;
 use flat3d_inject::heroic_wrapper::{self, Applied};
@@ -64,7 +65,7 @@ fn apply_wires_heroic_wrapper_and_records_backup_in_undo_record() {
 
     let recipe = recipes::parse_recipe_keyed(
         StoreKey::Epic(APP_NAME.to_string()),
-        "name\tAlan Wake 2\nstereo-status\tworks-now\nstereo-route\tbuild: native\nstereo-engine\tNorthlight\nstereo-api\tdx12\nstereo-mod\tnone\nstereo-free\tyes\nstereo-safe\tyes\nstereo-checked\t2026-11-17\n",
+        "name: Alan Wake 2\nstereo-status: works-now\nstereo-route: build: native\nstereo-engine: Northlight\nstereo-api: dx12\nstereo-mod: none\nstereo-free: yes\nstereo-safe: yes\nstereo-checked: 2026-11-17\n",
     )
     .unwrap();
 
@@ -169,7 +170,10 @@ fn legacy_steam_undo_record_fixture_loads_and_undoes() {
     let res: UndoResult = undo::undo_game(&paths.data, 870780).unwrap();
     assert_eq!(res.appid, 870780);
     assert!(!created_file.exists());
-    assert_eq!(fs::read_to_string(&replaced_file).unwrap(), "original-d3d11");
+    assert_eq!(
+        fs::read_to_string(&replaced_file).unwrap(),
+        "original-d3d11"
+    );
     assert!(!backup_file.exists());
     assert!(!sub_dir.exists());
     assert!(!rec_path.exists());
@@ -183,9 +187,12 @@ fn launch_add_and_remove_handles_epic_games_via_cli() {
     let orig_bytes = fs::read(&config_path).unwrap();
 
     let mut fake = FakeRunner::new();
+    let mut process = FakeRunner::new();
     let mut ctx = Ctx {
         paths: &paths,
         runner: &mut fake,
+        process: &mut process,
+        json: true,
     };
 
     // Test launch add --epic
