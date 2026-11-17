@@ -545,7 +545,12 @@ pub fn load_recipes_keyed(folder: &Path) -> Result<BTreeMap<StoreKey, Recipe>, R
 /// [`RecipeError::UnknownStore`].
 pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, RecipeError> {
     let keyed = load_recipes_keyed(folder).map_err(|e| match e {
-        RecipeError::InFile { file, error } if matches!(*error, RecipeError::UnknownStore(_)) => {
+        // Only a bad file-name prefix is a bad file name; an unknown store in a `store-key:`
+        // line is reported as it is.
+        RecipeError::InFile { file, error }
+            if matches!(&*error, RecipeError::UnknownStore(p)
+                if file.split_once('-').is_some_and(|(f, _)| f == p.as_str())) =>
+        {
             RecipeError::BadFileName(file)
         }
         other => other,

@@ -126,6 +126,34 @@ fn a_non_steam_recipe_without_a_store_key_is_an_error() {
 }
 
 #[test]
+fn an_unknown_store_in_a_store_key_line_is_not_a_bad_file_name() {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recipe-store-key-line-unknown");
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let text = "name: Alan Wake 2\n\
+         stereo-status: untested\n\
+         stereo-route: custom\n\
+         stereo-engine: northlight\n\
+         stereo-api: dx12\n\
+         stereo-mod: none\n\
+         stereo-free: yes\n\
+         stereo-safe: yes\n\
+         stereo-checked: 2026-11-17\n\
+         store-key: gog:1\n";
+    fs::write(dir.join("epic-alan-wake-2.recipe"), text).unwrap();
+    match load_recipes(&dir) {
+        Err(RecipeError::InFile { file, error }) => {
+            assert_eq!(file, "epic-alan-wake-2.recipe");
+            assert!(matches!(*error, RecipeError::UnknownStore(_)), "{error:?}");
+        }
+        other => panic!("expected InFile(UnknownStore), got {other:?}"),
+    }
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn a_store_key_round_trips() {
     let steam = StoreKey::Steam(870780);
     let steam_display = steam.to_string();
