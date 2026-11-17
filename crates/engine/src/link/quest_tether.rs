@@ -2,7 +2,16 @@
 //! `state` on the faces. It never starts, stops, heals or configures that link, and no decision
 //! in the engine depends on the answer (owner ruling 2026-11-10). The only command is `status`.
 
+use crate::api::LinkState;
 use crate::exec::CommandRunner;
+
+/// Until the Display seam exists, these link states identify a Quest display.
+pub fn is_quest_display(state: LinkState) -> bool {
+    matches!(
+        state,
+        LinkState::Starting | LinkState::Ready | LinkState::Unauthorised
+    )
+}
 
 /// What Quest Tether's `status --json` says that Flat to 3D keeps: the `state` text. Every
 /// other field is ignored, so a field that is added or missing changes nothing.

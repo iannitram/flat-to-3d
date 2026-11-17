@@ -25,17 +25,17 @@ pub fn link_view(snap: Option<LinkSnapshot>, now: u64) -> LinkView {
         quest_tether: quest_tether_line(
             snapshot
                 .as_ref()
+                .filter(|snapshot| crate::link::quest_tether::is_quest_display(snapshot.state))
                 .and_then(|snapshot| snapshot.quest_tether.as_deref()),
-        )
-        .to_string(),
+        ),
     }
 }
 
 /// The Quest Tether line both faces draw: its state as a read-only fact, nothing to press.
-fn quest_tether_line(state: Option<&str>) -> &'static str {
+fn quest_tether_line(state: Option<&str>) -> Option<String> {
     match state {
-        Some("connected") => "Quest Tether: connected",
-        Some(_) => "Quest Tether: not connected",
-        None => "Quest Tether: not installed",
+        Some("connected") => Some("Quest Tether: connected".into()),
+        Some(_) => Some("Quest Tether: not connected".into()),
+        None => None,
     }
 }

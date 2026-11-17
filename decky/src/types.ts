@@ -12,7 +12,7 @@ export interface LinkView {
   health: HealthView;
   auto_3d: boolean;
   adb_source: string;
-  quest_tether: string;
+  quest_tether: string | null;
 }
 export interface GameRow {
   appid: number;

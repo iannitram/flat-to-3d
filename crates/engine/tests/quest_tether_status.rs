@@ -1,5 +1,5 @@
 //! WP-38: reading Quest Tether's state, read-only. The one command is `status --json`; only the
-//! `state` text is kept; a missing program, a failed run or junk reads as "not installed".
+//! `state` text is kept; a missing program, a failed run or junk hides the line.
 
 use flat3d_inject::exec::CommandOutput;
 use flat3d_inject::link::quest_tether::{
@@ -106,4 +106,15 @@ fn a_non_zero_exit_gives_none_even_with_json_on_stdout() {
 fn unparseable_output_gives_none() {
     let mut runner = FakeRunner::new().ok(&["quest-tether"], "Quest Tether is not running\n");
     assert_eq!(quest_tether_status(&mut runner), None);
+}
+
+#[test]
+fn quest_tether_commands_are_read_only() {
+    let commands = [status_command()];
+    for argv in commands {
+        assert_eq!(argv, ["quest-tether", "status", "--json"]);
+        assert!(!argv
+            .iter()
+            .any(|arg| matches!(arg.as_str(), "connect" | "disconnect" | "service")));
+    }
 }
