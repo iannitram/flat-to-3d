@@ -87,7 +87,7 @@ while IFS= read -r line; do
   soname='' source=''
   read -r first second third _ <<<"$line"
   if [ "$second" = '=>' ] && [[ ${third:-} = /* ]]; then
-    soname=$first
+    soname=${first##*/}
     source=$third
   elif [[ ${first:-} = /* ]]; then
     source=$first

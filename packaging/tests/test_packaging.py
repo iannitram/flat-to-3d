@@ -106,6 +106,7 @@ chmod +x build/adb
         "ldd": """#!/bin/sh
 printf 'libfake.so.1 => %s/libfake.so.1 (0x0)\\n' "$FIXTURES"
 printf 'libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0)\\n'
+printf '/usr/lib64/ld-linux-x86-64.so.2 => /usr/lib/ld-linux-x86-64.so.2 (0x0)\\n'
 """,
         "patchelf": "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$PATCHELF_LOG\"\n",
     }
@@ -189,6 +190,9 @@ class PackagingTests(unittest.TestCase):
             )
             self.assertEqual(stat.S_IMODE((output / "adb").stat().st_mode), 0o755)
             self.assertFalse(any((output / "lib").glob("libc.so*")))
+            # Catches: Arch's ldd naming the loader by its full path ("/usr/lib64/ld-linux... =>"),
+            # which slipped past the ld-linux skip and failed the copy into lib//lib64/.
+            self.assertEqual(sorted(p.name for p in (output / "lib").iterdir()), ["libfake.so.1"])
             sums = (output / "SHA256SUMS").read_text()
             self.assertEqual([line.split()[1] for line in sums.splitlines()], ["adb"])
             self.assertIn("--set-rpath $ORIGIN/lib", log.read_text())
