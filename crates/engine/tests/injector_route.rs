@@ -39,6 +39,12 @@ fn a_route_naming_geo_11_is_the_geo11_route() {
 }
 
 #[test]
+fn a_route_naming_aw2_is_the_aw2_route() {
+    assert_eq!(route_of("aw2 alternate-eye"), Route::Aw2);
+    assert_eq!(route_of("Alan Wake 2 alternate-eye"), Route::Aw2);
+}
+
+#[test]
 fn none_empty_and_unknown_routes_are_no_route() {
     assert_eq!(route_of("none"), Route::NoRoute);
     assert_eq!(route_of(""), Route::NoRoute);

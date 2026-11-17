@@ -24,6 +24,7 @@ pub const GEO11_KEYS: [&str; 7] = [
     "geo11-remove-first",
 ];
 pub const PORT_KEYS: [&str; 0] = [];
+pub const AW2_KEYS: [&str; 0] = [];
 
 /// Read only route-specific settings from a recipe text.
 pub fn route_settings(text: &str) -> RouteSettings {
@@ -37,7 +38,11 @@ pub fn route_settings(text: &str) -> RouteSettings {
             continue;
         };
         let key = key.trim();
-        if !key.starts_with("uevr-") && !key.starts_with("geo11-") && !key.starts_with("port-") {
+        if !key.starts_with("uevr-")
+            && !key.starts_with("geo11-")
+            && !key.starts_with("port-")
+            && !key.starts_with("aw2-")
+        {
             continue;
         }
         let value = raw_value.trim();
@@ -57,6 +62,7 @@ pub fn check_route_settings(route: &str, settings: &RouteSettings) -> Result<(),
     let allowed: &[&str] = match route_of(route) {
         Route::Uevr => &UEVR_KEYS,
         Route::Geo11 => &GEO11_KEYS,
+        Route::Aw2 => &AW2_KEYS,
         Route::Port | Route::NoRoute => PORT_KEYS.as_slice(),
     };
     if settings.is_empty() {
@@ -95,6 +101,7 @@ pub fn check_route_settings(route: &str, settings: &RouteSettings) -> Result<(),
     for required in match route_of(route) {
         Route::Uevr => &UEVR_KEYS[0..1],
         Route::Geo11 => &GEO11_KEYS[0..2],
+        Route::Aw2 => &[],
         _ => &[],
     } {
         if !settings.contains_key(*required) {
