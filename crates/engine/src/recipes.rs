@@ -146,6 +146,8 @@ pub const APIS: [&str; 6] = ["dx9", "dx11", "dx12", "vulkan", "opengl", "unknown
 pub const FREES: [&str; 3] = ["yes", "no", "unclear"];
 /// Allowed `stereo-safe` values.
 pub const SAFES: [&str; 2] = ["yes", "no"];
+/// Known stores supported by the recipe loader.
+pub const STORES: [&str; 2] = ["steam", "epic"];
 /// The keys one recipe file must give, in the order a missing one is reported.
 pub const KEYS: [&str; 9] = [
     "name",
@@ -159,9 +161,56 @@ pub const KEYS: [&str; 9] = [
     "stereo-checked",
 ];
 
+/// A recipe's store-scoped identifier.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum StoreKey {
+    Steam(u32),
+    Epic(String),
+}
+
+impl std::fmt::Display for StoreKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StoreKey::Steam(appid) => write!(f, "steam:{appid}"),
+            StoreKey::Epic(name) => write!(f, "epic:{name}"),
+        }
+    }
+}
+
+impl std::str::FromStr for StoreKey {
+    type Err = RecipeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let Some((prefix, id)) = s.split_once(':') else {
+            return Err(RecipeError::BadStoreKey(s.to_string()));
+        };
+        if prefix.is_empty() {
+            return Err(RecipeError::BadStoreKey(s.to_string()));
+        }
+        match prefix {
+            "steam" => {
+                let appid = id
+                    .parse::<u32>()
+                    .map_err(|_| RecipeError::BadStoreKey(s.to_string()))?;
+                Ok(StoreKey::Steam(appid))
+            }
+            "epic" => {
+                let id = id.trim();
+                if id.is_empty() || id.contains('\n') || id.contains('\r') {
+                    return Err(RecipeError::BadStoreKey(s.to_string()));
+                }
+                Ok(StoreKey::Epic(id.to_string()))
+            }
+            _ => Err(RecipeError::UnknownStore(s.to_string())),
+        }
+    }
+}
+
 /// One game's stereo keys.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Recipe {
+    /// The Steam appid; 0 for a recipe from another store, whose [`StoreKey`] is its key in
+    /// [`load_recipes_keyed`]. No `StoreKey` field here: the locked tests build `Recipe` literals.
     pub appid: u32,
     pub name: String,
     /// `stereo-status`, one of [`STATUSES`].
@@ -201,6 +250,16 @@ pub enum RecipeError {
         first: String,
         second: String,
     },
+    /// Two files for one store key; file names, sorted.
+    DuplicateStoreKey {
+        key: String,
+        first: String,
+        second: String,
+    },
+    /// An unknown store prefix in a store key or file name.
+    UnknownStore(String),
+    /// A key with no `:` or an empty/invalid id.
+    BadStoreKey(String),
     /// A file could not be read.
     Io { path: String, message: String },
     /// A file's own error; `file` is the file name only.
@@ -227,6 +286,18 @@ impl std::fmt::Display for RecipeError {
                 first,
                 second,
             } => write!(f, "appid {appid} in both {first} and {second}"),
+            RecipeError::DuplicateStoreKey { key, first, second } => {
+                write!(f, "store key {key} in both {first} and {second}")
+            }
+            RecipeError::UnknownStore(key) => {
+                let prefix = key.split_once(':').map_or(key.as_str(), |(p, _)| p);
+                write!(
+                    f,
+                    "unknown store \"{prefix}\" in store key \"{key}\"; known stores: {}",
+                    STORES.join(", ")
+                )
+            }
+            RecipeError::BadStoreKey(key) => write!(f, "bad store key: {key}"),
             RecipeError::Io { path, message } => write!(f, "{path}: {message}"),
             RecipeError::InFile { file, error } => write!(f, "{file}: {error}"),
         }
@@ -237,6 +308,12 @@ impl std::error::Error for RecipeError {}
 
 /// Parse one recipe file's `key: value` text into its [`Recipe`]. Values are not checked here.
 pub fn parse_recipe(appid: u32, text: &str) -> Result<Recipe, RecipeError> {
+    parse_recipe_keyed(StoreKey::Steam(appid), text)
+}
+
+/// Parse one recipe file's `key: value` text into its [`Recipe`] for the given [`StoreKey`].
+/// Values are not checked here.
+pub fn parse_recipe_keyed(key: StoreKey, text: &str) -> Result<Recipe, RecipeError> {
     let mut values: BTreeMap<&str, String> = BTreeMap::new();
     for (index, raw) in text.lines().enumerate() {
         let line = index + 1;
@@ -250,13 +327,13 @@ pub fn parse_recipe(appid: u32, text: &str) -> Result<Recipe, RecipeError> {
                 text: trimmed.to_string(),
             });
         };
-        let key = raw_key.trim();
-        if !KEYS.contains(&key) {
+        let key_name = raw_key.trim();
+        if !KEYS.contains(&key_name) {
             continue;
         }
-        if values.contains_key(key) {
+        if values.contains_key(key_name) {
             return Err(RecipeError::DuplicateKey {
-                key: key.to_string(),
+                key: key_name.to_string(),
                 line,
             });
         }
@@ -264,12 +341,16 @@ pub fn parse_recipe(appid: u32, text: &str) -> Result<Recipe, RecipeError> {
         if value.len() >= 2 && value.starts_with('"') && value.ends_with('"') {
             value = &value[1..value.len() - 1];
         }
-        values.insert(key, value.to_string());
+        values.insert(key_name, value.to_string());
     }
-    let mut take = |key: &'static str| {
+    let mut take = |k: &'static str| {
         values
-            .remove(key)
-            .ok_or_else(|| RecipeError::MissingKey(key.to_string()))
+            .remove(k)
+            .ok_or_else(|| RecipeError::MissingKey(k.to_string()))
+    };
+    let appid = match &key {
+        StoreKey::Steam(id) => *id,
+        _ => 0,
     };
     Ok(Recipe {
         appid,
@@ -320,9 +401,37 @@ fn is_date_shape(text: &str) -> bool {
         })
 }
 
-/// Every `<appid>-<slug>.recipe` file under `folder`, parsed and checked, keyed by Steam appid.
+fn extract_store_key(text: &str) -> Result<Option<String>, RecipeError> {
+    let mut found: Option<(String, usize)> = None;
+    for (index, raw) in text.lines().enumerate() {
+        let line = index + 1;
+        let trimmed = raw.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let Some((raw_key, raw_value)) = trimmed.split_once(':') else {
+            continue;
+        };
+        if raw_key.trim() == "store-key" {
+            if found.is_some() {
+                return Err(RecipeError::DuplicateKey {
+                    key: "store-key".to_string(),
+                    line,
+                });
+            }
+            let mut value = raw_value.trim();
+            if value.len() >= 2 && value.starts_with('"') && value.ends_with('"') {
+                value = &value[1..value.len() - 1];
+            }
+            found = Some((value.to_string(), line));
+        }
+    }
+    Ok(found.map(|(v, _)| v))
+}
+
+/// Every `.recipe` file under `folder`, parsed and checked, keyed by [`StoreKey`].
 /// Other files are ignored. A file's own error comes back as [`RecipeError::InFile`] naming it.
-pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, RecipeError> {
+pub fn load_recipes_keyed(folder: &Path) -> Result<BTreeMap<StoreKey, Recipe>, RecipeError> {
     let entries = std::fs::read_dir(folder).map_err(|e| RecipeError::Io {
         path: folder.display().to_string(),
         message: e.to_string(),
@@ -339,13 +448,34 @@ pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, RecipeError>
         }
     }
     names.sort();
-    let mut recipes: BTreeMap<u32, Recipe> = BTreeMap::new();
-    let mut files: BTreeMap<u32, String> = BTreeMap::new();
+    let mut recipes: BTreeMap<StoreKey, Recipe> = BTreeMap::new();
+    let mut files: BTreeMap<StoreKey, String> = BTreeMap::new();
     for name in names {
-        let appid = name
-            .split_once('-')
-            .and_then(|(id, _)| id.parse::<u32>().ok())
-            .ok_or_else(|| RecipeError::BadFileName(name.clone()))?;
+        let Some(stem) = name.strip_suffix(".recipe") else {
+            return Err(RecipeError::BadFileName(name));
+        };
+        let Some((prefix, slug)) = stem.split_once('-') else {
+            return Err(RecipeError::BadFileName(name));
+        };
+        if prefix.is_empty() || slug.is_empty() {
+            return Err(RecipeError::BadFileName(name));
+        }
+        let is_steam_file = prefix.bytes().all(|b| b.is_ascii_digit());
+        let steam_appid = if is_steam_file {
+            Some(
+                prefix
+                    .parse::<u32>()
+                    .map_err(|_| RecipeError::BadFileName(name.clone()))?,
+            )
+        } else {
+            if !STORES.contains(&prefix) {
+                return Err(RecipeError::InFile {
+                    file: name.clone(),
+                    error: Box::new(RecipeError::UnknownStore(prefix.to_string())),
+                });
+            }
+            None
+        };
         let path = folder.join(&name);
         let text = std::fs::read_to_string(&path).map_err(|e| RecipeError::Io {
             path: path.display().to_string(),
@@ -355,19 +485,83 @@ pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, RecipeError>
             file: name.clone(),
             error: Box::new(error),
         };
-        let recipe = parse_recipe(appid, &text).map_err(in_file)?;
+        let raw_store_key = extract_store_key(&text).map_err(in_file)?;
+        let store_key = if let Some(appid) = steam_appid {
+            if let Some(raw) = raw_store_key {
+                let parsed: Result<StoreKey, _> = raw.parse();
+                if parsed != Ok(StoreKey::Steam(appid)) {
+                    return Err(in_file(RecipeError::BadValue {
+                        key: "store-key".to_string(),
+                        value: raw,
+                    }));
+                }
+                StoreKey::Steam(appid)
+            } else {
+                StoreKey::Steam(appid)
+            }
+        } else {
+            let raw = raw_store_key
+                .ok_or_else(|| in_file(RecipeError::MissingKey("store-key".to_string())))?;
+            let parsed: StoreKey = raw.parse().map_err(in_file)?;
+            let store_name = match &parsed {
+                StoreKey::Steam(_) => "steam",
+                StoreKey::Epic(_) => "epic",
+            };
+            if store_name != prefix {
+                return Err(in_file(RecipeError::BadValue {
+                    key: "store-key".to_string(),
+                    value: raw,
+                }));
+            }
+            parsed
+        };
+        let recipe = parse_recipe_keyed(store_key.clone(), &text).map_err(in_file)?;
         check_recipe(&recipe).map_err(in_file)?;
-        if let Some(first) = files.get(&appid) {
-            return Err(RecipeError::DuplicateAppid {
-                appid,
-                first: first.clone(),
-                second: name,
-            });
+        if let Some(first) = files.get(&store_key) {
+            if let StoreKey::Steam(appid) = store_key {
+                return Err(RecipeError::DuplicateAppid {
+                    appid,
+                    first: first.clone(),
+                    second: name,
+                });
+            } else {
+                return Err(RecipeError::DuplicateStoreKey {
+                    key: store_key.to_string(),
+                    first: first.clone(),
+                    second: name,
+                });
+            }
         }
-        files.insert(appid, name.clone());
-        recipes.insert(appid, recipe);
+        files.insert(store_key.clone(), name.clone());
+        recipes.insert(store_key, recipe);
     }
     Ok(recipes)
+}
+
+/// Every `<appid>-<slug>.recipe` file under `folder`, parsed and checked, keyed by Steam appid.
+/// Other files are ignored. A file's own error comes back as [`RecipeError::InFile`] naming it.
+/// A `.recipe` name that starts with neither an appid nor a known store stays
+/// [`RecipeError::BadFileName`] here, as before store keys; [`load_recipes_keyed`] calls it
+/// [`RecipeError::UnknownStore`].
+pub fn load_recipes(folder: &Path) -> Result<BTreeMap<u32, Recipe>, RecipeError> {
+    let keyed = load_recipes_keyed(folder).map_err(|e| match e {
+        // Only a bad file-name prefix is a bad file name; an unknown store in a `store-key:`
+        // line is reported as it is.
+        RecipeError::InFile { file, error }
+            if matches!(&*error, RecipeError::UnknownStore(p)
+                if file.split_once('-').is_some_and(|(f, _)| f == p.as_str())) =>
+        {
+            RecipeError::BadFileName(file)
+        }
+        other => other,
+    })?;
+    let mut steam_recipes = BTreeMap::new();
+    for (key, recipe) in keyed {
+        if let StoreKey::Steam(appid) = key {
+            steam_recipes.insert(appid, recipe);
+        }
+    }
+    Ok(steam_recipes)
 }
 
 #[cfg(test)]
