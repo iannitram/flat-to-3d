@@ -51,7 +51,7 @@ impl FrameSource for TestPattern {
             .checked_mul(self.h as usize)
             .ok_or_else(|| "test pattern dimensions are too large".to_string())?;
         let mut bytes = vec![64; len];
-        for px in bytes.chunks_exact_mut(4) {
+        for px in bytes.as_chunks_mut::<4>().0 {
             px.copy_from_slice(&[64, 64, 64, 255]);
         }
 
