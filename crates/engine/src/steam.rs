@@ -204,25 +204,70 @@ fn block<'a>(pairs: &'a [Pair], key: &str) -> Option<&'a [Pair]> {
 pub fn remove_recorded_wrapper(
     text: &str,
     appid: u32,
-    record: &crate::launch_options::LaunchRecord,
+    _record: &crate::launch_options::LaunchRecord,
 ) -> Result<Option<String>, String> {
-    let Some((options, span)) = launch_options_span(text, appid)? else {
+    let Some((_, span)) = launch_options_span(text, appid)? else {
         return Ok(None);
     };
-    let restored = if options == record.applied {
-        record.before.clone()
-    } else {
-        crate::launch_options::remove_wrapper(&options)
-    };
-    if options == restored {
+    // `span` points into the raw VDF value. Remove only literal wrapper words so every other
+    // source byte (including KeyValues escapes and user whitespace) stays untouched.
+    let raw = &text[span.clone()];
+    let removals = raw_wrapper_spans(raw);
+    if removals.is_empty() {
         return Ok(None);
     }
-    let encoded = restored.replace('\\', "\\\\").replace('"', "\\\"");
-    let mut output = String::with_capacity(text.len() + encoded.len());
+    let mut value = String::with_capacity(raw.len());
+    let mut cursor = 0;
+    for removal in removals {
+        value.push_str(&raw[cursor..removal.start]);
+        cursor = removal.end;
+    }
+    value.push_str(&raw[cursor..]);
+    let mut output = String::with_capacity(text.len());
     output.push_str(&text[..span.start]);
-    output.push_str(&encoded);
+    output.push_str(&value);
     output.push_str(&text[span.end..]);
     Ok(Some(output))
+}
+
+/// Find unquoted wrapper words in the raw launch-options value. VDF escapes are deliberately
+/// treated as ordinary source bytes here; wrapper paths accepted by add_wrapper_at need no escapes.
+fn raw_wrapper_spans(value: &str) -> Vec<std::ops::Range<usize>> {
+    let mut spans = Vec::new();
+    let mut start = None;
+    let mut quoted = false;
+    let mut escaped = false;
+    let mut words = Vec::new();
+    for (at, c) in value.char_indices() {
+        if c == '"' && at > 0 && value[..at].ends_with('\\') {
+            // A VDF-escaped quote belongs to the launch options, not to the VDF value.
+        } else if quoted && escaped {
+            escaped = false;
+        } else if quoted && c == '\\' {
+            escaped = true;
+        } else if c == '"' {
+            quoted = !quoted;
+        }
+        if c.is_whitespace() && !quoted {
+            if let Some(from) = start.take() {
+                words.push((from..at, &value[from..at]));
+            }
+        } else if start.is_none() {
+            start = Some(at);
+        }
+    }
+    if let Some(from) = start {
+        words.push((from..value.len(), &value[from..]));
+    }
+    for (span, word) in words {
+        if word == "%command%" {
+            break;
+        }
+        if word.rsplit('/').next() == Some(crate::launch_options::WRAPPER) {
+            spans.push(span);
+        }
+    }
+    spans
 }
 
 fn launch_options_span(

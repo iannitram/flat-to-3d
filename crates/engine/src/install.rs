@@ -321,13 +321,30 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
         let text = fs::read_to_string(entry.path()).map_err(|error| {
             io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
         })?;
-        let record: crate::launch_options::LaunchRecord =
-            serde_json::from_str(&text).map_err(|error| {
-                crate::api::ApiError::new(
-                    "command-failed",
-                    &format!("invalid launch-options record for {appid}: {error}"),
-                )
-            })?;
+        let record: crate::launch_options::LaunchRecord = match serde_json::from_str(&text) {
+            Ok(record)
+                if record.version == crate::launch_options::LAUNCH_RECORD_VERSION =>
+            {
+                record
+            }
+            Ok(record) => {
+                eprintln!(
+                    "warning: skipping launch-options record for {appid}: unsupported version {}",
+                    record.version
+                );
+                fs::remove_file(entry.path()).map_err(|error| {
+                    io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
+                })?;
+                continue;
+            }
+            Err(error) => {
+                eprintln!("warning: skipping corrupt launch-options record for {appid}: {error}");
+                fs::remove_file(entry.path()).map_err(|error| {
+                    io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
+                })?;
+                continue;
+            }
+        };
         for user in &userdata {
             let config = user.path().join("config/localconfig.vdf");
             let current = match fs::read_to_string(&config) {
@@ -345,7 +362,7 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
                 crate::steam::remove_recorded_wrapper(&current, appid, &record)
                     .map_err(|error| crate::api::ApiError::new("command-failed", &error))?
             {
-                fs::write(&config, updated).map_err(|error| {
+                crate::fsx::write_atomic(&config, updated.as_bytes()).map_err(|error| {
                     io_error(&config.display().to_string(), &error, FIX_UNINSTALL)
                 })?;
             }

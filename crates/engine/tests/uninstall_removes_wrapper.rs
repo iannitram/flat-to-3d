@@ -169,3 +169,89 @@ fn changed_launch_line_keeps_user_options_and_only_removes_the_wrapper() {
     assert!(after.contains("\"LaunchOptions\" \"PROTON_LOG=1 %command% -new-option\""));
     assert!(!after.contains("flat3d-run"));
 }
+
+#[test]
+fn uninstall_splices_only_the_raw_wrapper_token_in_crlf_config() {
+    // Catches: uninstall changes unknown VDF escapes, quoted launch arguments, single-backslash paths, CRLF, or sibling app bytes.
+    let (_root, home, src) = setup("raw-splice");
+    let no_rule = install_home(&home, &src);
+    let config_path = home.join(".local/share/Steam/userdata/1/config/localconfig.vdf");
+    fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+    let appid = 51;
+    let wrapper = home.join(".local/bin/flat3d-run").to_string_lossy().into_owned();
+    let before = r#"~/lsfg env DXVK_CONFIG=\"dxgi.maxFrameRate=90\" C:\foo %command%"#;
+    let applied = launch_options::add_wrapper_at(before, &wrapper);
+    launch_options::save_record(&home.join(".local/share/flat3d"), appid, before, &applied)
+        .unwrap();
+    let wrapper_token = format!("{wrapper} ");
+    let raw_line = format!(
+        r#"{wrapper_token}~/lsfg env DXVK_CONFIG=\\\"dxgi.maxFrameRate=90\\\" C:\foo %command%"#
+    );
+    let prefix = b"\xef\xbb\xbf\"UserLocalConfigStore\" {\r\n \"Software\" {\r\n  \"Valve\" {\r\n   \"Steam\" {\r\n    \"apps\" {\r\n     \"51\" {\r\n      \"LaunchOptions\" \"";
+    let suffix = b"\"\r\n     }\r\n     \"52\" {\r\n      \"LaunchOptions\" \"keep\\n\\tC:\\foo\\\"quoted\\\"\"\r\n     }\r\n    }\r\n   }\r\n  }\r\n }\r\n}\r\n";
+    let mut original = prefix.to_vec();
+    original.extend_from_slice(raw_line.as_bytes());
+    original.extend_from_slice(suffix);
+    fs::write(&config_path, &original).unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    let after = fs::read(&config_path).unwrap();
+    let mut expected = prefix.to_vec();
+    expected.extend_from_slice(raw_line.strip_prefix(&wrapper_token).unwrap().as_bytes());
+    expected.extend_from_slice(suffix);
+    assert_eq!(after, expected);
+}
+
+#[test]
+fn uninstall_leaves_a_recorded_line_without_a_wrapper_unchanged() {
+    // Catches: uninstall edits a launch line after the user removed or toggled off the wrapper.
+    let (_root, home, src) = setup("no-longer-applied");
+    let no_rule = install_home(&home, &src);
+    let config_path = home.join(".local/share/Steam/userdata/1/config/localconfig.vdf");
+    fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+    apply(&home, 61, "PROTON_LOG=1 %command% -safe");
+    let untouched = config(&[(61, "PROTON_LOG=1 %command% -safe")]);
+    fs::write(&config_path, &untouched).unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    assert_eq!(fs::read_to_string(config_path).unwrap(), untouched);
+}
+
+#[test]
+fn corrupt_launch_record_does_not_stop_uninstall() {
+    // Catches: one corrupt launch record aborts uninstall before installed files are removed.
+    let (_root, home, src) = setup("corrupt-record");
+    let no_rule = install_home(&home, &src);
+    let records = home.join(".local/share/flat3d/launch-options");
+    fs::create_dir_all(&records).unwrap();
+    fs::write(records.join("71.json"), b"{not json").unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    assert!(!home.join(".local/bin/flat3d-run").exists());
+    assert!(!records.join("71.json").exists());
+}
+
+#[test]
+fn adding_a_wrapper_overwrites_the_existing_launch_record() {
+    // Catches: a stale before/applied pair survives when the same app receives a newer launch line.
+    let (_root, home, _src) = setup("record-overwrite");
+    let data = home.join(".local/share/flat3d");
+    launch_options::save_record(&data, 81, "old %command%", "flat3d-run old %command%")
+        .unwrap();
+    launch_options::save_record(&data, 81, "new %command%", "flat3d-run new %command%")
+        .unwrap();
+
+    let record: launch_options::LaunchRecord = serde_json::from_slice(
+        &fs::read(launch_options::record_path(&data, 81)).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(record.before, "new %command%");
+    assert_eq!(record.applied, "flat3d-run new %command%");
+    let old: launch_options::LaunchRecord =
+        serde_json::from_str(r#"{"before":"old","applied":"flat3d-run old"}"#)
+            .unwrap();
+    assert_eq!(old.version, launch_options::LAUNCH_RECORD_VERSION);
+}
