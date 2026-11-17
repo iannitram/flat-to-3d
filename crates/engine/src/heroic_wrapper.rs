@@ -191,6 +191,16 @@ pub fn apply_for_key(
     key: &StoreKey,
     options: &str,
 ) -> Result<String, ApiError> {
+    apply_for_key_with(paths, key, options, &mut crate::exec::SystemRunner)
+}
+
+/// [`apply_for_key`] with the command runner given (WiVRn detection for an `epic:` key).
+pub fn apply_for_key_with(
+    paths: &crate::paths::EnginePaths,
+    key: &StoreKey,
+    options: &str,
+    runner: &mut dyn crate::exec::CommandRunner,
+) -> Result<String, ApiError> {
     match key {
         StoreKey::Epic(app_name) => {
             check_app_name(app_name)?;
@@ -205,8 +215,7 @@ pub fn apply_for_key(
                 name: key.to_string(),
                 install_dir: PathBuf::new(),
             };
-            let mut runner = crate::exec::SystemRunner;
-            crate::injectors::ensure_applied(&game, &recipe, &settings, paths, &mut runner)
+            crate::injectors::ensure_applied(&game, &recipe, &settings, paths, runner)
                 .map_err(|e| crate::injectors::string_api_error(&e))?;
             Ok(key.to_string())
         }

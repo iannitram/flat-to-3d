@@ -78,6 +78,15 @@ pub(crate) fn remove_created_dirs(record: &UndoRecord) {
     }
 }
 
+/// Remove the folders an apply made, deepest first, keeping any that are not empty; one
+/// `restored` line per folder removed or kept.
+pub(crate) fn remove_created_dirs_reported(record: &UndoRecord) -> io::Result<Vec<String>> {
+    deepest_first(&record.created_dirs)
+        .into_iter()
+        .map(|dir| remove_dir_step(&dir))
+        .collect()
+}
+
 /// What removing one created folder did, as a `restored` line; `Err` for a real failure.
 fn remove_dir_step(dir: &Path) -> Result<String, io::Error> {
     match fs::remove_dir(dir) {
@@ -396,8 +405,9 @@ pub fn put_back(rec: &UndoRecord) -> Vec<String> {
     restored
 }
 
-/// Put a game back to flat from its undo record for the given store key.
-pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, ApiError> {
+/// Read one game's undo record for the given store key: `not-found` when there is none, and an
+/// error when the file is not a record or is for another key.
+pub fn read_record_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoRecord, ApiError> {
     let path = record_path_keyed(data_dir, key);
     let label = key_label(key);
     let text = match fs::read_to_string(&path) {
@@ -418,6 +428,13 @@ pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, Ap
             &format!("undo record is for {}, not {label}", record.key()),
         ));
     }
+    Ok(record)
+}
+
+/// Put a game back to flat from its undo record for the given store key.
+pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, ApiError> {
+    let path = record_path_keyed(data_dir, key);
+    let record = read_record_keyed(data_dir, key)?;
 
     let mut restored = Vec::new();
     for action in undo_actions(&record) {

@@ -55,7 +55,7 @@ pub fn ensure_applied_in(
     // A game with no Steam appid carries its store key as its name; an `epic:` key goes to the
     // Epic Games Launcher hook, never to the Steam route below.
     if game.appid == 0 && game.name.starts_with("epic:") {
-        return ensure_applied_epic(game, settings, p);
+        return ensure_applied_epic(game, recipe, settings, p, r);
     }
     if let Some(env) = reuse(game.appid, recipe, settings, p) {
         return Ok(env);
@@ -84,7 +84,7 @@ pub fn ensure_applied_in(
                 keys.extend(settings.get("geo11-fix").cloned());
                 keys
             }
-            Route::Port => return Err("not-built: port route: #27b (WP-27)".into()),
+            Route::Port => return Err(PORT_NOT_BUILT.into()),
             Route::Aw2 => return Err(
                 "not-built: AW2 route needs the Heroic prefix through ensure_applied: #379 (WP-31)"
                     .into(),
@@ -140,12 +140,21 @@ pub fn ensure_applied_in(
     Ok(env)
 }
 
+/// The Steam path's refusal of a `Port` route; the Epic path gives the same one.
+const PORT_NOT_BUILT: &str = "not-built: port route: #27b (WP-27)";
+
 /// Turn 3D on for an `epic:<app name>` game: write its block into the launcher's
-/// `user_settings.py`. The exe comes from the recipe's `exe:` line, never from the app name.
+/// `user_settings.py`. The block's env comes from the inputs the Steam wrapper uses: the
+/// recipe's route, the injector env, the WiVRn folders from `detect_server`, and
+/// `PRESSURE_VESSEL_FILESYSTEMS_RW` merged with the value already set (at launch time, in the
+/// block). Returns the injector env, as the Steam branch does. The exe comes from the recipe's
+/// `exe:` line, never from the app name.
 fn ensure_applied_epic(
     game: &Game,
+    recipe: &Recipe,
     settings: &RouteSettings,
     p: &EnginePaths,
+    r: &mut dyn CommandRunner,
 ) -> Result<RouteEnv, String> {
     let key: recipes::StoreKey = game
         .name
@@ -154,12 +163,39 @@ fn ensure_applied_epic(
     let recipes::StoreKey::Epic(app_name) = key else {
         return Err(format!("refused: not an Epic key: {}", game.name));
     };
+    crate::heroic_wrapper::check_app_name(&app_name).map_err(api_error_string)?;
     let exe = settings
         .get(recipes::EPIC_EXE_KEY)
         .ok_or_else(|| format!("bad-recipe: the recipe for epic:{app_name} has no `exe:` line"))?;
-    let env = crate::epic_user_settings::three_d_env(&p.home);
+    crate::epic_user_settings::check_exe(exe).map_err(api_error_string)?;
+    let (route, injector) = epic_injector_env(recipe, settings)?;
+    let wivrn = crate::link::detect_server(r).map_err(|e| format!("not-found: wivrn: {e}"))?;
+    // The inherited value is not known until launch; the block merges it there.
+    let env = crate::epic_user_settings::three_d_env(route, &injector, &wivrn, None);
     crate::epic_user_settings::apply(p, &app_name, exe, &env).map_err(api_error_string)?;
-    Ok(env)
+    Ok(injector)
+}
+
+/// The route step for an Epic game, refusing what the Steam path refuses: a recipe its
+/// wrapper would run flat (`check_injectable`), bad route settings, a `Port` route, no route.
+/// UEVR and Geo-11 work on a Steam game folder and are not built for an Epic game. The AW2
+/// route sets no launch variables of its own (`aw2.rs` changes files), so its env is empty.
+pub fn epic_injector_env(
+    recipe: &Recipe,
+    settings: &RouteSettings,
+) -> Result<(Route, RouteEnv), String> {
+    check_injectable(recipe).map_err(|why| format!("refused: {why}"))?;
+    recipes::check_route_settings(&recipe.route, settings)
+        .map_err(|e| format!("bad-recipe: {e}"))?;
+    match route_of(&recipe.route) {
+        Route::Port => Err(PORT_NOT_BUILT.into()),
+        Route::NoRoute => Err(format!("refused: {} has no stereo route", recipe.name)),
+        route @ (Route::Uevr | Route::Geo11) => Err(format!(
+            "not-built: the {} route needs a Steam game folder; it is not built for an Epic game",
+            route_name(route)
+        )),
+        Route::Aw2 => Ok((Route::Aw2, RouteEnv::default())),
+    }
 }
 
 /// The reuse check (`ensure_applied` step 1): the record and the env file both exist, every

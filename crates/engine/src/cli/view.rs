@@ -112,7 +112,7 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
             if let Some(app_name) = options.strip_prefix("epic:") {
                 let key = crate::recipes::StoreKey::Epic(app_name.to_string());
                 let text = if *add {
-                    crate::heroic_wrapper::apply_for_key(p, &key, options)?
+                    crate::heroic_wrapper::apply_for_key_with(p, &key, options, &mut *ctx.runner)?
                 } else {
                     let _ = crate::heroic_wrapper::undo_epic(p, app_name)?;
                     String::new()
