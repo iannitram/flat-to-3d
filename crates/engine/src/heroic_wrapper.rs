@@ -168,9 +168,13 @@ pub fn apply_epic(paths: &crate::paths::EnginePaths, app_name: &str) -> Result<A
     Ok(applied)
 }
 
-/// Refuse an app name that could not be a plain file name: empty, a path separator, `..`, NUL.
+/// Refuse an app name that could not be a plain file name: empty, a path separator, `..`, a control character (NUL, newline).
 pub fn check_app_name(app_name: &str) -> Result<(), ApiError> {
-    if app_name.is_empty() || app_name.contains(['/', '\\', '\0']) || app_name.contains("..") {
+    if app_name.is_empty()
+        || app_name.contains(['/', '\\'])
+        || app_name.chars().any(char::is_control)
+        || app_name.contains("..")
+    {
         return Err(ApiError::new(
             "refused",
             &format!("bad Epic app name: {app_name:?}"),
@@ -179,8 +183,9 @@ pub fn check_app_name(app_name: &str) -> Result<(), ApiError> {
     Ok(())
 }
 
-/// Apply our wrapper for one store key: a Steam key gets the launch-option wrapper (the new
-/// text is returned); an `epic:` key gets the Heroic per-game wrapper and an undo record.
+/// Turn 3D on for one store key: a Steam key gets the launch-option wrapper (the new text is
+/// returned); an `epic:` key goes through `ensure_applied` to the Epic Games Launcher's
+/// `user_settings.py` hook, with an undo record. The Heroic code above stays for the catalog.
 pub fn apply_for_key(
     paths: &crate::paths::EnginePaths,
     key: &StoreKey,
@@ -188,8 +193,22 @@ pub fn apply_for_key(
 ) -> Result<String, ApiError> {
     match key {
         StoreKey::Epic(app_name) => {
-            apply_epic(paths, app_name)?;
-            Ok(format!("epic:{app_name}"))
+            check_app_name(app_name)?;
+            let text = crate::recipes::find_recipe_text_keyed(&paths.recipe_dirs, key)
+                .map_err(|e| ApiError::new("bad-recipe", &e))?
+                .ok_or_else(|| ApiError::new("not-found", &format!("no recipe for {key}")))?;
+            let recipe = crate::recipes::parse_recipe_keyed(key.clone(), &text)
+                .map_err(|e| ApiError::new("bad-recipe", &e.to_string()))?;
+            let settings = crate::recipes::route_settings(&text);
+            let game = crate::steam::Game {
+                appid: 0,
+                name: key.to_string(),
+                install_dir: PathBuf::new(),
+            };
+            let mut runner = crate::exec::SystemRunner;
+            crate::injectors::ensure_applied(&game, &recipe, &settings, paths, &mut runner)
+                .map_err(|e| crate::injectors::string_api_error(&e))?;
+            Ok(key.to_string())
         }
         StoreKey::Steam(_) => Ok(crate::launch_options::add_wrapper_at(
             options,
@@ -198,11 +217,10 @@ pub fn apply_for_key(
     }
 }
 
-/// Undo wrapper changes for an Epic game from its undo record.
+/// Undo an Epic game's change from its undo record.
 pub fn undo_epic(
     paths: &crate::paths::EnginePaths,
     app_name: &str,
 ) -> Result<crate::api::UndoResult, ApiError> {
-    check_app_name(app_name)?;
-    crate::undo::undo_game_keyed(&paths.data, &StoreKey::Epic(app_name.to_string()))
+    crate::epic_user_settings::undo(paths, app_name)
 }

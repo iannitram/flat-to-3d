@@ -121,8 +121,10 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
                     .map_err(|e| ApiError::new("command-failed", &e.to_string()))
             } else {
                 let options = if *add {
-                    let key = crate::recipes::StoreKey::Steam(0);
-                    crate::heroic_wrapper::apply_for_key(p, &key, options)?
+                    crate::launch_options::add_wrapper_at(
+                        options,
+                        &p.wrapper_bin().to_string_lossy(),
+                    )
                 } else {
                     crate::launch_options::remove_wrapper(options)
                 };

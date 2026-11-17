@@ -52,6 +52,11 @@ pub fn ensure_applied_in(
     r: &mut dyn CommandRunner,
     pins: &std::collections::BTreeMap<String, fetch::Pin>,
 ) -> Result<RouteEnv, String> {
+    // A game with no Steam appid carries its store key as its name; an `epic:` key goes to the
+    // Epic Games Launcher hook, never to the Steam route below.
+    if game.appid == 0 && game.name.starts_with("epic:") {
+        return ensure_applied_epic(game, settings, p);
+    }
     if let Some(env) = reuse(game.appid, recipe, settings, p) {
         return Ok(env);
     }
@@ -132,6 +137,28 @@ pub fn ensure_applied_in(
         let _ = fs::remove_file(&rec_path);
         return Err(format!("io: cannot write {}: {e}", env_path.display()));
     }
+    Ok(env)
+}
+
+/// Turn 3D on for an `epic:<app name>` game: write its block into the launcher's
+/// `user_settings.py`. The exe comes from the recipe's `exe:` line, never from the app name.
+fn ensure_applied_epic(
+    game: &Game,
+    settings: &RouteSettings,
+    p: &EnginePaths,
+) -> Result<RouteEnv, String> {
+    let key: recipes::StoreKey = game
+        .name
+        .parse()
+        .map_err(|e: recipes::RecipeError| format!("refused: {e}"))?;
+    let recipes::StoreKey::Epic(app_name) = key else {
+        return Err(format!("refused: not an Epic key: {}", game.name));
+    };
+    let exe = settings
+        .get(recipes::EPIC_EXE_KEY)
+        .ok_or_else(|| format!("bad-recipe: the recipe for epic:{app_name} has no `exe:` line"))?;
+    let env = crate::epic_user_settings::three_d_env(&p.home);
+    crate::epic_user_settings::apply(p, &app_name, exe, &env).map_err(api_error_string)?;
     Ok(env)
 }
 
@@ -328,7 +355,7 @@ pub fn inject(
 
 /// Split an `ensure_applied` error into its code and message; text without a known code
 /// prefix is `command-failed` with the whole text.
-fn string_api_error(text: &str) -> ApiError {
+pub(crate) fn string_api_error(text: &str) -> ApiError {
     match text.split_once(": ") {
         Some((code, message)) if api::ERROR_CODES.contains(&code) => ApiError::new(code, message),
         _ => ApiError::new("command-failed", text),

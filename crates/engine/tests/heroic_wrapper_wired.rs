@@ -8,7 +8,7 @@ use flat3d_inject::cli::ViewCommand;
 use flat3d_inject::heroic;
 use flat3d_inject::heroic_wrapper::{self, Applied};
 use flat3d_inject::paths::EnginePaths;
-use flat3d_inject::recipes::{self, StoreKey};
+use flat3d_inject::recipes::StoreKey;
 use flat3d_inject::testing::FakeRunner;
 use flat3d_inject::undo::{self, UndoRecord};
 use std::collections::BTreeMap;
@@ -76,35 +76,6 @@ fn launch(
         },
         &mut ctx,
     )
-}
-
-const RECIPE_TEXT: &str = "name: Alan Wake 2\nstereo-status: works-now\nstereo-route: build: native\nstereo-engine: Northlight\nstereo-api: dx12\nstereo-mod: none\nstereo-free: yes\nstereo-safe: yes\nstereo-checked: 2026-11-17\n";
-
-// Catches: the real apply entry point ignoring an epic: recipe key (wrapper or undo record missing), or taking the key from anywhere but the recipe.
-#[test]
-fn apply_for_epic_recipe_key_writes_wrapper_and_record() {
-    let (_dir, paths) = fresh_env("apply-wires");
-    let config_path = seed_heroic_config(&paths.home, APP_NAME, HEROIC_GAME_CONFIG);
-    let orig_bytes = fs::read(&config_path).unwrap();
-
-    let key: StoreKey = format!("epic:{APP_NAME}").parse().unwrap();
-    let recipe = recipes::parse_recipe_keyed(key.clone(), RECIPE_TEXT).unwrap();
-    assert_eq!(recipe.name, "Alan Wake 2");
-
-    let text = heroic_wrapper::apply_for_key(&paths, &key, "").unwrap();
-    assert_eq!(text, format!("epic:{APP_NAME}"));
-
-    let wrapper_str = paths.wrapper_bin().to_string_lossy().into_owned();
-    assert!(heroic_wrapper::has_wrapper(&config_path, APP_NAME, &wrapper_str).unwrap());
-
-    let record_path = undo::record_path_keyed(&paths.data, &key);
-    let record_text = fs::read_to_string(&record_path).unwrap();
-    assert!(record_text.contains(&format!("store-key\tepic:{APP_NAME}\n")));
-    let rec = UndoRecord::from_text(&record_text).unwrap();
-    assert_eq!(rec.key(), key);
-    assert_eq!(rec.replaced.len(), 1);
-    assert_eq!(rec.replaced[0].path, config_path);
-    assert_eq!(fs::read(&rec.replaced[0].backup).unwrap(), orig_bytes);
 }
 
 // Catches: a Steam recipe key no longer getting the launch-option wrapper through the same entry point, or touching Heroic.
@@ -244,47 +215,6 @@ fn legacy_steam_undo_record_fixture_loads_and_undoes() {
     assert!(!backup_file.exists());
     assert!(!sub_dir.exists());
     assert!(!rec_path.exists());
-}
-
-// Catches: launch add and launch remove CLI commands ignoring Epic games or failing to call heroic_wrapper.
-#[test]
-fn launch_add_and_remove_handles_epic_games_via_cli() {
-    let (_dir, paths) = fresh_env("launch-cli");
-    let config_path = seed_heroic_config(&paths.home, APP_NAME, HEROIC_GAME_CONFIG);
-    let orig_bytes = fs::read(&config_path).unwrap();
-
-    let mut fake = FakeRunner::new();
-    let mut process = FakeRunner::new();
-    let mut ctx = Ctx {
-        paths: &paths,
-        runner: &mut fake,
-        process: &mut process,
-        json: true,
-    };
-
-    // Test launch add --epic
-    let add_cmd = ViewCommand::Launch {
-        add: true,
-        options: format!("epic:{APP_NAME}"),
-    };
-    let add_val = view::run(&add_cmd, &mut ctx).unwrap();
-    assert_eq!(add_val["options"], format!("epic:{APP_NAME}"));
-
-    let wrapper_str = paths.wrapper_bin().to_string_lossy().into_owned();
-    assert!(heroic_wrapper::has_wrapper(&config_path, APP_NAME, &wrapper_str).unwrap());
-    let record_path = undo::record_path_keyed(&paths.data, &StoreKey::Epic(APP_NAME.to_string()));
-    assert!(record_path.exists());
-
-    // Test launch remove --epic
-    let rem_cmd = ViewCommand::Launch {
-        add: false,
-        options: format!("epic:{APP_NAME}"),
-    };
-    let rem_val = view::run(&rem_cmd, &mut ctx).unwrap();
-    assert_eq!(rem_val["options"], "");
-
-    assert_eq!(fs::read(&config_path).unwrap(), orig_bytes);
-    assert!(!record_path.exists());
 }
 
 // Catches: cli view parse rejecting launch add|remove with --epic flag.
