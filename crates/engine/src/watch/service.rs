@@ -834,6 +834,16 @@ mod service_tests {
     }
 
     #[test]
+    fn stop_app_uses_the_cached_app_only_for_its_own_serial() {
+        let (_fake, mut service) = service("stop-app-serial", vec![]);
+        service.serial = "SER".to_string();
+        service.quest_app = Some(("OTHER".to_string(), "org.meumeu.wivrn".to_string()));
+        assert_eq!(service.stop_app(), link::WIVRN_APP);
+        service.quest_app = Some(("SER".to_string(), "org.meumeu.wivrn".to_string()));
+        assert_eq!(service.stop_app(), "org.meumeu.wivrn");
+    }
+
+    #[test]
     fn the_event_kinds_match_the_note_kinds() {
         for note in [
             Note::Ready,
