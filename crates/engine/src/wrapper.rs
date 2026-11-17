@@ -8,6 +8,7 @@ use crate::recipes::Recipe;
 use crate::runs::{RunMode, RunRecord};
 use crate::{fsx, recipes, state, steam};
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -421,6 +422,31 @@ pub fn sidecar_argv(
     argv.push("--until-pid".into());
     argv.push(until_pid.to_string());
     Ok(argv)
+}
+
+/// viewer.log in the log folder, opened for append; `None` when it cannot be opened.
+fn viewer_log(paths: &EnginePaths) -> Option<File> {
+    std::fs::create_dir_all(&paths.log_dir).ok()?;
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(paths.log_dir.join("viewer.log"))
+        .ok()
+}
+
+/// Start the route's sidecar, tied to the game's wrapper pid.
+pub fn spawn_sidecar_with(
+    paths: &EnginePaths,
+    sidecar: &[String],
+    exe_dir: Option<&Path>,
+    until_pid: u32,
+) -> io::Result<(u32, Vec<String>)> {
+    let argv = sidecar_argv(sidecar, exe_dir, &paths.bin, until_pid, &|path| {
+        path.exists()
+    })
+    .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    let pid = crate::exec::spawn_detached(&argv, viewer_log(paths))?;
+    Ok((pid, argv))
 }
 
 /// `existing` with `folder` added to its colon list, unless it is already there.

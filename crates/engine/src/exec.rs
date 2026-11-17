@@ -1,5 +1,27 @@
 //! The two runner seams shared by the engine.
 
+use std::io;
+use std::process::{Command, Stdio};
+
+/// Starts a command without waiting for it, with stdin disconnected.
+pub fn spawn_detached(argv: &[String], output: Option<std::fs::File>) -> io::Result<u32> {
+    let Some((program, args)) = argv.split_first() else {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "empty command"));
+    };
+    let mut command = Command::new(program);
+    command.args(args).stdin(Stdio::null());
+    match output {
+        Some(file) => {
+            let stderr = file.try_clone().map_or_else(|_| Stdio::null(), Stdio::from);
+            command.stdout(Stdio::from(file)).stderr(stderr);
+        }
+        None => {
+            command.stdout(Stdio::null()).stderr(Stdio::null());
+        }
+    }
+    Ok(command.spawn()?.id())
+}
+
 /// What one command left behind.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandOutput {
