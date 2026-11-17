@@ -1,7 +1,9 @@
 export type LinkState = "no-headset" | "unauthorised" | "starting" | "ready" | "stopped";
 export type Zone = "green" | "yellow" | "red" | "unknown";
+export type EventKind = "ready" | "late-plug" | "grace-ended" | "allow-debugging" | "warm" | "hot";
+export type AdbSource = "running" | "bundled" | "missing";
 
-export interface LinkEvent { seq: number; kind: string; text: string }
+export interface LinkEvent { seq: number; kind: EventKind; text: string }
 export interface HealthView { battery: string; temp: string; zone: Zone; colour: string }
 export interface LinkView {
   state: LinkState;
@@ -11,7 +13,7 @@ export interface LinkView {
   stop: boolean;
   health: HealthView;
   auto_3d: boolean;
-  adb_source: string;
+  adb_source: AdbSource;
   quest_tether: string | null;
 }
 export interface GameRow {
@@ -26,7 +28,7 @@ export interface GameRow {
 }
 export interface LaunchText { options: string }
 export interface CollectionPlan { name: string; wanted: number[]; add: number[]; remove: number[] }
-export interface ToastBatch { toasts: LinkEvent[]; last_seq: number; title?: string }
+export interface ToastBatch { toasts: LinkEvent[]; last_seq: number }
 export interface LogLines { lines: string[]; text: string }
 export interface LinkReport { state: LinkState; message: string }
 export interface SwitchState { appid: number; on: boolean }
