@@ -54,8 +54,8 @@ pub fn compare_games(a: &Game, b: &Game) -> Ordering {
 
             match a_name_lower.cmp(&b_name_lower) {
                 Ordering::Equal => {
-                    // If names are equal, compare by appid
-                    a.appid.cmp(&b.appid)
+                    // If names are equal, compare by key
+                    a.key().cmp(&b.key())
                 }
                 other => other,
             }
