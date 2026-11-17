@@ -109,7 +109,7 @@ cd "$HOME/Games/AlanWake2"
 "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/tools/proton/Proton-CachyOS-latest/proton" waitforexitandrun ./AlanWake2.exe
 ```
 
-Before the run, in the game: upscaling and frame generation off, in a lit outdoor scene. Press F12 (RenderDoc's capture key) once in gameplay, quit, then open the `.rdc` (`renderdoccmd` or qrenderdoc), pick a world mesh draw, and read the constant buffer that holds `g_mWorldToView` / `g_mViewToClip`. If the game will not start offline outside Heroic, add the same four `ENABLE_VULKAN_RENDERDOC_CAPTURE`, `RENDERDOC_CAPFILE` variables to Heroic's game settings and run Heroic from a host-installed (non-flatpak) build instead.
+Before the run, in the game: upscaling and frame generation off, in a lit outdoor scene. Press F12 (RenderDoc's capture key) once in gameplay, quit, then open the `.rdc` (`renderdoccmd` or qrenderdoc), pick a world mesh draw, and read the constant buffer that holds `g_mWorldToView` / `g_mViewToClip`. If the game will not start offline outside Heroic, add the same environment variables (`ENABLE_VULKAN_RENDERDOC_CAPTURE`, `RENDERDOC_CAPFILE`, and optionally `VKD3D_CONFIG`, `DXVK_HDR`, `PROTON_FSR4_UPGRADE`) to Heroic's game settings and run Heroic from a host-installed (non-flatpak) build instead.
 
 ## Counts
 
@@ -118,7 +118,7 @@ Before the run, in the game: upscaling and frame generation off, in a lit outdoo
 
 ## Earlier build (1.2.10, for history only)
 
-The 2026-11-16 map's RVAs for `1.2.10` (SHA-256 `0e7a7b5fe05ada30ac043d96eeb658e934db96b4783479ade64495ed428b5904`, the copy in `/run/media/deck/Clem/Backups/AlanWake2-heroic-20261117/`). On 2026-11-17 the old map's seven patterns and the upload function's prologue were re-scanned over that copy, and each matched once at the RVA below; the swap chain creation RVA is the old map's and was not re-checked (its `1.2.11` prologue pattern does not occur in `1.2.10`). None of these is valid for `1.2.11`. In `1.2.11` the old patterns find the same functions, except `renderWorldInternal`, whose frame size changed (`C8 EE` to `D8 EE`), and the `rend::View` setters, whose shared pattern matched both.
+The 2026-11-16 map's RVAs for `1.2.10` (SHA-256 `0e7a7b5fe05ada30ac043d96eeb658e934db96b4783479ade64495ed428b5904`, the backup copy on an external drive). On 2026-11-17 the old map's seven patterns and the upload function's prologue were re-scanned over that copy, and each matched once at the RVA below; the swap chain creation RVA is the old map's and was not re-checked (its `1.2.11` prologue pattern does not occur in `1.2.10`). None of these is valid for `1.2.11`. In `1.2.11` the old patterns find the same functions, except `renderWorldInternal`, whose frame size changed (`C8 EE` to `D8 EE`), and the `rend::View` setters, whose shared pattern matched both.
 
 | Hook | 1.2.10 RVA | 1.2.11 RVA |
 |---|---|---|
@@ -128,6 +128,6 @@ The 2026-11-16 map's RVAs for `1.2.10` (SHA-256 `0e7a7b5fe05ada30ac043d96eeb658e
 | `rend::View::setViewToWorld` | `0x12cfda0` | `0x12bb580` |
 | `m::View::setViewToWorld` | `0x3b2e70` | `0x3aa910` |
 | `setViewToClip` | `0x12cf9f0` | `0x12bb1d0` |
-| Present function / call site | `0x207a680` / `0x207a8a4` | `0x204b4e0` / `0x204b704` |
+| Present function / call-site pattern start (the `Present` call is 3 bytes later) | `0x207a680` / `0x207a8a4` | `0x204b4e0` / `0x204b704` |
 | Swap chain creation | `0x207aec0` | `0x204bd30` |
 | Constant upload | `0x21f0110` | `0x21bff70` |
