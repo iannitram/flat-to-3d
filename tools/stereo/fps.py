@@ -47,6 +47,7 @@ def main(argv=None):
     p.add_argument("--min", type=float, default=30)
     p.add_argument("--skip-rows", type=int, default=0)
     p.add_argument("--json", action="store_true")
+    p.add_argument("--per-eye", action="store_true")
     a = p.parse_args(argv)
     try:
         rows = read_mangohud(a.csv)[a.skip_rows:]
@@ -54,9 +55,14 @@ def main(argv=None):
     except (OSError, ValueError) as e:
         print(str(e), file=sys.stderr)
         return 2
+    if a.per_eye:
+        result["p50"] /= 2
+        result["p1"] /= 2
+    result["per_eye"] = a.per_eye
     result["min"] = a.min
     result["pass"] = result["p50"] >= a.min
-    print(json.dumps(result, sort_keys=True) if a.json else f"n={result['n']} p50={result['p50']:.2f} p1={result['p1']:.2f} pass={result['pass']}")
+    tail = " per_eye=True" if a.per_eye else ""
+    print(json.dumps(result, sort_keys=True) if a.json else f"n={result['n']} p50={result['p50']:.2f} p1={result['p1']:.2f} pass={result['pass']}{tail}")
     return 0 if result["pass"] else 1
 
 
