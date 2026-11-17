@@ -1,0 +1,6 @@
+flat3d-undo 1
+appid	870780
+launch-options	-novid
+created	TARGET_DIR/created.dll
+replaced	TARGET_DIR/d3d11.dll	TARGET_DIR/d3d11.dll.flat3d-backup
+created-dir	TARGET_DIR/sub

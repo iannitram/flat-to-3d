@@ -33,6 +33,27 @@ pub fn parse(args: &[String]) -> Option<Result<ViewCommand, String>> {
                     options: options.clone(),
                 })
             }
+            [_, verb, flag, app]
+                if (flag == "--epic" || flag == "--app") && (verb == "add" || verb == "remove") =>
+            {
+                let opt = if app.starts_with("epic:") {
+                    app.clone()
+                } else {
+                    format!("epic:{app}")
+                };
+                Ok(ViewCommand::Launch {
+                    add: verb == "add",
+                    options: opt,
+                })
+            }
+            [_, verb, app]
+                if (verb == "add" || verb == "remove") && app.starts_with("epic:") =>
+            {
+                Ok(ViewCommand::Launch {
+                    add: verb == "add",
+                    options: app.clone(),
+                })
+            }
             _ => Err(usage()),
         },
         "collection" => match args {
@@ -90,13 +111,28 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
         ViewCommand::Rows { filter } => serde_json::to_value(rows(p, filter, now)?)
             .map_err(|e| ApiError::new("command-failed", &e.to_string())),
         ViewCommand::Launch { add, options } => {
-            let options = if *add {
-                crate::launch_options::add_wrapper_at(options, &p.wrapper_bin().to_string_lossy())
+            if let Some(app_name) = options.strip_prefix("epic:") {
+                let text = if *add {
+                    let _ = crate::heroic_wrapper::apply_epic(p, app_name)?;
+                    format!("epic:{app_name}")
+                } else {
+                    let _ = crate::heroic_wrapper::undo_epic(p, app_name)?;
+                    String::new()
+                };
+                serde_json::to_value(api::LaunchText { options: text })
+                    .map_err(|e| ApiError::new("command-failed", &e.to_string()))
             } else {
-                crate::launch_options::remove_wrapper(options)
-            };
-            serde_json::to_value(api::LaunchText { options })
-                .map_err(|e| ApiError::new("command-failed", &e.to_string()))
+                let options = if *add {
+                    crate::launch_options::add_wrapper_at(
+                        options,
+                        &p.wrapper_bin().to_string_lossy(),
+                    )
+                } else {
+                    crate::launch_options::remove_wrapper(options)
+                };
+                serde_json::to_value(api::LaunchText { options })
+                    .map_err(|e| ApiError::new("command-failed", &e.to_string()))
+            }
         }
         ViewCommand::Collection { current } => serde_json::to_value(collection(p, current)?)
             .map_err(|e| ApiError::new("command-failed", &e.to_string())),
