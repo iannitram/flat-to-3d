@@ -25,7 +25,7 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 ## Where it stands (2026-11-16)
 
-The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (labelled `after-1.0`); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue.
+The 1.0 path is the six Favorites in SPEC.md, in order by readiness (rulings 43-47). Each game track starts its hooking with a hook-point research step on the installed game (ruling 52, [below](#hook-point-research-ruling-52)). After 1.0 (kept, not sized): #4, #8, #9, #11, #12, #13, #14, and Planet of Lana's #45 and #48 (labelled `after-1.0`); #11 names 007 First Light and Alan Wake 2, now 1.0 games, so it needs re-cutting; Forza Horizon 6 is after 1.0 too (ruling 45) and has no issue. The stores ruling 55 leaves out of 1.0 are `after-1.0` too: Microsoft Store / Game Pass #357, Mac App Store #358, Battle.net #359 (1.0 builds Steam and Heroic/Epic in #356).
 
 **Roadmap v2, `main` at `3025963`.** The per-WP table with PR numbers is [`progress.md`](plans/roadmap-v2/progress.md); the waves are [below](#waves). One bullet per wave:
 
@@ -102,7 +102,7 @@ Ruling 43 added three games; ruling 45 moved Forza Horizon 6 to `after-1.0` the 
 | Game | Spec | Planned route (untested) | Fallback | Open |
 |---|---|---|---|---|
 | 007 First Light (Steam 3768760, Glacier, DX12), fourth in the order | M31 | a `dinput8.dll` proxy of our own switches the engine's dormant VR device to its `stereo3d` mode; the side-by-side picture goes to the SBS viewer (G2) | our own two-pass or alternate-eye DX12 stereo (#11) | whether the dormant mode still draws two real views |
-| Alan Wake 2 (Epic only, through Heroic; no Steam appid; Northlight, DX12), sixth in the order | M32 | our own alternate-eye hook on the engine's camera class, loaded by a proxy DLL, into the SBS viewer (G2). Alternate-eye counts here because no workable two-real-views route is known (a two-pass render would double a GPU load the note already puts at its limit); the bar is 30+ fps per eye (ruling 44) | the NoMoreFlat OpenXR mod (also alternate-eye), only if its free build is published; it was not public on 2026-11-11 | recipes and the launch wrapper assume a Steam appid, so a non-Steam game needs a design of its own |
+| Alan Wake 2 (Epic only, through Heroic; no Steam appid; Northlight, DX12), sixth in the order | M32 | our own alternate-eye hook on the engine's camera class, loaded by a proxy DLL, into the SBS viewer (G2). Alternate-eye counts here because no workable two-real-views route is known (a two-pass render would double a GPU load the note already puts at its limit); the bar is 30+ fps per eye (ruling 44) | the NoMoreFlat OpenXR mod (also alternate-eye), only if its free build is published; it was not public on 2026-11-11 | recipes and the launch wrapper assumed a Steam appid; ruling 55 keys recipes by store and scans the Steam and Heroic/Epic libraries (#356) |
 
 Both depend on G2 (#44), the SBS viewer, which Control needs first.
 
@@ -125,7 +125,7 @@ Fallback if F3 finds no two-eye picture: #11 (two-pass DX12 stereo).
 
 | Step | What | Depends on |
 |---|---|---|
-| W1 (#292) | Decision: how a non-Steam (Heroic) game gets a recipe key and the launch wrapper (the owner's call, tracked on #292 rather than under Decisions for you); the Heroic files an engine would read are in [the Heroic files note](notes/research/games/epic-alan-wake-2-heroic-files.md) (#277, paths checked on the device except the wrapper entry format and wrapper launch test) | the owner |
+| W1 (#292) | Decided 2026-11-17 (ruling 55): recipes keyed by store (`epic:<app name>` here), the engine scans the Steam and Heroic/Epic libraries and writes Heroic's per-game wrapper setting; the build is #356; the Heroic files an engine would read are in [the Heroic files note](notes/research/games/epic-alan-wake-2-heroic-files.md) (#277, paths checked on the device except the wrapper entry format and wrapper launch test) | the owner |
 | W2 (#293) | The launch path on the device, and a do-nothing proxy `version.dll` load check | - |
 | WR (#289) | Hook-point research on the installed game (ruling 52): `rend::View`'s setters and `renderWorldInternal` from Control's exports and the lambda RTTI names, the present hook below Streamline, one RenderDoc capture of the view constants, into `docs/hooks/epic-alan-wake-2.md` | the install (ruling 51) |
 | W3 (#299) | One-eye camera shift through the `rend::View` hook | WR, W2 |

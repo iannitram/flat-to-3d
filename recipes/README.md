@@ -4,7 +4,7 @@ One file per game, with `name` plus the eight stereo keys (`docs/notes/DECISIONS
 
 ## Format
 
-One file per game, named `<appid>-<slug>.recipe`: the Steam appid, a dash, then a short name, for example `2651280-spider-man-2.recipe`. The loader reads every `.recipe` file in this folder and ignores other files, this README included.
+One file per game, named `<appid>-<slug>.recipe`: the Steam appid, a dash, then a short name, for example `2651280-spider-man-2.recipe`. Ruling 55 (2026-11-17) adds store keys (`steam:<appid>`, `epic:<app name>`) so a non-Steam game such as Alan Wake 2 can have a recipe; the naming change is built in #356, and until then this naming holds. The loader reads every `.recipe` file in this folder and ignores other files, this README included.
 
 Each line is one `key: value` pair, split at the first `:`. A line starting with `#` is a comment, and blank lines are skipped. One pair of double quotes around a value is dropped, so `"yes"` and `yes` are the same.
 
