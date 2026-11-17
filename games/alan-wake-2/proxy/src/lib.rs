@@ -78,9 +78,10 @@ macro_rules! forward {
 
 forward! {
     GetFileVersionInfoA(file: *const u8, handle: u32, len: u32, data: *mut c_void) -> i32;
-    // Undocumented export: its signature is not public, so the eight argument words are
-    // passed on as they are (the four register words and the stack words after them).
-    GetFileVersionInfoByHandle(a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize, a6: usize, a7: usize) -> usize;
+    // Documented signature (learn.microsoft.com, GetFileVersionInfoByHandle): four
+    // arguments, returns BOOL. Forwarding more words would read stack slots the caller
+    // never supplied.
+    GetFileVersionInfoByHandle(flags: u32, file: *mut c_void, data: *mut *mut c_void, len: *mut u32) -> i32;
     GetFileVersionInfoExA(flags: u32, file: *const u8, handle: u32, len: u32, data: *mut c_void) -> i32;
     GetFileVersionInfoExW(flags: u32, file: *const u16, handle: u32, len: u32, data: *mut c_void) -> i32;
     GetFileVersionInfoSizeA(file: *const u8, handle: *mut u32) -> u32;

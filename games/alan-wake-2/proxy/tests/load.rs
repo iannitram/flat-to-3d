@@ -1,8 +1,9 @@
 //! Loads the built `version.dll` and checks that it forwards and logs (#293).
 #![cfg(windows)]
 
-use std::ffi::OsStr;
+use std::ffi::{c_void, OsStr};
 use std::os::windows::ffi::OsStrExt;
+use std::os::windows::io::AsRawHandle;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -98,4 +99,52 @@ fn proxy_forwards_size_query_and_logs_load() {
 
     // SAFETY: `module` came from LoadLibraryW above and is freed once.
     unsafe { FreeLibrary(module) };
+}
+
+#[test]
+fn proxy_forwards_by_handle_with_the_documented_four_arguments() {
+    let dll = built_dll();
+    assert!(dll.exists(), "build the proxy first: {}", dll.display());
+    let file = std::fs::File::open(r"C:\Windows\System32\kernel32.dll").expect("open kernel32.dll");
+    type ByHandle = unsafe extern "system" fn(u32, *mut c_void, *mut *mut c_void, *mut u32) -> i32;
+    let lookup = |path: &str| -> (HMODULE, ByHandle) {
+        // SAFETY: the path is nul-terminated; the handle is checked before use.
+        let module = unsafe { LoadLibraryW(wide(path).as_ptr()) };
+        assert!(!module.is_null(), "LoadLibraryW failed for {path}");
+        // SAFETY: the name is nul-terminated and the export is looked up by name.
+        let proc = unsafe { GetProcAddress(module, c"GetFileVersionInfoByHandle".as_ptr().cast()) }
+            .unwrap_or_else(|| panic!("{path} exports GetFileVersionInfoByHandle"));
+        // SAFETY: the export has the documented four-argument signature.
+        (module, unsafe {
+            std::mem::transmute::<unsafe extern "system" fn() -> isize, ByHandle>(proc)
+        })
+    };
+    let (proxy_module, proxied) = lookup(dll.to_str().unwrap());
+    let (system_module, direct) = lookup(r"C:\Windows\System32\version.dll");
+    assert_ne!(
+        proxy_module, system_module,
+        "the proxy must not be the system DLL"
+    );
+
+    let (mut data_a, mut len_a) = (std::ptr::null_mut(), 0u32);
+    let (mut data_b, mut len_b) = (std::ptr::null_mut(), 0u32);
+    let handle = file.as_raw_handle();
+    // SAFETY: a live file handle and valid out-pointers; any buffer the call returns is leaked.
+    let (via_proxy, via_system) = unsafe {
+        (
+            proxied(0, handle, &mut data_a, &mut len_a),
+            direct(0, handle, &mut data_b, &mut len_b),
+        )
+    };
+    assert_eq!(
+        via_proxy, via_system,
+        "proxy must answer like the system version.dll"
+    );
+    assert_eq!(len_a, len_b, "same length out-value as the system call");
+
+    // SAFETY: both modules came from LoadLibraryW above and are freed once each.
+    unsafe {
+        FreeLibrary(proxy_module);
+        FreeLibrary(system_module);
+    }
 }
