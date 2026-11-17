@@ -55,13 +55,18 @@ int main(int argc, char **argv) {
   }
   fprintf(stderr, "rd-trigger: connected to %s (pid %u)\n", tc->GetTarget().c_str(), tc->GetPID());
   // On connect the target replays a NewCapture message for each capture it already took; note them
-  // so a second trigger in the same run reports only the new capture.
+  // so a second trigger in the same run reports only the new capture. Read back to back (one message
+  // per call) and keep going until no NewCapture has come for 500 ms, so a long backlog is not
+  // cut off and later reported as new.
   std::set<uint32_t> earlier;
   for (auto drain = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
-       std::chrono::steady_clock::now() < drain;) {
+       std::chrono::steady_clock::now() < drain && tc->Connected();) {
     TargetControlMessage msg = tc->ReceiveMessage(nullptr);
-    if (msg.type == TargetControlMessageType::NewCapture) earlier.insert(msg.newCapture.captureId);
-    sleep_s(0.05);
+    if (msg.type == TargetControlMessageType::Noop) { sleep_s(0.05); continue; }
+    if (msg.type == TargetControlMessageType::NewCapture) {
+      earlier.insert(msg.newCapture.captureId);
+      drain = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+    }
   }
   tc->TriggerCapture(frames);
 
