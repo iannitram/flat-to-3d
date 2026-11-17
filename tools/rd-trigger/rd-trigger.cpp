@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
 #include <thread>
 #include <unistd.h>
 #include "renderdoc_replay.h"
@@ -23,6 +24,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--wait") && i + 1 < argc) wait = atof(argv[++i]);
     else { fprintf(stderr, "usage: rd-trigger [--delay SECONDS] [--frames N] [--wait SECONDS]\n"); return 2; }
   }
+  if (frames == 0) { fprintf(stderr, "rd-trigger: --frames must be at least 1\n"); return 2; }
   if (delay > 0) { fprintf(stderr, "rd-trigger: capturing in %.0f s\n", delay); sleep_s(delay); }
 
   GlobalEnvironment env;
@@ -52,13 +54,22 @@ int main(int argc, char **argv) {
     return 1;
   }
   fprintf(stderr, "rd-trigger: connected to %s (pid %u)\n", tc->GetTarget().c_str(), tc->GetPID());
+  // On connect the target replays a NewCapture message for each capture it already took; note them
+  // so a second trigger in the same run reports only the new capture.
+  std::set<uint32_t> earlier;
+  for (auto drain = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+       std::chrono::steady_clock::now() < drain;) {
+    TargetControlMessage msg = tc->ReceiveMessage(nullptr);
+    if (msg.type == TargetControlMessageType::NewCapture) earlier.insert(msg.newCapture.captureId);
+    sleep_s(0.05);
+  }
   tc->TriggerCapture(frames);
 
   int rc = 1;
   auto end = std::chrono::steady_clock::now() + std::chrono::duration<double>(wait);
   while (std::chrono::steady_clock::now() < end && tc->Connected()) {
     TargetControlMessage msg = tc->ReceiveMessage(nullptr);
-    if (msg.type == TargetControlMessageType::NewCapture) {
+    if (msg.type == TargetControlMessageType::NewCapture && !earlier.count(msg.newCapture.captureId)) {
       printf("%s\n", msg.newCapture.path.c_str());
       rc = 0;
       if (--frames == 0) break;
