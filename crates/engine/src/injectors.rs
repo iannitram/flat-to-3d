@@ -67,28 +67,30 @@ pub fn ensure_applied_in(
     }
 
     let route = route_of(&recipe.route);
-    let keys = match route {
-        Route::Uevr => {
-            let mut keys = vec!["uevr".to_string()];
-            keys.extend(settings.get("uevr-profile").cloned());
-            keys
-        }
-        Route::Geo11 => {
-            let mut keys = vec!["geo11".to_string()];
-            keys.extend(settings.get("geo11-fix").cloned());
-            keys
-        }
-        Route::Port => return Err("not-built: port route: #27b (WP-27)".into()),
-        Route::Aw2 => {
-            return Err("not-built: AW2 route requires the Heroic prefix: #293 (W2)".into())
-        }
-        Route::NoRoute => {
-            let why = check_injectable(recipe)
-                .err()
-                .unwrap_or_else(|| format!("{} has no stereo route", recipe.name));
-            return Err(format!("refused: {why}"));
-        }
-    };
+    let keys =
+        match route {
+            Route::Uevr => {
+                let mut keys = vec!["uevr".to_string()];
+                keys.extend(settings.get("uevr-profile").cloned());
+                keys
+            }
+            Route::Geo11 => {
+                let mut keys = vec!["geo11".to_string()];
+                keys.extend(settings.get("geo11-fix").cloned());
+                keys
+            }
+            Route::Port => return Err("not-built: port route: #27b (WP-27)".into()),
+            Route::Aw2 => return Err(
+                "not-built: AW2 route needs the Heroic prefix through ensure_applied: #379 (WP-31)"
+                    .into(),
+            ),
+            Route::NoRoute => {
+                let why = check_injectable(recipe)
+                    .err()
+                    .unwrap_or_else(|| format!("{} has no stereo route", recipe.name));
+                return Err(format!("refused: {why}"));
+            }
+        };
     for key in keys {
         let pin = fetch::pin_in(pins, &key).map_err(fetch_error_string)?;
         fetch::fetch(&pin, p, r).map_err(fetch_error_string)?;
