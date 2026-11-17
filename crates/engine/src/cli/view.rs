@@ -110,9 +110,9 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
             .map_err(|e| ApiError::new("command-failed", &e.to_string())),
         ViewCommand::Launch { add, options } => {
             if let Some(app_name) = options.strip_prefix("epic:") {
+                let key = crate::recipes::StoreKey::Epic(app_name.to_string());
                 let text = if *add {
-                    let _ = crate::heroic_wrapper::apply_epic(p, app_name)?;
-                    format!("epic:{app_name}")
+                    crate::heroic_wrapper::apply_for_key(p, &key, options)?
                 } else {
                     let _ = crate::heroic_wrapper::undo_epic(p, app_name)?;
                     String::new()
@@ -121,10 +121,8 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
                     .map_err(|e| ApiError::new("command-failed", &e.to_string()))
             } else {
                 let options = if *add {
-                    crate::launch_options::add_wrapper_at(
-                        options,
-                        &p.wrapper_bin().to_string_lossy(),
-                    )
+                    let key = crate::recipes::StoreKey::Steam(0);
+                    crate::heroic_wrapper::apply_for_key(p, &key, options)?
                 } else {
                     crate::launch_options::remove_wrapper(options)
                 };

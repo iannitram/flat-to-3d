@@ -133,6 +133,7 @@ pub fn find_config_root(home: &Path, app_name: &str) -> PathBuf {
 
 /// Apply our wrapper to an Epic game's Heroic config, saving an undo record with the backup.
 pub fn apply_epic(paths: &crate::paths::EnginePaths, app_name: &str) -> Result<Applied, ApiError> {
+    check_app_name(app_name)?;
     let config_root = find_config_root(&paths.home, app_name);
     let config = games_config(&config_root, app_name);
     if !config.exists() {
@@ -167,13 +168,34 @@ pub fn apply_epic(paths: &crate::paths::EnginePaths, app_name: &str) -> Result<A
     Ok(applied)
 }
 
-/// Apply an Epic recipe's wrapper settings to Heroic.
-pub fn apply_recipe(
+/// Refuse an app name that could not be a plain file name: empty, a path separator, `..`, NUL.
+pub fn check_app_name(app_name: &str) -> Result<(), ApiError> {
+    if app_name.is_empty() || app_name.contains(['/', '\\', '\0']) || app_name.contains("..") {
+        return Err(ApiError::new(
+            "refused",
+            &format!("bad Epic app name: {app_name:?}"),
+        ));
+    }
+    Ok(())
+}
+
+/// Apply our wrapper for one store key: a Steam key gets the launch-option wrapper (the new
+/// text is returned); an `epic:` key gets the Heroic per-game wrapper and an undo record.
+pub fn apply_for_key(
     paths: &crate::paths::EnginePaths,
-    _recipe: &crate::recipes::Recipe,
-    app_name: &str,
-) -> Result<Applied, ApiError> {
-    apply_epic(paths, app_name)
+    key: &StoreKey,
+    options: &str,
+) -> Result<String, ApiError> {
+    match key {
+        StoreKey::Epic(app_name) => {
+            apply_epic(paths, app_name)?;
+            Ok(format!("epic:{app_name}"))
+        }
+        StoreKey::Steam(_) => Ok(crate::launch_options::add_wrapper_at(
+            options,
+            &paths.wrapper_bin().to_string_lossy(),
+        )),
+    }
 }
 
 /// Undo wrapper changes for an Epic game from its undo record.
@@ -181,5 +203,6 @@ pub fn undo_epic(
     paths: &crate::paths::EnginePaths,
     app_name: &str,
 ) -> Result<crate::api::UndoResult, ApiError> {
+    check_app_name(app_name)?;
     crate::undo::undo_game_keyed(&paths.data, &StoreKey::Epic(app_name.to_string()))
 }

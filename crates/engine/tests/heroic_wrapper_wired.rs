@@ -56,42 +56,109 @@ fn seed_heroic_config(home: &Path, app_name: &str, content: &str) -> PathBuf {
     config_path
 }
 
-// Catches: apply for an epic: recipe failing to call heroic_wrapper::apply, not finding the config root inside a temp HOME, or omitting the backup path from the undo record.
+fn launch(
+    paths: &EnginePaths,
+    add: bool,
+    options: &str,
+) -> Result<serde_json::Value, flat3d_inject::api::ApiError> {
+    let mut fake = FakeRunner::new();
+    let mut process = FakeRunner::new();
+    let mut ctx = Ctx {
+        paths,
+        runner: &mut fake,
+        process: &mut process,
+        json: true,
+    };
+    view::run(
+        &ViewCommand::Launch {
+            add,
+            options: options.to_string(),
+        },
+        &mut ctx,
+    )
+}
+
+const RECIPE_TEXT: &str = "name: Alan Wake 2\nstereo-status: works-now\nstereo-route: build: native\nstereo-engine: Northlight\nstereo-api: dx12\nstereo-mod: none\nstereo-free: yes\nstereo-safe: yes\nstereo-checked: 2026-11-17\n";
+
+// Catches: the real apply entry point ignoring an epic: recipe key (wrapper or undo record missing), or taking the key from anywhere but the recipe.
 #[test]
-fn apply_wires_heroic_wrapper_and_records_backup_in_undo_record() {
+fn apply_for_epic_recipe_key_writes_wrapper_and_record() {
     let (_dir, paths) = fresh_env("apply-wires");
     let config_path = seed_heroic_config(&paths.home, APP_NAME, HEROIC_GAME_CONFIG);
     let orig_bytes = fs::read(&config_path).unwrap();
 
-    let recipe = recipes::parse_recipe_keyed(
-        StoreKey::Epic(APP_NAME.to_string()),
-        "name: Alan Wake 2\nstereo-status: works-now\nstereo-route: build: native\nstereo-engine: Northlight\nstereo-api: dx12\nstereo-mod: none\nstereo-free: yes\nstereo-safe: yes\nstereo-checked: 2026-11-17\n",
-    )
-    .unwrap();
+    let key: StoreKey = format!("epic:{APP_NAME}").parse().unwrap();
+    let recipe = recipes::parse_recipe_keyed(key.clone(), RECIPE_TEXT).unwrap();
+    assert_eq!(recipe.name, "Alan Wake 2");
 
-    let applied = heroic_wrapper::apply_recipe(&paths, &recipe, APP_NAME).unwrap();
-    assert_eq!(applied, Applied::Added);
+    let text = heroic_wrapper::apply_for_key(&paths, &key, "").unwrap();
+    assert_eq!(text, format!("epic:{APP_NAME}"));
 
     let wrapper_str = paths.wrapper_bin().to_string_lossy().into_owned();
     assert!(heroic_wrapper::has_wrapper(&config_path, APP_NAME, &wrapper_str).unwrap());
 
-    let record_path = undo::record_path_keyed(&paths.data, &StoreKey::Epic(APP_NAME.to_string()));
-    assert!(
-        record_path.exists(),
-        "undo record must exist at {}",
-        record_path.display()
-    );
-
-    let text = fs::read_to_string(&record_path).unwrap();
-    let rec = UndoRecord::from_text(&text).unwrap();
-    assert_eq!(rec.key(), StoreKey::Epic(APP_NAME.to_string()));
+    let record_path = undo::record_path_keyed(&paths.data, &key);
+    let record_text = fs::read_to_string(&record_path).unwrap();
+    assert!(record_text.contains(&format!("store-key\tepic:{APP_NAME}\n")));
+    let rec = UndoRecord::from_text(&record_text).unwrap();
+    assert_eq!(rec.key(), key);
     assert_eq!(rec.replaced.len(), 1);
     assert_eq!(rec.replaced[0].path, config_path);
-    assert!(
-        rec.replaced[0].backup.exists(),
-        "backup file must exist on disk"
-    );
     assert_eq!(fs::read(&rec.replaced[0].backup).unwrap(), orig_bytes);
+}
+
+// Catches: a Steam recipe key no longer getting the launch-option wrapper through the same entry point, or touching Heroic.
+#[test]
+fn apply_for_steam_recipe_key_still_adds_launch_option_wrapper() {
+    let (_dir, paths) = fresh_env("apply-steam");
+    let key: StoreKey = "steam:870780".parse().unwrap();
+    let text = heroic_wrapper::apply_for_key(&paths, &key, "").unwrap();
+    assert!(text.contains(&paths.wrapper_bin().to_string_lossy().into_owned()));
+    assert_eq!(launch(&paths, true, "").unwrap()["options"], text);
+    assert!(!paths.data.join("undo").exists());
+}
+
+// Catches: an Epic app name with path parts escaping the undo folder or the Heroic config folder.
+#[test]
+fn bad_epic_app_names_are_refused_and_write_nothing() {
+    let (dir, paths) = fresh_env("bad-name");
+    for name in ["../x", "", "a/b", "a\\b", "..", "a\0b"] {
+        assert!(
+            heroic_wrapper::apply_for_key(&paths, &StoreKey::Epic(name.into()), "").is_err(),
+            "{name:?}"
+        );
+        assert!(heroic_wrapper::undo_epic(&paths, name).is_err(), "{name:?}");
+        assert!(launch(&paths, true, &format!("epic:{name}")).is_err());
+    }
+    assert!(!paths.data.join("undo").exists());
+    assert!(!dir.join("x.json").exists() && !paths.data.join("x.txt").exists());
+}
+
+// Catches: undo deleting the backup or record when the config write fails, losing the only copy of the original.
+#[test]
+fn failed_restore_keeps_backup_and_record() {
+    let (_dir, paths) = fresh_env("undo-fails");
+    let config_path = seed_heroic_config(&paths.home, APP_NAME, HEROIC_GAME_CONFIG);
+    let orig_bytes = fs::read(&config_path).unwrap();
+    heroic_wrapper::apply_epic(&paths, APP_NAME).unwrap();
+    let key = StoreKey::Epic(APP_NAME.to_string());
+    let record_path = undo::record_path_keyed(&paths.data, &key);
+    let rec = UndoRecord::from_text(&fs::read_to_string(&record_path).unwrap()).unwrap();
+    let backup = rec.replaced[0].backup.clone();
+
+    // Simulated failed write: a folder sits where the config file was, so the rename fails.
+    fs::remove_file(&config_path).unwrap();
+    fs::create_dir(&config_path).unwrap();
+    assert!(heroic_wrapper::undo_epic(&paths, APP_NAME).is_err());
+    assert!(backup.exists(), "backup must survive a failed restore");
+    assert!(record_path.exists(), "record must survive a failed restore");
+
+    // Once the write can work, undo restores the bytes and only then removes the backup.
+    fs::remove_dir(&config_path).unwrap();
+    heroic_wrapper::undo_epic(&paths, APP_NAME).unwrap();
+    assert_eq!(fs::read(&config_path).unwrap(), orig_bytes);
+    assert!(!backup.exists());
+    assert!(!record_path.exists());
 }
 
 // Catches: running apply twice duplicating wrapper entries or mutating config bytes on idempotent re-application.

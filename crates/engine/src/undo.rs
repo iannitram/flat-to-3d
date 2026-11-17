@@ -163,18 +163,13 @@ pub(crate) fn unescape(s: &str) -> String {
 
 impl UndoRecord {
     /// The store key for this record: `StoreKey::Steam(appid)` when `appid != 0`, or
-    /// `StoreKey::Epic(app_name)` when it replaced a Heroic game's config or recorded an epic key.
+    /// `StoreKey::Epic(app_name)` when the record carries an epic key (its `store-key` line is
+    /// kept in `launch_options_before` as `epic:<app name>`). Never guessed from file names.
     pub fn key(&self) -> StoreKey {
         if self.appid != 0 {
             StoreKey::Steam(self.appid)
         } else if let Some(name) = self.launch_options_before.strip_prefix("epic:") {
             StoreKey::Epic(name.to_string())
-        } else if let Some(first) = self.replaced.first() {
-            if let Some(stem) = first.path.file_stem().and_then(|s| s.to_str()) {
-                StoreKey::Epic(stem.to_string())
-            } else {
-                StoreKey::Steam(0)
-            }
         } else {
             StoreKey::Steam(self.appid)
         }
@@ -434,6 +429,21 @@ pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, Ap
                 }
                 Err(e) => return Err(io_error("cannot remove", &file, &e)),
             },
+            UndoAction::RestoreFile {
+                backup,
+                path: target,
+            } if matches!(key, StoreKey::Epic(_)) => {
+                // Heroic configs go back through the atomic write; the backup goes only after it.
+                match crate::heroic_wrapper::undo(&target, &backup) {
+                    Ok(true) => restored.push(format!(
+                        "restored {} from {}",
+                        target.display(),
+                        backup.display()
+                    )),
+                    Ok(false) => restored.push(format!("already restored {}", target.display())),
+                    Err(e) => return Err(io_error("cannot restore", &target, &e)),
+                }
+            }
             UndoAction::RestoreFile { backup, path } => match fs::copy(&backup, &path) {
                 Ok(_) => {
                     fs::remove_file(&backup).map_err(|e| io_error("cannot remove", &backup, &e))?;
