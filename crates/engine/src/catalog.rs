@@ -1,9 +1,10 @@
 //! Installed Steam games joined to their configured recipes.
 
-use crate::{api, paths::EnginePaths, recipes, steam};
-use std::collections::BTreeMap;
+use crate::{api, heroic, paths::EnginePaths, recipes, steam};
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 
 /// The games installed in Steam and their recipe records.
 pub struct Catalog {
@@ -94,4 +95,45 @@ pub fn find_recipe(dirs: &[PathBuf], appid: u32) -> Result<Option<(PathBuf, Stri
         }
     }
     Ok(None)
+}
+
+/// The games installed across known game libraries (Steam and Heroic).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Library {
+    pub steam: Vec<steam::Game>,
+    pub epic: Vec<heroic::Game>,
+}
+
+/// Scan for installed games across Steam and Heroic library roots.
+pub fn scan_libraries(home: &Path) -> io::Result<Library> {
+    let steam = steam::installed_games(&home.join(steam::DEFAULT_STEAM_ROOT))?;
+    let epic = heroic::installed_games(home)?;
+    Ok(Library { steam, epic })
+}
+
+/// Load Epic recipes for installed games from the given recipe directories.
+///
+/// For each existing directory, recipes are loaded; missing directories are skipped.
+/// An earlier directory wins when both define a recipe for the same store key.
+pub fn epic_recipes(
+    games: &[heroic::Game],
+    recipe_dirs: &[PathBuf],
+) -> Result<BTreeMap<String, recipes::Recipe>, recipes::RecipeError> {
+    let installed: HashSet<&str> = games.iter().map(|g| g.app_name.as_str()).collect();
+    let mut found = BTreeMap::new();
+    for dir in recipe_dirs {
+        let keyed = match recipes::load_recipes_keyed(dir) {
+            Ok(keyed) => keyed,
+            Err(recipes::RecipeError::Io { .. }) if !dir.exists() => continue,
+            Err(err) => return Err(err),
+        };
+        for (key, recipe) in keyed {
+            if let recipes::StoreKey::Epic(app_name) = key {
+                if installed.contains(app_name.as_str()) {
+                    found.entry(app_name).or_insert(recipe);
+                }
+            }
+        }
+    }
+    Ok(found)
 }
