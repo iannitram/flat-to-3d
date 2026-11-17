@@ -109,7 +109,7 @@ cd "$HOME/Games/AlanWake2"
 "$HOME/.var/app/com.heroicgameslauncher.hgl/config/heroic/tools/proton/Proton-CachyOS-latest/proton" waitforexitandrun ./AlanWake2.exe
 ```
 
-Before the run, in the game: upscaling and frame generation off, in a lit outdoor scene. Press F12 (RenderDoc's capture key) once in gameplay, quit, then open the `.rdc` (`renderdoccmd` or qrenderdoc), pick a world mesh draw, and read the constant buffer that holds `g_mWorldToView` / `g_mViewToClip`. If the game will not start offline outside Heroic, add the same environment variables (`ENABLE_VULKAN_RENDERDOC_CAPTURE`, `RENDERDOC_CAPFILE`, and optionally `VKD3D_CONFIG`, `DXVK_HDR`, `PROTON_FSR4_UPGRADE`) to Heroic's game settings and run Heroic from a host-installed (non-flatpak) build instead.
+Before the run, in the game: upscaling and frame generation off, in a lit outdoor scene. Press Print Screen (RenderDoc listens for both F12 and Print Screen; on the Z13 the F12 key is also airplane mode, so use Print Screen) once in gameplay, quit, then open the `.rdc` (`renderdoccmd` or qrenderdoc), pick a world mesh draw, and read the constant buffer that holds `g_mWorldToView` / `g_mViewToClip`. If the game will not start offline outside Heroic, add the same environment variables (`ENABLE_VULKAN_RENDERDOC_CAPTURE`, `RENDERDOC_CAPFILE`, and optionally `VKD3D_CONFIG`, `DXVK_HDR`, `PROTON_FSR4_UPGRADE`) to Heroic's game settings and run Heroic from a host-installed (non-flatpak) build instead.
 
 ## Counts
 
