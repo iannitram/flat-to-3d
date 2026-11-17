@@ -110,7 +110,7 @@ Both depend on G2 (#44), the SBS viewer, which Control needs first.
 
 | Step | What | Depends on |
 |---|---|---|
-| F1 (#290) | Offline play, and the dummy VR device's log lines under Proton (note tests 1-3, no code) | - |
+| F1 (#290) | Offline play, and the dummy VR device's log lines under Proton (note tests 1-3, no code). Done 2026-11-17: plays in offline mode under a shim that blocks outbound connections (the one network-off start, run 1, did not reach a window); the retail build logged no device lines; `user.ini` override showed no effect ([results](notes/research/games/3768760-007-first-light.md#results-of-tests-1-to-3-2026-11-17-290)) | - |
 | FR (#288) | Hook-point research on the installed game (ruling 52): map `ZRenderVRDeviceDummy` (vtable, activate and set-mode methods, active flag, mode and IPD) and the loader hooks, into `docs/hooks/3768760-007-first-light.md` | the install (ruling 51) |
 | F2 (#291) | Build ZKntSDK from source and load it under Proton | - |
 | F3 (#294) | Probe mod: switch the device to `stereo3d`, report what is drawn | FR, F2 |
