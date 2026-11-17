@@ -8,6 +8,7 @@ use crate::steam::{self, Game};
 use crate::undo::{self, UndoRecord};
 use std::fs;
 
+pub mod aw2;
 pub mod fetch;
 pub mod geo11;
 pub mod port;
@@ -78,6 +79,9 @@ pub fn ensure_applied_in(
             keys
         }
         Route::Port => return Err("not-built: port route: #27b (WP-27)".into()),
+        Route::Aw2 => {
+            return Err("not-built: AW2 route requires the Heroic prefix: #293 (W2)".into())
+        }
         Route::NoRoute => {
             let why = check_injectable(recipe)
                 .err()
@@ -105,7 +109,7 @@ pub fn ensure_applied_in(
             )?;
             (applied.record, env)
         }
-        Route::Port | Route::NoRoute => unreachable!("returned above"),
+        Route::Port | Route::Aw2 | Route::NoRoute => unreachable!("returned above"),
     };
 
     let rec_path = match undo::save_record(&p.data, &record) {
@@ -151,6 +155,7 @@ fn route_name(route: Route) -> &'static str {
         Route::Uevr => "uevr",
         Route::Geo11 => "geo11",
         Route::Port => "port",
+        Route::Aw2 => "aw2",
         Route::NoRoute => "none",
     }
 }
@@ -201,6 +206,7 @@ pub fn parse_env_file(text: &str) -> Result<(Route, RouteSettings, RouteEnv), St
     let route = match lines.next().and_then(|line| line.strip_prefix("route\t")) {
         Some("uevr") => Route::Uevr,
         Some("geo11") => Route::Geo11,
+        Some("aw2") => Route::Aw2,
         Some("port") => Route::Port,
         Some("none") => Route::NoRoute,
         _ => return Err("missing or unknown route tag".into()),
@@ -235,6 +241,7 @@ pub enum Route {
     Uevr,
     Geo11,
     Port,
+    Aw2,
     NoRoute,
 }
 
@@ -248,6 +255,8 @@ pub fn route_of(stereo_route: &str) -> Route {
         Route::Uevr
     } else if text.contains("geo-11") {
         Route::Geo11
+    } else if text.contains("aw2") || text.contains("alan wake 2") {
+        Route::Aw2
     } else {
         Route::NoRoute
     }

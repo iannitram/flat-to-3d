@@ -24,7 +24,7 @@ fn pin_refs(route: Route, settings: &RouteSettings) -> Vec<String> {
                 refs.push(fix.clone());
             }
         }
-        Route::Port | Route::NoRoute => {}
+        Route::Aw2 | Route::Port | Route::NoRoute => {}
     }
     refs
 }
@@ -51,7 +51,7 @@ fn pin_settings(route: Route, settings: &RouteSettings) -> Vec<(&'static str, St
                 refs.push(("geo11-fix", fix.clone()));
             }
         }
-        Route::Port | Route::NoRoute => {}
+        Route::Aw2 | Route::Port | Route::NoRoute => {}
     }
     refs
 }

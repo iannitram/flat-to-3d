@@ -28,7 +28,7 @@ fn pin_refs(route: Route, settings: &RouteSettings) -> Vec<String> {
                 refs.push(fix.clone());
             }
         }
-        Route::Port | Route::NoRoute => {}
+        Route::Aw2 | Route::Port | Route::NoRoute => {}
     }
     refs
 }
@@ -45,7 +45,7 @@ fn pin_setting(route: Route, settings: &RouteSettings, pin: &str) -> &'static st
         Route::Uevr if settings.get("uevr-profile").is_some_and(|key| key == pin) => "uevr-profile",
         Route::Geo11 if settings.get("geo11-fix").is_some_and(|key| key == pin) => "geo11-fix",
         Route::Uevr | Route::Geo11 => "stereo-route",
-        Route::Port | Route::NoRoute => "stereo-route",
+        Route::Aw2 | Route::Port | Route::NoRoute => "stereo-route",
     }
 }
 
