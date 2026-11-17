@@ -40,14 +40,24 @@ fn parses_all_view_forms_and_json_positions() {
         view(&["launch", "add", "--options", ""]),
         ViewCommand::Launch {
             add: true,
-            options: String::new()
+            options: String::new(),
+            appid: None,
         }
     );
     assert_eq!(
         view(&["launch", "add", "--json", "--options", "%command% -dx11"]),
         ViewCommand::Launch {
             add: true,
-            options: "%command% -dx11".into()
+            options: "%command% -dx11".into(),
+            appid: None,
+        }
+    );
+    assert_eq!(
+        view(&["launch", "add", "--appid", "42", "--options", "%command%",]),
+        ViewCommand::Launch {
+            add: true,
+            options: "%command%".into(),
+            appid: Some(42),
         }
     );
     assert!(
@@ -59,21 +69,24 @@ fn parses_all_view_forms_and_json_positions() {
         view(&["launch", "add", "--options", "FOO=1 %command% -- -dx11"]),
         ViewCommand::Launch {
             add: true,
-            options: "FOO=1 %command% -- -dx11".into()
+            options: "FOO=1 %command% -- -dx11".into(),
+            appid: None,
         }
     );
     assert_eq!(
         view(&["launch", "add", "--options", "-- %command%"]),
         ViewCommand::Launch {
             add: true,
-            options: "-- %command%".into()
+            options: "-- %command%".into(),
+            appid: None,
         }
     );
     assert_eq!(
         view(&["launch", "remove", "--options", "flat3d-run %command%"]),
         ViewCommand::Launch {
             add: false,
-            options: "flat3d-run %command%".into()
+            options: "flat3d-run %command%".into(),
+            appid: None,
         }
     );
     assert_eq!(
@@ -174,6 +187,7 @@ fn view_commands_return_expected_values() {
             &ViewCommand::Launch {
                 add: true,
                 options: String::new(),
+                appid: Some(7),
             },
             ctx,
         )
@@ -182,6 +196,12 @@ fn view_commands_return_expected_values() {
             launch["options"],
             format!("{} %command%", p.wrapper_bin().display())
         );
+        let record: flat3d_inject::launch_options::LaunchRecord = serde_json::from_slice(
+            &std::fs::read(flat3d_inject::launch_options::record_path(&p.data, 7)).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(record.before, "");
+        assert_eq!(record.applied, launch["options"].as_str().unwrap());
         for original in ["", "-- %command%", "FOO=1 %command% -- -dx11"] {
             let added = flat3d_inject::launch_options::add_wrapper_at(
                 original,
@@ -191,6 +211,7 @@ fn view_commands_return_expected_values() {
                 &ViewCommand::Launch {
                     add: false,
                     options: added,
+                    appid: None,
                 },
                 ctx,
             )
@@ -205,7 +226,8 @@ fn view_commands_return_expected_values() {
             cli::view::run(
                 &ViewCommand::Launch {
                     add: false,
-                    options: added
+                    options: added,
+                    appid: None,
                 },
                 ctx
             )
@@ -272,7 +294,10 @@ fn view_registry_rows_match_parser_and_read_only_effects() {
     let samples: &[(&str, &[&str])] = &[
         ("view", &["view"]),
         ("rows", &["rows", "--filter", "works-now"]),
-        ("launch", &["launch", "add", "--options", "x"]),
+        (
+            "launch",
+            &["launch", "add", "--appid", "7", "--options", "x"],
+        ),
         ("collection", &["collection", "--current", "1,2"]),
         ("toasts", &["toasts", "7"]),
         ("logs", &["logs", "--limit", "3"]),
@@ -303,7 +328,12 @@ fn view_registry_rows_match_parser_and_read_only_effects() {
         let rows: Vec<_> = cli::COMMANDS.iter().filter(|spec| spec.id == id).collect();
         assert_eq!(rows.len(), 1, "{id}");
         assert_eq!(rows[0].group, "View", "{id}");
-        assert_eq!(rows[0].effects, &[cli::SideEffect::ReadOnly], "{id}");
+        let effects = if id == "launch" {
+            &[cli::SideEffect::WritesFiles][..]
+        } else {
+            &[cli::SideEffect::ReadOnly][..]
+        };
+        assert_eq!(rows[0].effects, effects, "{id}");
         assert!(row_ids.contains(&id), "{id}");
     }
     assert_eq!(row_ids.len(), samples.len());
@@ -367,10 +397,12 @@ fn every_view_verb_is_read_only() {
             ViewCommand::Launch {
                 add: true,
                 options: "%command%".into(),
+                appid: None,
             },
             ViewCommand::Launch {
                 add: false,
                 options: "flat3d-run %command%".into(),
+                appid: None,
             },
             ViewCommand::Collection {
                 current: Some(vec![1]),

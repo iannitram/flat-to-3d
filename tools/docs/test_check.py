@@ -114,7 +114,7 @@ class CheckerTests(unittest.TestCase):
         self.assertEqual((code, out), (0, ""))
 
     def test_usage_alternatives_inside_brackets_and_subverbs(self):
-        real = '"usage: flat3d-inject view | rows [--filter <status>|all] | launch add|remove --options <string> | collection [--current <appids>] | toasts <last_seq> | logs [--limit <n>]"\n'
+        real = '"usage: flat3d-inject view | rows [--filter <status>|all] | launch add|remove [--appid <appid>] --options <string> | collection [--current <appids>] | toasts <last_seq> | logs [--limit <n>]"\n'
         self.put("crates/engine/src/cli.rs", real)
         rows = "".join(f"| `{c}` | x |\n" for c in ("view", "rows", "launch", "collection", "toasts", "logs"))
         self.put("docs/code-map.md", "## Commands\n" + rows)

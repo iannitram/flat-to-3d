@@ -199,6 +199,306 @@ fn block<'a>(pairs: &'a [Pair], key: &str) -> Option<&'a [Pair]> {
     })
 }
 
+/// Remove a recorded game's wrapper from one Steam `localconfig.vdf`. `None` means Steam no
+/// longer has that app's launch-options entry. The returned text is the updated KeyValues file.
+pub fn remove_recorded_wrapper(
+    text: &str,
+    appid: u32,
+    record: &crate::launch_options::LaunchRecord,
+) -> Result<Option<String>, String> {
+    let Some((options, span)) = launch_options_span(text, appid)? else {
+        return Ok(None);
+    };
+    let raw = &text[span.clone()];
+    let spliced = splice_out_wrapper(raw, record);
+    let value = if options == record.applied {
+        // The line is exactly what we wrote. Cutting our words out of the raw bytes keeps every
+        // escape as the user wrote it; when that does not read back as the recorded original
+        // (we also normalised the spacing), encode the original in the line's own escape style.
+        match spliced {
+            Some(value) if decode_vdf_value(&value) == record.before => value,
+            _ => encode_vdf_value(&record.before, raw.contains("\\\\")),
+        }
+    } else {
+        // The line was edited after we wrote it: remove only our wrapper words.
+        match spliced {
+            Some(value) => value,
+            None => return Ok(None),
+        }
+    };
+    if value == raw {
+        return Ok(None);
+    }
+    let mut output = String::with_capacity(text.len());
+    output.push_str(&text[..span.start]);
+    output.push_str(&value);
+    output.push_str(&text[span.end..]);
+    Ok(Some(output))
+}
+
+/// `raw` with our wrapper words (and the space after each) cut out and every other source byte
+/// kept; `None` when it holds no wrapper word.
+fn splice_out_wrapper(raw: &str, record: &crate::launch_options::LaunchRecord) -> Option<String> {
+    let removals = raw_wrapper_spans(raw);
+    if removals.is_empty() {
+        return None;
+    }
+    let mut value = String::with_capacity(raw.len());
+    let mut cursor = 0;
+    for removal in removals {
+        value.push_str(&raw[cursor..removal.start]);
+        cursor = removal.end;
+        let rest = &raw[cursor..];
+        let gap = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+        if gap > 0 {
+            cursor += 1;
+        } else if value.ends_with([' ', '\t']) {
+            value.pop();
+        }
+    }
+    value.push_str(&raw[cursor..]);
+    // A line with no `%command%` got one put after the wrapper; take it back off when the
+    // original had none of its own and the line still starts with it.
+    let had_command = record
+        .before
+        .split_whitespace()
+        .any(|word| word == "%command%");
+    if !had_command {
+        if let Some(after) = value.strip_prefix("%command%") {
+            if after.is_empty() || after.starts_with([' ', '\t']) {
+                value = after.strip_prefix([' ', '\t']).unwrap_or(after).to_string();
+            }
+        }
+    }
+    Some(value)
+}
+
+/// Read a quoted VDF value the way `tokenize_spanned` does: only `\\` and `\"` are escapes.
+fn decode_vdf_value(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut chars = raw.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek()) {
+            ('\\', Some('\\' | '"')) => out.extend(chars.next()),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Encode `value` for a quoted VDF string so `tokenize_spanned` reads it back unchanged. With
+/// `double_all` every backslash is doubled, as Steam writes it. Otherwise only a backslash the
+/// reader would take as an escape (before `\\`, `"` or the closing quote) is doubled, so a line
+/// written as `C:\foo` keeps its single backslash.
+fn encode_vdf_value(value: &str, double_all: bool) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut chars = value.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' if double_all => out.push_str("\\\\"),
+            '\\' => match chars.peek() {
+                None | Some('\\') | Some('"') => out.push_str("\\\\"),
+                Some(_) => out.push('\\'),
+            },
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Find unquoted wrapper words in the raw launch-options value. VDF escapes are deliberately
+/// treated as ordinary source bytes here; wrapper paths accepted by add_wrapper_at need no escapes.
+fn raw_wrapper_spans(value: &str) -> Vec<std::ops::Range<usize>> {
+    let mut spans = Vec::new();
+    let mut start = None;
+    let mut words = Vec::new();
+    for (at, c) in value.char_indices() {
+        if c.is_whitespace() {
+            if let Some(from) = start.take() {
+                words.push((from..at, &value[from..at]));
+            }
+        } else if start.is_none() {
+            start = Some(at);
+        }
+    }
+    if let Some(from) = start {
+        words.push((from..value.len(), &value[from..]));
+    }
+    for (span, word) in words {
+        if word == "%command%" {
+            break;
+        }
+        if word.rsplit('/').next() == Some(crate::launch_options::WRAPPER) {
+            spans.push(span);
+        }
+    }
+    spans
+}
+
+fn launch_options_span(
+    text: &str,
+    appid: u32,
+) -> Result<Option<(String, std::ops::Range<usize>)>, String> {
+    #[derive(Debug)]
+    enum SpanToken {
+        Text(String, std::ops::Range<usize>),
+        Open,
+        Close,
+    }
+    fn tokenize_spanned(text: &str) -> Option<Vec<SpanToken>> {
+        let mut tokens = Vec::new();
+        let mut chars = text.char_indices().peekable();
+        while let Some((_, c)) = chars.peek().copied() {
+            match c {
+                c if c.is_whitespace() || c == '\u{feff}' => {
+                    chars.next();
+                }
+                '/' => {
+                    chars.next();
+                    if chars.next().map(|(_, c)| c) != Some('/') {
+                        return None;
+                    }
+                    for (_, c) in chars.by_ref() {
+                        if c == '\n' {
+                            break;
+                        }
+                    }
+                }
+                '{' => {
+                    chars.next();
+                    tokens.push(SpanToken::Open);
+                }
+                '}' => {
+                    chars.next();
+                    tokens.push(SpanToken::Close);
+                }
+                '"' => {
+                    let (quote_at, _) = chars.next()?;
+                    let mut value = String::new();
+                    let end = loop {
+                        let (at, c) = chars.next()?;
+                        match c {
+                            '"' => break at,
+                            '\\' => match chars.peek().copied() {
+                                Some((_, next @ ('\\' | '"'))) => {
+                                    chars.next();
+                                    value.push(next);
+                                }
+                                _ => value.push('\\'),
+                            },
+                            c => value.push(c),
+                        }
+                    };
+                    let start = quote_at + 1;
+                    tokens.push(SpanToken::Text(value, start..end));
+                }
+                _ => return None,
+            }
+        }
+        Some(tokens)
+    }
+    fn block_end(tokens: &[SpanToken], open: usize) -> Option<usize> {
+        let mut depth = 0usize;
+        for (index, token) in tokens.iter().enumerate().skip(open) {
+            match token {
+                SpanToken::Open => depth += 1,
+                SpanToken::Close => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(index);
+                    }
+                }
+                SpanToken::Text(_, _) => {}
+            }
+        }
+        None
+    }
+    fn options_in_app(
+        tokens: &[SpanToken],
+        start: usize,
+        end: usize,
+        appid: &str,
+    ) -> Option<(String, std::ops::Range<usize>)> {
+        let mut pos = start;
+        while pos < end {
+            let SpanToken::Text(key, _) = tokens.get(pos)? else {
+                return None;
+            };
+            pos += 1;
+            match tokens.get(pos)? {
+                SpanToken::Text(_, _) => pos += 1,
+                SpanToken::Open => {
+                    let close = block_end(tokens, pos)?;
+                    if key == appid {
+                        let mut field = pos + 1;
+                        while field < close {
+                            let SpanToken::Text(name, _) = tokens.get(field)? else {
+                                return None;
+                            };
+                            field += 1;
+                            match tokens.get(field)? {
+                                SpanToken::Text(value, span)
+                                    if name.eq_ignore_ascii_case("LaunchOptions") =>
+                                {
+                                    return Some((value.clone(), span.clone()));
+                                }
+                                SpanToken::Text(_, _) => field += 1,
+                                SpanToken::Open => field = block_end(tokens, field)? + 1,
+                                SpanToken::Close => return None,
+                            }
+                        }
+                        return None;
+                    }
+                    pos = close + 1;
+                }
+                SpanToken::Close => return None,
+            }
+        }
+        None
+    }
+    fn find_apps(
+        tokens: &[SpanToken],
+        start: usize,
+        end: usize,
+        appid: &str,
+    ) -> Option<(String, std::ops::Range<usize>)> {
+        let mut pos = start;
+        while pos < end {
+            let SpanToken::Text(key, _) = tokens.get(pos)? else {
+                return None;
+            };
+            pos += 1;
+            match tokens.get(pos)? {
+                SpanToken::Text(_, _) => pos += 1,
+                SpanToken::Open => {
+                    let close = block_end(tokens, pos)?;
+                    let found = if key.eq_ignore_ascii_case("apps") {
+                        options_in_app(tokens, pos + 1, close, appid)
+                    } else {
+                        None
+                    };
+                    if found.is_some() {
+                        return found;
+                    }
+                    if let Some(found) = find_apps(tokens, pos + 1, close, appid) {
+                        return Some(found);
+                    }
+                    pos = close + 1;
+                }
+                SpanToken::Close => return None,
+            }
+        }
+        None
+    }
+
+    if parse(text).is_none() {
+        return Err("malformed localconfig.vdf".to_string());
+    }
+    let tokens = tokenize_spanned(text).ok_or_else(|| "malformed localconfig.vdf".to_string())?;
+    Ok(find_apps(&tokens, 0, tokens.len(), &appid.to_string()))
+}
+
 /// How deeply blocks may nest. Steam's files nest three or four levels; deeper is malformed, and
 /// the limit keeps a hostile file from overflowing the stack.
 const MAX_DEPTH: usize = 64;

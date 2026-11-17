@@ -34,7 +34,7 @@ async function syncOne(
   try {
     await appDetailsStore.RequestAppDetails(id);
     const cur = appDetailsStore.GetAppDetails(id)?.strLaunchOptions ?? "";
-    const r = await launch(verb, cur);
+    const r = await launch(verb, id, cur);
     if (!r.ok) {
       errors.push(r.error);
     } else if (r.data.options !== cur) {
