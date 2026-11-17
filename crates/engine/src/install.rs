@@ -249,6 +249,9 @@ pub fn execute_uninstall(
             }
         }
     }
+    for dir in created_dirs(&plan.home) {
+        let _ = fs::remove_dir(&dir);
+    }
     if std::path::Path::new(&plan.udev_rule).exists() {
         for command in &plan.udev_commands {
             let out = r.run(command);
@@ -297,6 +300,24 @@ fn install_roots(home: &str) -> Vec<String> {
         format!("{home}/.local/share/flat3d/"),
         format!("{home}/.config/systemd/user/"),
     ]
+}
+/// Every folder install can create, deepest first.
+fn created_dirs(home: &str) -> Vec<String> {
+    [
+        ".local/share/flat3d/bin/lib",
+        ".local/share/flat3d/bin",
+        ".local/share/flat3d/recipes",
+        ".local/share/flat3d",
+        ".local/share",
+        ".local/bin",
+        ".local",
+        ".config/systemd/user",
+        ".config/systemd",
+        ".config",
+    ]
+    .into_iter()
+    .map(|entry| format!("{home}/{entry}"))
+    .collect()
 }
 fn inside_roots(path: &str, roots: &[String]) -> bool {
     !std::path::Path::new(path)
