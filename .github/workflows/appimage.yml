@@ -15,10 +15,22 @@ jobs:
           SUDO=$(command -v sudo || true)
           $SUDO apt-get update && $SUDO apt-get install -y --no-install-recommends build-essential curl ca-certificates pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev libpipewire-0.3-dev libspa-0.2-dev libclang-dev clang desktop-file-utils
       - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Validate desktop file
+        run: desktop-file-validate packaging/flat3d.desktop
       - name: Build AppImage
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: packaging/build-appimage.sh --no-tools
+      - name: Check AppImage payload
+        run: |
+          cd "$(mktemp -d)"
+          "$GITHUB_WORKSPACE/dist/Flat_to_3D-x86_64.AppImage" --appimage-extract
+          for member in usr/bin/flat3d-app usr/bin/flat3d-inject usr/bin/flat3d-run usr/bin/flat3d-viewer AppRun flat3d.desktop flat3d.svg; do
+            if [ ! -e "squashfs-root/$member" ]; then
+              echo "Missing AppImage payload file: $member" >&2
+              exit 1
+            fi
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: Flat_to_3D-x86_64.AppImage

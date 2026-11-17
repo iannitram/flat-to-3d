@@ -5,4 +5,4 @@ Comment=Play flat PC games in 3D on a Quest
 Exec=flat3d-app
 Icon=flat3d
 Terminal=false
-Categories=Game;Utility;
+Categories=Utility;
