@@ -24,7 +24,10 @@ fn fresh(quest_tether: Option<&str>) -> LinkSnapshot {
 #[test]
 fn connected_reads_connected() {
     let view = link_view(Some(fresh(Some("connected"))), 100);
-    assert_eq!(view.quest_tether, "Quest Tether: connected");
+    assert_eq!(
+        view.quest_tether.as_deref(),
+        Some("Quest Tether: connected")
+    );
 }
 
 #[test]
@@ -38,32 +41,30 @@ fn every_other_state_reads_not_connected() {
         "something-new",
     ] {
         let view = link_view(Some(fresh(Some(state))), 100);
-        assert_eq!(view.quest_tether, "Quest Tether: not connected", "{state}");
+        assert_eq!(
+            view.quest_tether.as_deref(),
+            Some("Quest Tether: not connected"),
+            "{state}"
+        );
     }
 }
 
 #[test]
-fn none_reads_not_installed() {
+fn none_is_hidden() {
     let view = link_view(Some(fresh(None)), 100);
-    assert_eq!(view.quest_tether, "Quest Tether: not installed");
+    assert_eq!(view.quest_tether, None);
 }
 
 #[test]
-fn no_snapshot_reads_not_installed() {
-    assert_eq!(
-        link_view(None, 100).quest_tether,
-        "Quest Tether: not installed"
-    );
+fn no_snapshot_is_hidden() {
+    assert_eq!(link_view(None, 100).quest_tether, None);
 }
 
 #[test]
-fn a_stale_snapshot_reads_not_installed() {
+fn a_stale_snapshot_is_hidden() {
     let mut stale = fresh(Some("connected"));
     stale.updated = 80;
-    assert_eq!(
-        link_view(Some(stale), 100).quest_tether,
-        "Quest Tether: not installed"
-    );
+    assert_eq!(link_view(Some(stale), 100).quest_tether, None);
 }
 
 #[test]
@@ -191,7 +192,7 @@ fn nothing_depends_on_it() {
     let up = run_script("connected", present);
 
     assert_eq!(none.quest_tether, None);
-    assert_eq!(up.quest_tether.as_deref(), Some("connected"));
+    assert_eq!(up.quest_tether, None);
     assert_eq!(none.states.last(), Some(&LinkState::Stopped));
     assert!(none.states.contains(&LinkState::Ready));
     assert_eq!(none.commands, up.commands);
@@ -205,7 +206,10 @@ fn it_is_asked_at_most_every_ten_seconds() {
     let mut service = Service::new(
         paths("rate"),
         Rc::clone(&fake),
-        quiet_frames(None),
+        quiet_frames(Some(vec![Device {
+            serial: SERIAL.into(),
+            state: "unauthorized".into(),
+        }])),
         choice(),
     );
     let settings = Settings::default();
@@ -220,4 +224,154 @@ fn it_is_asked_at_most_every_ten_seconds() {
         .count();
     // Ticks 2000..2025 ask at 2000, 2010 and 2020.
     assert_eq!(asked, 3);
+}
+
+#[test]
+fn only_quest_link_states_identify_a_quest_display() {
+    use flat3d_inject::link::quest_tether::is_quest_display;
+    for state in [
+        LinkState::Starting,
+        LinkState::Ready,
+        LinkState::Unauthorised,
+    ] {
+        assert!(is_quest_display(state), "{state:?}");
+    }
+    for state in [LinkState::Stopped, LinkState::NoHeadset] {
+        assert!(!is_quest_display(state), "{state:?}");
+        let mut snapshot = fresh(Some("connected"));
+        snapshot.state = state;
+        assert_eq!(link_view(Some(snapshot), 100).quest_tether, None);
+    }
+}
+
+#[test]
+fn quest_runner_status_controls_the_optional_line() {
+    use flat3d_inject::link::quest_tether::status_command;
+    let mut replies: Vec<_> = [
+        "connected",
+        "idle",
+        "starting",
+        "reconnecting",
+        "stopping",
+        "error",
+    ]
+    .into_iter()
+    .map(|state| {
+        (
+            FakeRunner::new().ok(&["quest-tether"], &format!(r#"{{"state":"{state}"}}"#)),
+            Some(if state == "connected" {
+                "Quest Tether: connected"
+            } else {
+                "Quest Tether: not connected"
+            }),
+        )
+    })
+    .collect();
+    replies.extend([
+        (
+            FakeRunner::new().fail(&["quest-tether"], "No such file or directory (os error 2)"),
+            None,
+        ),
+        (FakeRunner::new().fail(&["quest-tether"], "exit 1"), None),
+        (FakeRunner::new().ok(&["quest-tether"], "not json"), None),
+    ]);
+    for (index, (runner, expected)) in replies.into_iter().enumerate() {
+        let fake = Rc::new(RefCell::new(runner));
+        let mut service = Service::new(
+            paths(&format!("reply-{index}")),
+            Rc::clone(&fake),
+            quiet_frames(Some(vec![Device {
+                serial: SERIAL.into(),
+                state: "unauthorized".into(),
+            }])),
+            choice(),
+        );
+        let snapshot = service.tick(100, &Settings::default(), None, (false, false));
+        assert_eq!(snapshot.state, LinkState::Unauthorised);
+        assert_eq!(
+            link_view(Some(snapshot), 100).quest_tether.as_deref(),
+            expected,
+            "reply {index}"
+        );
+        assert_eq!(fake.borrow().ran, vec![status_command()]);
+    }
+}
+
+#[test]
+fn stopped_and_no_headset_never_run_quest_tether() {
+    for (name, devices, expected) in [
+        (
+            "stopped",
+            vec![Device {
+                serial: SERIAL.into(),
+                state: "device".into(),
+            }],
+            LinkState::Stopped,
+        ),
+        ("no-headset", vec![], LinkState::NoHeadset),
+    ] {
+        let fake = Rc::new(RefCell::new(FakeRunner::new()));
+        let mut service = Service::new(
+            paths(name),
+            Rc::clone(&fake),
+            quiet_frames(Some(devices)),
+            AdbChoice {
+                path: String::new(),
+                source: AdbSource::Missing,
+            },
+        );
+        let settings = Settings {
+            auto_3d: false,
+            ..Settings::default()
+        };
+        for now in 100..125 {
+            let snapshot = service.tick(now, &settings, None, (false, false));
+            assert_eq!(snapshot.state, expected);
+            assert_eq!(link_view(Some(snapshot), now).quest_tether, None);
+        }
+        assert!(
+            fake.borrow().ran.is_empty(),
+            "{name}: {:?}",
+            fake.borrow().ran
+        );
+    }
+}
+
+#[test]
+fn leaving_quest_clears_status_and_returning_refreshes_immediately() {
+    use flat3d_inject::link::quest_tether::status_command;
+    let fake = Rc::new(RefCell::new(
+        FakeRunner::new()
+            .ok(&["quest-tether"], r#"{"state":"connected"}"#)
+            .ok(&["quest-tether"], r#"{"state":"idle"}"#),
+    ));
+    let quest = vec![Device {
+        serial: SERIAL.into(),
+        state: "unauthorized".into(),
+    }];
+    let mut service = Service::new(
+        paths("return"),
+        Rc::clone(&fake),
+        Frames(VecDeque::from([
+            Some(quest.clone()),
+            Some(vec![]),
+            Some(quest),
+        ])),
+        choice(),
+    );
+    let settings = Settings::default();
+    let first = service.tick(100, &settings, None, (false, false));
+    assert_eq!(
+        link_view(Some(first), 100).quest_tether.as_deref(),
+        Some("Quest Tether: connected")
+    );
+    let gone = service.tick(101, &settings, None, (false, false));
+    assert_eq!(link_view(Some(gone), 101).quest_tether, None);
+    assert_eq!(fake.borrow().ran, vec![status_command()]);
+    let back = service.tick(102, &settings, None, (false, false));
+    assert_eq!(
+        link_view(Some(back), 102).quest_tether.as_deref(),
+        Some("Quest Tether: not connected")
+    );
+    assert_eq!(fake.borrow().ran, vec![status_command(), status_command()]);
 }

@@ -84,9 +84,8 @@ pub struct LinkView {
     pub health: crate::face::view::HealthView,
     pub auto_3d: bool,
     pub adb_source: AdbSource,
-    /// The one Quest Tether line, read-only: "Quest Tether: connected", "... not connected" or
-    /// "... not installed".
-    pub quest_tether: String,
+    /// The read-only Quest Tether line, hidden when no status is available.
+    pub quest_tether: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

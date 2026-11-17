@@ -19,7 +19,7 @@ use crate::api::{LinkEvent, LinkSnapshot, LinkState};
 use crate::exec::LinkRunner as CommandRunner;
 use crate::link;
 use crate::link::adb::{AdbChoice, AdbRunner};
-use crate::link::quest_tether::quest_tether_status;
+use crate::link::quest_tether::{is_quest_display, quest_tether_status};
 use crate::link::Headset;
 use crate::state::{EventRing, Request};
 use crate::switches::Settings;
@@ -274,7 +274,6 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             game_3d_running: modes.0,
             game_flat_running: modes.1,
         };
-        self.read_quest_tether(now);
         if let Some(devices) = self.feed.poll() {
             match classify(&devices) {
                 Seen::Ready(serial) => {
@@ -307,13 +306,19 @@ impl<R: CommandRunner, F: Feed> Service<R, F> {
             None => {}
         }
         self.fire(now, Event::Tick);
+        self.read_quest_tether(now);
         self.publish(now)
     }
 
     /// Ask Quest Tether for its state, at most every ten seconds, and keep the `state` text for
-    /// the snapshot. A missing program, a failed run or junk reads as not installed, quietly.
+    /// the snapshot. A missing program, a failed run or junk hides the line.
     /// Nothing reads the result except the faces.
     fn read_quest_tether(&mut self, now: u64) {
+        if !is_quest_display(self.state_text().0) {
+            self.quest_tether = None;
+            self.quest_tether_asked = None;
+            return;
+        }
         let due = self
             .quest_tether_asked
             .is_none_or(|asked| now.saturating_sub(asked) >= QUEST_TETHER_EVERY_SECS);
