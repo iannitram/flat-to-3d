@@ -210,46 +210,21 @@ pub fn remove_recorded_wrapper(
         return Ok(None);
     };
     let raw = &text[span.clone()];
+    let spliced = splice_out_wrapper(raw, record);
     let value = if options == record.applied {
-        // The line is exactly what we wrote, so give back the recorded original, encoded so it
-        // reads back to the same text.
-        encode_vdf_value(&record.before)
+        // The line is exactly what we wrote. Cutting our words out of the raw bytes keeps every
+        // escape as the user wrote it; when that does not read back as the recorded original
+        // (we also normalised the spacing), encode the original in the line's own escape style.
+        match spliced {
+            Some(value) if decode_vdf_value(&value) == record.before => value,
+            _ => encode_vdf_value(&record.before, raw.contains("\\\\")),
+        }
     } else {
-        // The line was edited after we wrote it. Remove only our wrapper words, with the space
-        // after each, so every other source byte (KeyValues escapes, the user's own spacing)
-        // stays untouched.
-        let removals = raw_wrapper_spans(raw);
-        if removals.is_empty() {
-            return Ok(None);
+        // The line was edited after we wrote it: remove only our wrapper words.
+        match spliced {
+            Some(value) => value,
+            None => return Ok(None),
         }
-        let mut value = String::with_capacity(raw.len());
-        let mut cursor = 0;
-        for removal in removals {
-            value.push_str(&raw[cursor..removal.start]);
-            cursor = removal.end;
-            let rest = &raw[cursor..];
-            let gap = rest.len() - rest.trim_start_matches([' ', '\t']).len();
-            if gap > 0 {
-                cursor += 1;
-            } else if value.ends_with([' ', '\t']) {
-                value.pop();
-            }
-        }
-        value.push_str(&raw[cursor..]);
-        // A line with no `%command%` got one put after the wrapper; take it back off when the
-        // original had none of its own.
-        let had_command = record
-            .before
-            .split_whitespace()
-            .any(|word| word == "%command%");
-        if !had_command {
-            if let Some(after) = value.strip_prefix("%command%") {
-                if after.is_empty() || after.starts_with([' ', '\t']) {
-                    value = after.strip_prefix([' ', '\t']).unwrap_or(after).to_string();
-                }
-            }
-        }
-        value
     };
     if value == raw {
         return Ok(None);
@@ -261,15 +236,67 @@ pub fn remove_recorded_wrapper(
     Ok(Some(output))
 }
 
-/// Encode `value` for a quoted VDF string so `tokenize_spanned` reads it back unchanged. Only a
-/// quote, and a backslash the reader would take as an escape (before `\\`, `"` or the closing
-/// quote), get a backslash; other backslashes, such as `C:\\foo` or `\\n`, stay single.
-fn encode_vdf_value(value: &str) -> String {
+/// `raw` with our wrapper words (and the space after each) cut out and every other source byte
+/// kept; `None` when it holds no wrapper word.
+fn splice_out_wrapper(raw: &str, record: &crate::launch_options::LaunchRecord) -> Option<String> {
+    let removals = raw_wrapper_spans(raw);
+    if removals.is_empty() {
+        return None;
+    }
+    let mut value = String::with_capacity(raw.len());
+    let mut cursor = 0;
+    for removal in removals {
+        value.push_str(&raw[cursor..removal.start]);
+        cursor = removal.end;
+        let rest = &raw[cursor..];
+        let gap = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+        if gap > 0 {
+            cursor += 1;
+        } else if value.ends_with([' ', '\t']) {
+            value.pop();
+        }
+    }
+    value.push_str(&raw[cursor..]);
+    // A line with no `%command%` got one put after the wrapper; take it back off when the
+    // original had none of its own and the line still starts with it.
+    let had_command = record
+        .before
+        .split_whitespace()
+        .any(|word| word == "%command%");
+    if !had_command {
+        if let Some(after) = value.strip_prefix("%command%") {
+            if after.is_empty() || after.starts_with([' ', '\t']) {
+                value = after.strip_prefix([' ', '\t']).unwrap_or(after).to_string();
+            }
+        }
+    }
+    Some(value)
+}
+
+/// Read a quoted VDF value the way `tokenize_spanned` does: only `\\` and `\"` are escapes.
+fn decode_vdf_value(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut chars = raw.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek()) {
+            ('\\', Some('\\' | '"')) => out.extend(chars.next()),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Encode `value` for a quoted VDF string so `tokenize_spanned` reads it back unchanged. With
+/// `double_all` every backslash is doubled, as Steam writes it. Otherwise only a backslash the
+/// reader would take as an escape (before `\\`, `"` or the closing quote) is doubled, so a line
+/// written as `C:\foo` keeps its single backslash.
+fn encode_vdf_value(value: &str, double_all: bool) -> String {
     let mut out = String::with_capacity(value.len());
     let mut chars = value.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
             '"' => out.push_str("\\\""),
+            '\\' if double_all => out.push_str("\\\\"),
             '\\' => match chars.peek() {
                 None | Some('\\') | Some('"') => out.push_str("\\\\"),
                 Some(_) => out.push('\\'),
@@ -285,20 +312,9 @@ fn encode_vdf_value(value: &str) -> String {
 fn raw_wrapper_spans(value: &str) -> Vec<std::ops::Range<usize>> {
     let mut spans = Vec::new();
     let mut start = None;
-    let mut quoted = false;
-    let mut escaped = false;
     let mut words = Vec::new();
     for (at, c) in value.char_indices() {
-        if c == '"' && at > 0 && value[..at].ends_with('\\') {
-            // A VDF-escaped quote belongs to the launch options, not to the VDF value.
-        } else if quoted && escaped {
-            escaped = false;
-        } else if quoted && c == '\\' {
-            escaped = true;
-        } else if c == '"' {
-            quoted = !quoted;
-        }
-        if c.is_whitespace() && !quoted {
+        if c.is_whitespace() {
             if let Some(from) = start.take() {
                 words.push((from..at, &value[from..at]));
             }

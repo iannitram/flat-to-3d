@@ -224,7 +224,8 @@ fn uninstall_leaves_a_recorded_line_without_a_wrapper_unchanged() {
 
 #[test]
 fn corrupt_launch_record_does_not_stop_uninstall() {
-    // Catches: one corrupt launch record aborts uninstall before installed files are removed.
+    // Catches: one corrupt launch record aborts uninstall before installed files are removed, or
+    // the record (the only copy of the original line) is deleted.
     let (_root, home, src) = setup("corrupt-record");
     let no_rule = install_home(&home, &src);
     let records = home.join(".local/share/flat3d/launch-options");
@@ -234,7 +235,7 @@ fn corrupt_launch_record_does_not_stop_uninstall() {
     uninstall_home(&home, &no_rule);
 
     assert!(!home.join(".local/bin/flat3d-run").exists());
-    assert!(!records.join("71.json").exists());
+    assert!(records.join("71.json").exists());
 }
 
 #[test]
@@ -274,4 +275,73 @@ fn unedited_line_with_quotes_and_backslashes_is_restored_byte_for_byte() {
         fs::read_to_string(&config_path).unwrap(),
         config(&[(61, raw_before)])
     );
+}
+
+#[test]
+fn unedited_line_with_doubled_backslashes_is_restored_byte_for_byte() {
+    // Catches: the unedited-line restore re-encoding the decoded original, so Steam's `\\`
+    // comes back as a single `\`.
+    let (_root, home, src) = setup("restore-doubled");
+    let no_rule = install_home(&home, &src);
+    let config_path = home.join(".local/share/Steam/userdata/1/config/localconfig.vdf");
+    fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+    let raw_before = r#"WINEPATH=C:\\games\\x \\n %command%"#;
+    let before = r#"WINEPATH=C:\games\x \n %command%"#;
+    let applied = apply(&home, 62, before);
+    let raw_applied = applied.replace('\\', "\\\\");
+    fs::write(&config_path, config(&[(62, &raw_applied)])).unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        config(&[(62, raw_before)])
+    );
+}
+
+#[test]
+fn future_and_unreadable_records_are_kept() {
+    // Catches: a record in a newer format, or one that is not UTF-8, being deleted (losing the
+    // original line) or aborting uninstall.
+    let (_root, home, src) = setup("keep-records");
+    let no_rule = install_home(&home, &src);
+    let records = home.join(".local/share/flat3d/launch-options");
+    fs::create_dir_all(&records).unwrap();
+    fs::write(
+        records.join("72.json"),
+        br#"{"version":99,"before":"a","applied":"b"}"#,
+    )
+    .unwrap();
+    fs::write(records.join("73.json"), [0xff, 0xfe, 0x00]).unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    assert!(!home.join(".local/bin/flat3d-run").exists());
+    assert!(records.join("72.json").exists());
+    assert!(records.join("73.json").exists());
+}
+
+#[test]
+fn a_malformed_localconfig_does_not_stop_other_users() {
+    // Catches: one Steam user's broken localconfig.vdf aborting uninstall, so another user's
+    // wrapper is left in place.
+    let (_root, home, src) = setup("bad-user");
+    let no_rule = install_home(&home, &src);
+    let steam = home.join(".local/share/Steam/userdata");
+    let bad = steam.join("1/config/localconfig.vdf");
+    let good = steam.join("2/config/localconfig.vdf");
+    for path in [&bad, &good] {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+    }
+    let applied = apply(&home, 63, "-novid");
+    fs::write(&bad, "\"UserLocalConfigStore\" {\n \"Software\" {\n").unwrap();
+    fs::write(&good, config(&[(63, &applied)])).unwrap();
+
+    uninstall_home(&home, &no_rule);
+
+    assert_eq!(
+        fs::read_to_string(&good).unwrap(),
+        config(&[(63, "-novid")])
+    );
+    assert!(!home.join(".local/bin/flat3d-run").exists());
 }

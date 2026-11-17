@@ -318,9 +318,15 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
         else {
             continue;
         };
-        let text = fs::read_to_string(entry.path()).map_err(|error| {
-            io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
-        })?;
+        // A record we cannot use is left on disk with a warning, never deleted: a newer
+        // format still holds the only copy of the user's original launch options.
+        let text = match fs::read_to_string(entry.path()) {
+            Ok(text) => text,
+            Err(error) => {
+                eprintln!("warning: keeping unreadable launch-options record for {appid}: {error}");
+                continue;
+            }
+        };
         let record: crate::launch_options::LaunchRecord = match serde_json::from_str::<
             crate::launch_options::LaunchRecord,
         >(&text)
@@ -328,47 +334,48 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
             Ok(record) if record.version == crate::launch_options::LAUNCH_RECORD_VERSION => record,
             Ok(record) => {
                 eprintln!(
-                    "warning: skipping launch-options record for {appid}: unsupported version {}",
+                    "warning: keeping launch-options record for {appid}: unsupported version {}",
                     record.version
                 );
-                fs::remove_file(entry.path()).map_err(|error| {
-                    io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
-                })?;
                 continue;
             }
             Err(error) => {
-                eprintln!("warning: skipping corrupt launch-options record for {appid}: {error}");
-                fs::remove_file(entry.path()).map_err(|error| {
-                    io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
-                })?;
+                eprintln!("warning: keeping corrupt launch-options record for {appid}: {error}");
                 continue;
             }
         };
+        // One bad Steam user folder must not stop the others; the record stays when any fails.
+        let mut all_done = true;
         for user in &userdata {
             let config = user.path().join("config/localconfig.vdf");
             let current = match fs::read_to_string(&config) {
                 Ok(text) => text,
                 Err(error) if error.kind() == ErrorKind::NotFound => continue,
                 Err(error) => {
-                    return Err(io_error(
-                        &config.display().to_string(),
-                        &error,
-                        FIX_UNINSTALL,
-                    ))
+                    eprintln!("warning: could not read {}: {error}", config.display());
+                    all_done = false;
+                    continue;
                 }
             };
-            if let Some(updated) =
-                crate::steam::remove_recorded_wrapper(&current, appid, &record)
-                    .map_err(|error| crate::api::ApiError::new("command-failed", &error))?
-            {
-                crate::fsx::write_atomic(&config, updated.as_bytes()).map_err(|error| {
-                    io_error(&config.display().to_string(), &error, FIX_UNINSTALL)
-                })?;
+            match crate::steam::remove_recorded_wrapper(&current, appid, &record) {
+                Ok(Some(updated)) => {
+                    if let Err(error) = crate::fsx::write_atomic(&config, updated.as_bytes()) {
+                        eprintln!("warning: could not write {}: {error}", config.display());
+                        all_done = false;
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    eprintln!("warning: could not restore {}: {error}", config.display());
+                    all_done = false;
+                }
             }
         }
-        fs::remove_file(entry.path()).map_err(|error| {
-            io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
-        })?;
+        if all_done {
+            fs::remove_file(entry.path()).map_err(|error| {
+                io_error(&entry.path().display().to_string(), &error, FIX_UNINSTALL)
+            })?;
+        }
     }
     let _ = fs::remove_dir(records);
     Ok(())
