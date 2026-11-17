@@ -14,6 +14,7 @@ pub use face::{collection, headset_view, link_view, rows, toasts, view};
 pub mod face;
 pub mod health;
 pub mod heroic;
+pub mod heroic_wrapper;
 pub mod injectors;
 pub mod install;
 pub mod launch_options;
