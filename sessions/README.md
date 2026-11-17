@@ -22,6 +22,6 @@ Results go to `${XDG_STATE_HOME:-~/.local/state}/flat3d/sessions/` unless `--sta
 
 ## Stereo measurements
 
-`tools/stereo/fps.py CSV --min 30 --json` reads MangoHud's preamble, value row and `fps` header. It reports the median FPS as p50 and p1, using frametime's 99th percentile when available. It exits 0 when p50 meets the threshold, 1 when it does not, and 2 for bad input.
+`tools/stereo/fps.py CSV --min 30 --json` reads MangoHud's preamble, value row and `fps` header. It reports the median FPS as p50 and p1, using frametime's 99th percentile when available. It exits 0 when p50 meets the threshold, 1 when it does not, and 2 for bad input. `--per-eye` halves p50 and p1 before the gate (alternate-eye rendering, ruling 44).
 
 `tools/stereo/disparity.py IMAGE --layout sbs --json` supports non-interlaced PNG and binary PPM/PGM. It compares textured blocks between side-by-side (`sbs`) or top-and-bottom (`tab`) eyes, reports the number of matched blocks, mean absolute disparity and p90. The default pass threshold is mean disparity greater than one pixel. These measurements are supporting evidence; the owner judges headset depth and camera behavior.
