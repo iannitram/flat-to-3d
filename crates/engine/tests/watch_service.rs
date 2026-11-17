@@ -88,6 +88,8 @@ fn auto_3d(on: bool) -> Settings {
 
 #[test]
 fn allow_debugging_event_once() {
+    // Catches: entering Seen::Unauthorised without pushing an AllowUsbDebugging event,
+    // or pushing repeated events on every tick while staying in Seen::Unauthorised.
     let (_fake, _paths, mut service) = service(
         "allow-debugging",
         ready_runner(1),
@@ -119,6 +121,8 @@ fn allow_debugging_event_once() {
 
 #[test]
 fn wivrn_start_uses_the_detected_app() {
+    // Catches: StartLink/Reattach falling back to the default app instead of using the
+    // Quest app package detected via detect_quest_app, or omitting the required server flags.
     let fake = ready_runner(1)
         .ok(
             &[
@@ -172,6 +176,8 @@ fn wivrn_start_uses_the_detected_app() {
 
 #[test]
 fn two_stop_requests_end_stopped() {
+    // Catches: Stop 3D running raw link_commands instead of going through link::stop_3d,
+    // which would cause a second stop (when the server unit is already gone) to log an error.
     let fake = ready_runner(1).fail(
         &["systemctl", "--user", "stop", "flat3d-wivrn.service"],
         "Failed to stop flat3d-wivrn.service: Unit flat3d-wivrn.service not loaded.",
@@ -200,6 +206,8 @@ fn two_stop_requests_end_stopped() {
 
 #[test]
 fn health_probes_use_the_chosen_adb() {
+    // Catches: publish() executing health loop dumpsys probes using a bare `adb` command
+    // rather than using AdbRunner with the chosen adb path and `-s <serial>`.
     let (fake, _paths, mut service) =
         service("health-adb", ready_runner(1), vec![device("device")]);
     let s = auto_3d(true);
@@ -214,6 +222,8 @@ fn health_probes_use_the_chosen_adb() {
 
 #[test]
 fn no_tether_word_runs() {
+    // Catches: legacy tether commands (gnirehtet, tun0, nmcli) being invoked during
+    // watch service operation after the tether removal in ruling 42.
     let (fake, _paths, mut service) = service(
         "no-tether",
         ready_runner(1),
