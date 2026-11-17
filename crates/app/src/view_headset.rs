@@ -17,7 +17,9 @@ pub fn view(s: &HeadsetState, now: u64) -> Element<'_, Msg> {
     ]
     .spacing(10);
     // Read-only: Quest Tether's state as one line. No button, no switch, no hint.
-    content = content.push(text(v.quest_tether));
+    if let Some(line) = v.quest_tether {
+        content = content.push(text(line));
+    }
     if v.start && !s.busy {
         content = content.push(button("Start 3D").on_press(Msg::StartPressed));
     }
@@ -33,4 +35,25 @@ pub fn view(s: &HeadsetState, now: u64) -> Element<'_, Msg> {
         content = content.push(text(error));
     }
     content.into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flat3d_inject::api::{LinkSnapshot, LinkState};
+
+    #[test]
+    fn absent_quest_tether_has_no_view_row() {
+        let mut snapshot = LinkSnapshot::stopped(100);
+        snapshot.state = LinkState::Ready;
+        let mut state = HeadsetState {
+            snapshot: Some(snapshot),
+            ..HeadsetState::default()
+        };
+        let hidden = view(&state, 100).as_widget().children().len();
+        state.snapshot.as_mut().unwrap().quest_tether = Some("connected".into());
+        let shown = view(&state, 100).as_widget().children().len();
+        assert_eq!(hidden, 5);
+        assert_eq!(shown, hidden + 1);
+    }
 }

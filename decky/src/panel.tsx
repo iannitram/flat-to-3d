@@ -145,7 +145,7 @@ export function Content(): JSX.Element {
               <Field label="Temperature" description={v.health.temp} />
             </div>
           </PanelSectionRow>
-          <Field label={v.quest_tether} />
+          {v.quest_tether !== null && <Field label={v.quest_tether} />}
           <PanelSectionRow>
             <ToggleField
               label="Auto 3D"

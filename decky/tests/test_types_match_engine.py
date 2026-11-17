@@ -83,7 +83,7 @@ class TypesMatchEngineTest(unittest.TestCase):
                 "health: HealthView",
                 "auto_3d: boolean",
                 "adb_source: AdbSource",
-                "quest_tether: string",
+                "quest_tether: string | null",
             ),
         )
 
