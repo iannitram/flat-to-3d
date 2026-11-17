@@ -191,7 +191,7 @@ pub fn epic_injector_env(
         Route::Port => Err(PORT_NOT_BUILT.into()),
         Route::NoRoute => Err(format!("refused: {} has no stereo route", recipe.name)),
         route @ (Route::Uevr | Route::Geo11) => Err(format!(
-            "not-built: the {} route needs a Steam game folder; it is not built for an Epic game",
+            "not-built: the {} route needs a Steam game folder; it is not built for an Epic game: #356 (WP-31)",
             route_name(route)
         )),
         Route::Aw2 => Ok((Route::Aw2, RouteEnv::default())),
