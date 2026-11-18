@@ -124,7 +124,7 @@ unsafe extern "system" fn create_instance(
     out: *mut vk::Instance,
 ) -> vk::Result {
     let mut p = (*ci).p_next as *mut LoaderInfo;
-    while !p.is_null() && !((*p).s_type == 47 && (*p).function == 0) {
+    while !(p.is_null() || ((*p).s_type == 47 && (*p).function == 0)) {
         p = (*p).p_next;
     }
     if p.is_null() {
@@ -152,7 +152,7 @@ unsafe extern "system" fn create_device(
     out: *mut vk::Device,
 ) -> vk::Result {
     let mut p = (*ci).p_next as *mut LoaderInfo;
-    while !p.is_null() && !((*p).s_type == 48 && (*p).function == 0) {
+    while !(p.is_null() || ((*p).s_type == 48 && (*p).function == 0)) {
         p = (*p).p_next;
     }
     if p.is_null() {
