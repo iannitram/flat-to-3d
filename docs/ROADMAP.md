@@ -23,9 +23,9 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 ## Today (2026-11-18): Zero Company in 3D, and what that changes
 
-**First real game in the headset.** STAR WARS Zero Company ran in 3D on the Quest 2 over WiVRn, at 1440x1440 per eye and a steady 60 fps with 2x frame generation. The owner confirmed depth, aspect and size. It was set up by hand and is not a product feature yet. No full mission has been played through, so Z4 stays open.
+**First real game in the headset.** STAR WARS Zero Company ran in 3D on the Quest 2 over WiVRn, at 1440x1440 per eye and a steady 60 fps at the viewer from about 30 real frames, using lsfg-vk 2x frame generation. The owner confirmed depth, aspect and size. It was set up by hand and is not a product feature yet. No full mission has been played through, so Z4 stays open.
 
-**The route is not the one planned.** It uses Unreal's own fake stereo (`r.EnableStereoEmulation`) on a headless gamescope display of 2880x1440, read over PipeWire by `flat3d-viewer`, with a Vulkan layer that gives the flat UI stereo depth. UEVR (Z2) is not part of it. M14-M17 and the Z steps below still describe UEVR until SPEC is changed.
+**The route is not the one planned.** It uses Unreal's own fake stereo (`r.EnableStereoEmulation`) on a headless gamescope display of 2880x1440, read over PipeWire by `flat3d-viewer`, with a Vulkan layer that gives the flat UI stereo depth. UEVR (Z2) is not part of it. M14, M15, M17 and the Z steps below still describe UEVR until SPEC is changed. M16, the full-mission bar, applies to any route.
 
 **Owner decisions today:**
 

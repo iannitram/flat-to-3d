@@ -117,6 +117,7 @@ Inferred: the framework mounts pak files as Unreal game-feature plugins and over
 - Observed: the game ships DLSS, FSR and XeSS frame generation and has a user setting for it. The exe has FSR frame-interpolation present classes and an XeSS swap-chain provider, so frame generation takes over presenting.
 - Cited: UEVR says to turn DLSS Frame Generation off, and a change to reword its warning about it was closed unmerged in 2026-06 — [UEVR README](https://github.com/praydog/UEVR); [PR #406](https://github.com/praydog/UEVR/pull/406). With Valve's default launch options NVAPI is off, so the DLSS kinds are not offered on SteamOS anyway (GamingOnLinux, above). FSR frame generation is still offered on AMD hardware.
 - Inferred: frame generation must be off on both routes. On the UEVR route it fights UEVR for the swap chain. On the fallback route it would blend across the seam between the two eyes. The recipe should set it off and Link should check it.
+- Measured 2026-11-18, which changes this for the engine fake-stereo route: the game's own frame generation stays unavailable, but lsfg-vk 2x ran over the full side-by-side picture at 60 fps at the viewer from about 30 real frames, and the owner accepted the image. A seam artefact was not measured separately.
 
 ## 5. Proposed seed recipe
 
