@@ -57,6 +57,8 @@ fn paths(name: &str) -> EnginePaths {
         bin: root.join("bin"),
         recipe_dirs: Vec::new(),
         headset_dirs: vec![root.join("first"), root.join("second")],
+        system_dirs: Vec::new(),
+        os_release: PathBuf::from("/etc/os-release"),
     }
 }
 

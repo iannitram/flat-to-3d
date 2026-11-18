@@ -31,6 +31,7 @@ pub mod state;
 pub mod status;
 pub mod steam;
 pub mod switches;
+pub mod systems;
 
 pub mod undo;
 

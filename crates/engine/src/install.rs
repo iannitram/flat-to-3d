@@ -43,7 +43,15 @@ impl Default for UnitSpec {
 }
 
 pub fn unit_text_with(spec: &UnitSpec) -> String {
-    format!("[Unit]\nDescription={}\nStartLimitIntervalSec={}\nStartLimitBurst={}\n\n[Service]\nType=simple\nExecStart={}\nRestart=on-failure\nRestartSec={}\n\n[Install]\nWantedBy={}\n", spec.description, spec.start_limit_interval_sec, spec.start_limit_burst, spec.exec_start, spec.restart_sec, spec.wanted_by)
+    format!(
+        "[Unit]\nDescription={}\nStartLimitIntervalSec={}\nStartLimitBurst={}\n\n[Service]\nType=simple\nExecStart={}\nRestart=on-failure\nRestartSec={}\n\n[Install]\nWantedBy={}\n",
+        spec.description,
+        spec.start_limit_interval_sec,
+        spec.start_limit_burst,
+        spec.exec_start,
+        spec.restart_sec,
+        spec.wanted_by
+    )
 }
 
 pub fn execute(
@@ -119,6 +127,15 @@ pub fn execute(
             if !Path::new(src).is_dir() {
                 continue;
             }
+            let data_extension = if Path::new(src).ends_with("recipes") {
+                Some("recipe")
+            } else if Path::new(src).ends_with("systems") {
+                Some("system")
+            } else if Path::new(src).ends_with("headsets") {
+                Some("headset")
+            } else {
+                None
+            };
             fs::create_dir_all(dst).map_err(|e| io_error(dst, &e, IO_INSTALL))?;
             let entries = fs::read_dir(src).map_err(|e| io_error(src, &e, IO_INSTALL))?;
             for entry in entries {
@@ -130,14 +147,17 @@ pub fn execute(
                 {
                     continue;
                 }
-                let extension = tree_extension(src);
-                if let Some(extension) = extension {
-                    if entry.path().extension().is_none_or(|e| e != extension) {
-                        continue;
-                    }
+                if data_extension.is_some_and(|extension| {
+                    entry.path().extension().is_none_or(|e| e != extension)
+                }) {
+                    continue;
                 }
                 let dest = format!("{dst}/{}", entry.file_name().to_string_lossy());
-                let mode = if extension.is_some() { 0o644 } else { 0o755 };
+                let mode = if data_extension.is_some() {
+                    0o644
+                } else {
+                    0o755
+                };
                 copy_chmod(&entry.path().display().to_string(), &dest, mode)?;
                 written.push(dest);
             }
@@ -243,7 +263,7 @@ pub fn execute_uninstall(
                 return Err(crate::api::ApiError::new(
                     "io",
                     &format!("{path}: {e}; fix: {FIX_UNINSTALL}"),
-                ))
+                ));
             }
         }
     }
@@ -302,7 +322,7 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
                 &steam.display().to_string(),
                 &error,
                 FIX_UNINSTALL,
-            ))
+            ));
         }
     };
     for entry in entries {
@@ -385,18 +405,6 @@ fn io_error(path: &str, error: &std::io::Error, fix: &str) -> crate::api::ApiErr
 fn last_line(stderr: &str) -> &str {
     stderr.lines().rfind(|s| !s.trim().is_empty()).unwrap_or("")
 }
-/// The extension a data tree keeps; its files are also installed read-only.
-fn tree_extension(src: &str) -> Option<&'static str> {
-    let path = std::path::Path::new(src);
-    if path.ends_with("recipes") {
-        Some("recipe")
-    } else if path.ends_with("headsets") {
-        Some("headset")
-    } else {
-        None
-    }
-}
-
 fn install_roots(home: &str) -> Vec<String> {
     vec![
         format!("{home}/.local/bin/"),
@@ -411,6 +419,7 @@ fn created_dirs(home: &str) -> Vec<String> {
         ".local/share/flat3d/bin",
         ".local/share/flat3d/recipes",
         ".local/share/flat3d/headsets",
+        ".local/share/flat3d/systems",
         ".local/share/flat3d",
         ".local/share",
         ".local/bin",
@@ -547,6 +556,7 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             format!("{tools_dir}/"),
             format!("{home}/.local/share/flat3d/recipes"),
             format!("{home}/.local/share/flat3d/headsets"),
+            format!("{home}/.local/share/flat3d/systems"),
             format!("{home}/.config/systemd/user"),
         ],
         optional_bins: vec![(
@@ -562,6 +572,10 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             (
                 format!("{src_dir}/headsets"),
                 format!("{home}/.local/share/flat3d/headsets"),
+            ),
+            (
+                format!("{src_dir}/systems"),
+                format!("{home}/.local/share/flat3d/systems"),
             ),
         ],
         manifest: format!("{home}/.local/share/flat3d/installed.txt"),

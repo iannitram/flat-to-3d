@@ -37,7 +37,7 @@ if [ "$DRY" = 1 ]; then
     printf '+ cargo build --release --locked -p flat3d-inject --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
   fi
-  printf "+ mkdir -p \$stage/flat-to-3d/dist \$stage/flat-to-3d/bin/recipes \$stage/flat-to-3d/bin/headsets\n"
+  printf "+ mkdir -p \$stage/flat-to-3d/dist \$stage/flat-to-3d/bin/recipes \$stage/flat-to-3d/bin/systems \$stage/flat-to-3d/bin/headsets\n"
   for file in dist/index.js package.json plugin.json main.py README.md; do
     printf "+ cp %s/decky/%s \$stage/flat-to-3d/%s\n" "$ROOT_DIR" "$file" "$file"
   done
@@ -53,6 +53,7 @@ if [ "$DRY" = 1 ]; then
   fi
   printf "+ shopt -s nullglob; cp %s/recipes/*.recipe \$stage/flat-to-3d/bin/recipes/\n" "$ROOT_DIR"
   printf "+ shopt -s nullglob; cp %s/headsets/*.headset \$stage/flat-to-3d/bin/headsets/\n" "$ROOT_DIR"
+  printf "+ cp %s/systems/*.system \$stage/flat-to-3d/bin/systems/\n" "$ROOT_DIR"
   printf "+ chmod 755 \$stage/flat-to-3d/bin/*\n"
   printf "+ (cd \$stage && python3 -m zipfile -c %s flat-to-3d)\n" "$OUT"
   exit 0
@@ -69,7 +70,7 @@ stage=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-decky.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 package="$stage/flat-to-3d"
 case $OUT in /*) out_abs=$OUT ;; *) out_abs="$PWD/$OUT" ;; esac
-run mkdir -p "$package/dist" "$package/bin/recipes" "$package/bin/headsets"
+run mkdir -p "$package/dist" "$package/bin/recipes" "$package/bin/systems" "$package/bin/headsets"
 for file in index.js package.json plugin.json main.py README.md; do
   source=$ROOT_DIR/decky/$file
   destination="$package/$file"
@@ -98,5 +99,7 @@ recipes=("$ROOT_DIR"/recipes/*.recipe)
 if ((${#recipes[@]})); then run cp "${recipes[@]}" "$package/bin/recipes/"; fi
 headsets=("$ROOT_DIR"/headsets/*.headset)
 if ((${#headsets[@]})); then run cp "${headsets[@]}" "$package/bin/headsets/"; fi
+systems=("$ROOT_DIR"/systems/*.system)
+if ((${#systems[@]})); then run cp "${systems[@]}" "$package/bin/systems/"; fi
 run mkdir -p "$(dirname "$out_abs")"
 run bash -c 'cd "$1" && python3 -m zipfile -c "$2" flat-to-3d' _ "$stage" "$out_abs"
