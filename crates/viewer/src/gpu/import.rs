@@ -54,8 +54,11 @@ pub fn modifiers(ctx: &XrContext, f: vk::Format) -> Vec<u64> {
     values
         .into_iter()
         .filter(|p| {
-            p.drm_format_modifier_tiling_features
-                .contains(vk::FormatFeatureFlags::TRANSFER_SRC | vk::FormatFeatureFlags::BLIT_SRC)
+            // The importer handles one plane, so compressed layouts must not be negotiated.
+            p.drm_format_modifier_plane_count == 1
+                && p.drm_format_modifier_tiling_features.contains(
+                    vk::FormatFeatureFlags::TRANSFER_SRC | vk::FormatFeatureFlags::BLIT_SRC,
+                )
         })
         .map(|p| p.drm_format_modifier)
         .collect()
@@ -93,7 +96,7 @@ impl Importer {
         }?[0];
         let fence = unsafe {
             ctx.device
-                .create_fence(&vk::FenceCreateInfo::default(), None)
+                .create_fence(&vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED), None)
         }?;
         let (staging, staging_mem) = create_buffer(ctx, 4)?;
         let (upload, upload_mem) = create_image(ctx, 1, 1, vk::Format::B8G8R8A8_SRGB)?;

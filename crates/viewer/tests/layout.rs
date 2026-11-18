@@ -205,3 +205,12 @@ fn test_pattern_handles_tiny_frames_and_pacing() {
     assert!(start.elapsed() < Duration::from_millis(200));
     assert_eq!(paced.next(Duration::from_secs(2)).unwrap().unwrap().seq, 1);
 }
+
+#[test]
+fn eye_shift_trims_opposite_edges_of_each_eye() {
+    let mut shifted = spec(Layout::Sbs);
+    shifted.eye_shift = 0.25;
+    let [left, right] = eye_rects(1920, 1200, &shifted);
+    assert_eq!((left.x, left.w), (240, 720));
+    assert_eq!((right.x, right.w), (960, 720));
+}

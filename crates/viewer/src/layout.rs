@@ -51,6 +51,12 @@ pub fn eye_rects(frame_w: u32, frame_h: u32, spec: &ViewerSpec) -> [Rect; 2] {
     if matches!(spec.layout, Layout::SbsRev | Layout::TabRev) {
         std::mem::swap(&mut left, &mut right);
     }
+    if spec.eye_shift > 0.0 {
+        let shift = ((left.w as f32 * spec.eye_shift).round() as u32).min(left.w);
+        left.x += shift;
+        left.w -= shift;
+        right.w -= shift;
+    }
     if spec.swap_eyes {
         std::mem::swap(&mut left, &mut right);
     }
