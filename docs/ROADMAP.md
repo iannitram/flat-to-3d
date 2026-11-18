@@ -37,8 +37,8 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 | Work | Issues | State |
 |---|---|---|
-| Virtual-display route: settings patch and restore, gamescope launch | #399, then #400 | #399 in build |
-| One-eye laptop window: crop and pointer map, PipeWire window, keyboard and mouse | #401, then #402 and #403 | #401 in build |
+| Virtual-display route: settings patch and restore, gamescope launch | #399, then #400 | #399 in review (PR #414) |
+| One-eye laptop window: crop and pointer map, PipeWire window, keyboard and mouse | #401, then #402 and #403 | #401 not yet in a PR |
 | 3D on/off: state model, desktop button, Decky, SPEC and rulings | #404, then #405, #406, #407 | not started |
 | Package the UI layer, clean up the prototype | #408, then #409 | not started |
 | App data: Zero Company recipe, headset profiles, system profiles | #410, #411, #412 | not started |
@@ -47,7 +47,7 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 - Gamescope 3.16.30 segfaulted in the Radeon Vulkan driver during a mirror test, about 13 seconds after a stream started, and took the game with it. The cause is unknown. Starting and stopping stream readers against a test app did not reproduce it. #402 must prove the viewer and laptop window can run together for 30 minutes.
 - The viewer fixes and the UI layer prototype are on a working branch, not in `main`. The viewer's recentre signal can also end its OpenXR session.
-- Q3 (link smoke) is not finished, and #392's fix (PR #393) is waiting on a re-review.
+- Q3 (link smoke) is not finished, and #392's fix (PR #393) failed review and is waiting on a fix.
 
 <a id="where-it-stands"></a>
 

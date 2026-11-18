@@ -112,9 +112,9 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `games/alan-wake-2/` | present (the proxy only) | `proxy/`, `flat3d-aw2-proxy` (#293): our do-nothing `version.dll` proxy, which logs one line on load and forwards every export to the system copy; the alternate-eye hook on the engine's camera class stays planned (planned route, untested; ruling 44); device check: W2 | M32 |
 | `games/spiderman2/` | planned (only `map.toml` so far, the SM2 address map, WP-30) | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `crates/viewer/` | present | Linux-native PipeWire→OpenXR quad viewer on WiVRn: `flat3d-viewer` (features `xr`,`capture`); layout/status/spec pure; device check Q10 | M21 |
-| `crates/engine/src/ini_patch.rs` | planned (#399, in build) | writes a route's ini values and restores only those keys from a saved record | - |
+| `crates/engine/src/ini_patch.rs` | planned (#399, PR #414) | writes a route's ini values and restores only those keys from a saved record | - |
 | `crates/engine/src/injectors/` virtual-display route | planned (#400) | starts the game on a headless gamescope display at the route's stream size | - |
-| `crates/engine/src/eye_view.rs` | planned (#401, in build) | the one-eye crop, fit-to-window rectangle and window-to-game pointer map, from route settings | - |
+| `crates/engine/src/eye_view.rs` | planned (#401) | the one-eye crop, fit-to-window rectangle and window-to-game pointer map, from route settings | - |
 | one-eye laptop window | planned (#402, #403) | opens with every virtual-display 3D session: native PipeWire window beside the viewer, with keyboard and mouse sent to gamescope over XTEST | - |
 | 3D on/off state and buttons | planned (#404-#407) | the session state model, the desktop app's **Play in 3D** and **Bring back to laptop** button, the Decky control | M18, M24 (changes need the owner's approval, #407) |
 | `crates/ui-layer/` | planned (#408, #409) | the Vulkan layer that gives a flat game UI stereo depth; a prototype exists outside `main` | - |
