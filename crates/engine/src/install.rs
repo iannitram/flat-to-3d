@@ -130,17 +130,14 @@ pub fn execute(
                 {
                     continue;
                 }
-                if Path::new(src).ends_with("recipes")
-                    && entry.path().extension().is_none_or(|e| e != "recipe")
-                {
-                    continue;
+                let extension = tree_extension(src);
+                if let Some(extension) = extension {
+                    if entry.path().extension().is_none_or(|e| e != extension) {
+                        continue;
+                    }
                 }
                 let dest = format!("{dst}/{}", entry.file_name().to_string_lossy());
-                let mode = if Path::new(src).ends_with("recipes") {
-                    0o644
-                } else {
-                    0o755
-                };
+                let mode = if extension.is_some() { 0o644 } else { 0o755 };
                 copy_chmod(&entry.path().display().to_string(), &dest, mode)?;
                 written.push(dest);
             }
@@ -388,6 +385,18 @@ fn io_error(path: &str, error: &std::io::Error, fix: &str) -> crate::api::ApiErr
 fn last_line(stderr: &str) -> &str {
     stderr.lines().rfind(|s| !s.trim().is_empty()).unwrap_or("")
 }
+/// The extension a data tree keeps; its files are also installed read-only.
+fn tree_extension(src: &str) -> Option<&'static str> {
+    let path = std::path::Path::new(src);
+    if path.ends_with("recipes") {
+        Some("recipe")
+    } else if path.ends_with("headsets") {
+        Some("headset")
+    } else {
+        None
+    }
+}
+
 fn install_roots(home: &str) -> Vec<String> {
     vec![
         format!("{home}/.local/bin/"),
@@ -401,6 +410,7 @@ fn created_dirs(home: &str) -> Vec<String> {
         ".local/share/flat3d/bin/lib",
         ".local/share/flat3d/bin",
         ".local/share/flat3d/recipes",
+        ".local/share/flat3d/headsets",
         ".local/share/flat3d",
         ".local/share",
         ".local/bin",
@@ -536,6 +546,7 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             bin_dir.clone(),
             format!("{tools_dir}/"),
             format!("{home}/.local/share/flat3d/recipes"),
+            format!("{home}/.local/share/flat3d/headsets"),
             format!("{home}/.config/systemd/user"),
         ],
         optional_bins: vec![(
@@ -547,6 +558,10 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             (
                 format!("{src_dir}/recipes"),
                 format!("{home}/.local/share/flat3d/recipes"),
+            ),
+            (
+                format!("{src_dir}/headsets"),
+                format!("{home}/.local/share/flat3d/headsets"),
             ),
         ],
         manifest: format!("{home}/.local/share/flat3d/installed.txt"),

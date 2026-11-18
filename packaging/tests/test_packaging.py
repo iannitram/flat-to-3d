@@ -284,6 +284,7 @@ class PackagingTests(unittest.TestCase):
             self.assertIn(f"--manifest-path {root}/Cargo.toml", result.stdout)
             self.assertIn(f"{root}/target/release/flat3d-inject", result.stdout)
             self.assertIn("$stage/flat-to-3d/dist", result.stdout)
+            self.assertIn(f"{root}/headsets/*.headset", result.stdout)
 
     def test_payload_parity(self) -> None:
         output = subprocess.run(
@@ -411,6 +412,7 @@ class PackagingTests(unittest.TestCase):
                 "flat-to-3d/bin/tools/adb",
                 "flat-to-3d/bin/tools/lib/libx.so",
                 "flat-to-3d/bin/recipes/x.recipe",
+                "flat-to-3d/bin/headsets/x.headset",
             }
             with zipfile.ZipFile(output) as archive:
                 files = {name for name in archive.namelist() if not name.endswith("/")}
@@ -441,8 +443,10 @@ def make_decky_tree(temp: Path) -> tuple[Path, Path, Path]:
     root = temp / "tree"
     (root / "decky/dist").mkdir(parents=True)
     (root / "recipes").mkdir()
+    (root / "headsets").mkdir()
     (root / "LICENSE").write_text("license\n")
     (root / "recipes/x.recipe").write_text("recipe\n")
+    (root / "headsets/x.headset").write_text("headset\n")
     for path, content in {
         "decky/dist/index.js": "bundle\n",
         "decky/package.json": "{}\n",

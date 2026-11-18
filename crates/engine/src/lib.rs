@@ -12,6 +12,7 @@ pub mod testing;
 pub use cli::link as cli_link;
 pub use face::{collection, headset_view, link_view, rows, toasts, view};
 pub mod face;
+pub mod headsets;
 pub mod health;
 pub mod heroic;
 pub mod heroic_wrapper;
