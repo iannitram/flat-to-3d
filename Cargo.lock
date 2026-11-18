@@ -925,6 +925,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "flat3d-ui-layer"
+version = "0.0.0"
+dependencies = [
+ "ash",
+ "serde_json",
+]
+
+[[package]]
 name = "flat3d-viewer"
 version = "0.0.0"
 dependencies = [

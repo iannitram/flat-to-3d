@@ -27,6 +27,7 @@ while (($#)); do
   esac
 done
 
+UI_LAYER_LIBRARY=${LAYER_FILES[0]}
 APPIMAGETOOL_URL=$(pin appimagetool.url)
 APPIMAGETOOL_SHA=$(pin appimagetool.sha256)
 RUNTIME_URL=$(pin appimage-runtime.url)
@@ -37,12 +38,16 @@ if [ "$DRY" = 1 ]; then
   if [ "$SKIP_BUILD" = 0 ]; then
     printf '+ cargo build --release --locked -p flat3d-inject -p flat3d-app --manifest-path %s/Cargo.toml\n' "$ROOT"
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT"
+    printf '+ cargo build --release --locked -p flat3d-ui-layer --manifest-path %s/Cargo.toml\n' "$ROOT"
   fi
   printf "+ mkdir -p \$tmp/AppDir/usr/bin \$tmp/AppDir/usr/tools \$tmp/AppDir/usr/recipes\n"
   printf "+ cp %s/flat3d-app \$tmp/AppDir/usr/bin/flat3d-app\n" "$BIN_DIR"
   for name in "${PAYLOAD_BIN[@]}"; do
     printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$name" "$name"
     printf "+ ln -s bin/%s \$tmp/AppDir/usr/%s\n" "$name" "$name"
+  done
+  for name in "${LAYER_FILES[@]}"; do
+    printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$name" "$name"
   done
   if [ "$NO_TOOLS" = 0 ]; then
     for name in "${PAYLOAD_TOOLS[@]}"; do
@@ -61,13 +66,14 @@ if [ "$DRY" = 1 ]; then
   printf "+ curl -fL --proto =https --tlsv1.2 --retry 3 -o \$CACHE/dl.XXXXXX/%s %s\n" "${RUNTIME_URL##*/}" "$RUNTIME_URL"
   printf "+ sha256sum -c \$CACHE/dl.XXXXXX/%s (sha256 %s)\n" "${RUNTIME_URL##*/}" "$RUNTIME_SHA"
   printf "+ APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 %s --runtime-file \$CACHE/dl.XXXXXX/%s \$tmp/AppDir %s\n" "${APPIMAGETOOL_URL##*/}" "${RUNTIME_URL##*/}" "$OUT"
-  printf "+ test no *.so* outside \$tmp/AppDir/usr/tools/lib\n"
+  printf "+ test no *.so* outside \$tmp/AppDir/usr/tools/lib and usr/bin/libflat3d_ui_layer.so\n"
   exit 0
 fi
 
 if [ "$SKIP_BUILD" = 0 ]; then
   run cargo build --release --locked -p flat3d-inject -p flat3d-app --manifest-path "$ROOT/Cargo.toml"
   run cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path "$ROOT/Cargo.toml"
+  run cargo build --release --locked -p flat3d-ui-layer --manifest-path "$ROOT/Cargo.toml"
 fi
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-appimage.XXXXXX")
@@ -79,6 +85,9 @@ run cp "$BIN_DIR/flat3d-app" "$appdir/usr/bin/flat3d-app"
 for name in "${PAYLOAD_BIN[@]}"; do
   run cp "$BIN_DIR/$name" "$appdir/usr/bin/$name"
   run ln -s "bin/$name" "$appdir/usr/$name"
+done
+for name in "${LAYER_FILES[@]}"; do
+  run cp "$BIN_DIR/$name" "$appdir/usr/bin/$name"
 done
 if [ "$NO_TOOLS" = 0 ]; then
   run mkdir -p "$appdir/usr/tools/lib"
@@ -110,7 +119,7 @@ check_sha256 "$APPIMAGETOOL_SHA" "$appimagetool" appimagetool.sha256
 run chmod +x "$appimagetool"
 run curl -fL --proto '=https' --tlsv1.2 --retry 3 -o "$runtime" "$RUNTIME_URL"
 check_sha256 "$RUNTIME_SHA" "$runtime" appimage-runtime.sha256
-bundled_lib=$(find "$appdir" -type f -name '*.so*' ! -path "$appdir/usr/tools/lib/*" -print -quit)
+bundled_lib=$(find "$appdir" -type f -name '*.so*' ! -path "$appdir/usr/tools/lib/*" ! -name "$UI_LAYER_LIBRARY" -print -quit)
 final_check test -z "$bundled_lib"
 run mkdir -p "$(dirname "$out_abs")"
 run env APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 "$appimagetool" --runtime-file "$runtime" "$appdir" "$out_abs"

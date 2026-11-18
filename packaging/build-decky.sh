@@ -36,6 +36,7 @@ if [ "$DRY" = 1 ]; then
     printf '+ pnpm -C %s/decky run build\n' "$ROOT_DIR"
     printf '+ cargo build --release --locked -p flat3d-inject --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
+    printf '+ cargo build --release --locked -p flat3d-ui-layer --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
   fi
   printf "+ mkdir -p \$stage/flat-to-3d/dist \$stage/flat-to-3d/bin/recipes\n"
   for file in dist/index.js package.json plugin.json main.py README.md; do
@@ -43,6 +44,9 @@ if [ "$DRY" = 1 ]; then
   done
   printf "+ cp %s/LICENSE \$stage/flat-to-3d/LICENSE\n" "$ROOT_DIR"
   for name in "${PAYLOAD_BIN[@]}"; do
+    printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$name" "$name"
+  done
+  for name in "${LAYER_FILES[@]}"; do
     printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$name" "$name"
   done
   if [ "$NO_TOOLS" = 0 ]; then
@@ -62,6 +66,7 @@ if [ "$SKIP_BUILD" = 0 ]; then
   run pnpm -C "$ROOT_DIR/decky" run build
   run cargo build --release --locked -p flat3d-inject --manifest-path "$ROOT_DIR/Cargo.toml"
   run cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path "$ROOT_DIR/Cargo.toml"
+  run cargo build --release --locked -p flat3d-ui-layer --manifest-path "$ROOT_DIR/Cargo.toml"
 fi
 
 stage=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-decky.XXXXXX")
@@ -82,7 +87,11 @@ run cp "$ROOT_DIR/LICENSE" "$package/LICENSE"
 for name in "${PAYLOAD_BIN[@]}"; do
   run cp "$BIN_DIR/$name" "$package/bin/$name"
 done
+for name in "${LAYER_FILES[@]}"; do
+  run cp "$BIN_DIR/$name" "$package/bin/$name"
+done
 run chmod 755 "$package/bin/"flat3d-*
+run chmod 755 "$package/bin/${LAYER_FILES[0]}"
 if [ "$NO_TOOLS" = 0 ]; then
   run mkdir -p "$package/bin/tools/lib"
   for name in "${PAYLOAD_TOOLS[@]}"; do

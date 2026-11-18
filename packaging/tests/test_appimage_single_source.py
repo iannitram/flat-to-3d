@@ -88,7 +88,8 @@ class AppImageSingleSourceTests(unittest.TestCase):
         self.assertIn("--appimage-extract", text)
         for member in (
             "usr/bin/flat3d-app", "usr/bin/flat3d-inject", "usr/bin/flat3d-run",
-            "usr/bin/flat3d-viewer", "AppRun", "flat3d.desktop", "flat3d.svg",
+            "usr/bin/flat3d-viewer", "usr/bin/libflat3d_ui_layer.so",
+            "usr/bin/VkLayer_FLAT3D_ui.json", "AppRun", "flat3d.desktop", "flat3d.svg",
         ):
             self.assertIn(member, text.split("--appimage-extract", 1)[1])
 

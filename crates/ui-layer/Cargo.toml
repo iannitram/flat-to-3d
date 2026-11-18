@@ -1,0 +1,21 @@
+[package]
+name = "flat3d-ui-layer"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+description = "Flat to 3D's Vulkan layer: per-eye draws for a flat game's UI"
+publish = false
+
+[lib]
+name = "flat3d_ui_layer"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+ash = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
