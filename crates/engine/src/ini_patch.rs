@@ -75,7 +75,6 @@ impl PatchRecord {
 
         let mut edits = Vec::new();
         for line in lines {
-            let line = line.strip_suffix('\r').unwrap_or(line);
             if line.is_empty() {
                 continue;
             }
@@ -205,16 +204,31 @@ pub fn restore(record: &PatchRecord, files: &IniFiles) -> IniFiles {
             CRLF
         };
 
+        let mut original_last: Option<String> = None;
         for entry in entries.iter().rev() {
             match &entry.before {
                 Some(value) => restore_key(&mut lines, entry, value, eol),
-                None => remove_key(&mut lines, entry),
+                None => {
+                    let previous = remove_key(&mut lines, entry);
+                    if entry.eol_added {
+                        original_last = previous;
+                    }
+                }
             }
         }
 
         for entry in entries.iter().rev() {
             if !entry.section_existed && section_is_empty(&lines, &entry.section) {
-                remove_section(&mut lines, entry);
+                let previous = remove_section(&mut lines, entry);
+                if entry.eol_added {
+                    original_last = previous;
+                }
+            }
+        }
+
+        if let (Some(original), Some(last)) = (original_last, lines.last_mut()) {
+            if last.text == original {
+                last.ending.clear();
             }
         }
 
@@ -285,14 +299,13 @@ fn restore_key(lines: &mut Vec<IniLine>, entry: &PatchEntry, value: &str, eol: &
     }
 }
 
-fn remove_key(lines: &mut Vec<IniLine>, entry: &PatchEntry) {
-    let Some(section) = find_section(lines, &entry.section) else {
-        return;
-    };
+fn remove_key(lines: &mut Vec<IniLine>, entry: &PatchEntry) -> Option<String> {
+    let section = find_section(lines, &entry.section)?;
     let end = section_end(lines, section);
-    if let Some(key) = find_key(lines, section + 1, end, &entry.key) {
-        remove_line(lines, key, entry.eol_added);
-    }
+    let key = find_key(lines, section + 1, end, &entry.key)?;
+    let previous = key.checked_sub(1).map(|i| lines[i].text.clone());
+    remove_line(lines, key);
+    previous
 }
 
 fn section_is_empty(lines: &[IniLine], name: &str) -> bool {
@@ -305,15 +318,12 @@ fn section_is_empty(lines: &[IniLine], name: &str) -> bool {
         .all(|line| trimmed(&line.text).is_empty())
 }
 
-fn remove_section(lines: &mut Vec<IniLine>, entry: &PatchEntry) {
-    let Some(section) = find_section(lines, &entry.section) else {
-        return;
-    };
+fn remove_section(lines: &mut Vec<IniLine>, entry: &PatchEntry) -> Option<String> {
+    let section = find_section(lines, &entry.section)?;
     let end = section_end(lines, section);
+    let previous = section.checked_sub(1).map(|i| lines[i].text.clone());
     lines.drain(section..end);
-    if entry.eol_added && section == lines.len() && section > 0 {
-        lines[section - 1].ending.clear();
-    }
+    previous
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -463,11 +473,8 @@ fn insert_line(lines: &mut Vec<IniLine>, at: usize, text: String, eol: &str) -> 
     false
 }
 
-fn remove_line(lines: &mut Vec<IniLine>, at: usize, eol_added: bool) {
+fn remove_line(lines: &mut Vec<IniLine>, at: usize) {
     lines.remove(at);
-    if eol_added && at == lines.len() && at > 0 {
-        lines[at - 1].ending.clear();
-    }
 }
 
 #[cfg(test)]
@@ -690,6 +697,77 @@ mod tests {
             Some("[S]\nA=1\n[T]\nK=n\n[U]\nM=n\n")
         );
         assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_a_new_section_after_new_keys_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "S", "K", "n"),
+            edit("game.ini", "T", "K", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\nA=1\nK=n\n[T]\nK=n\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_a_new_section_after_new_keys_with_crlf_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\r\nA=1"))]);
+        let edits = [
+            edit("game.ini", "S", "K", "n"),
+            edit("game.ini", "T", "K", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\r\nA=1\r\nK=n\r\n[T]\r\nK=n\r\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_a_new_section_after_new_keys_with_the_edit_order_reversed() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "T", "K", "n"),
+            edit("game.ini", "S", "K", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\nA=1\nK=n\n[T]\nK=n\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_keeps_a_game_appended_line_and_its_ending() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "S", "K", "n"),
+            edit("game.ini", "S", "L", "n"),
+        ];
+        let (mut patched, record) = apply(&edits, &input);
+        patched.insert(
+            "game.ini".to_string(),
+            Some("[S]\nA=1\nK=n\nL=n\nG=1\n".to_string()),
+        );
+        let restored = restore(&record, &patched);
+        assert_eq!(restored["game.ini"].as_deref(), Some("[S]\nA=1\nG=1\n"));
+    }
+
+    #[test]
+    fn a_record_round_trips_a_value_ending_in_a_carriage_return() {
+        let input = files(&[("game.ini", Some("[S]\nK=a\r\r\n"))]);
+        let (patched, record) = apply(&[edit("game.ini", "S", "K", "n")], &input);
+        assert_eq!(record.edits[0].before.as_deref(), Some("a\r"));
+        let round_tripped = PatchRecord::from_text(&record.to_text()).unwrap();
+        assert_eq!(round_tripped, record);
+        assert_eq!(restore(&round_tripped, &patched), input);
     }
 
     #[test]
