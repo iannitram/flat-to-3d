@@ -2,8 +2,10 @@
 //! the side-by-side stream size, and the packaging and code-map wiring.
 
 use flat3d_inject::headsets::{
-    self, find, load_headsets, lookup, stream_size, HeadsetError, Identification, Resolution, UsbId,
+    self, find, load_headsets, load_headsets_from_dirs, lookup, lookup_in_paths, parse_headset,
+    stream_size, stream_size_in_paths, HeadsetError, Identification, Resolution, UsbId,
 };
+use flat3d_inject::paths::EnginePaths;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -40,6 +42,22 @@ fn repo_headsets() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
         .join("headsets")
+}
+
+fn paths(name: &str) -> EnginePaths {
+    let root = folder(&format!("engine-{name}"), &[]);
+    EnginePaths {
+        home: root.join("home"),
+        uid: 0,
+        state_dir: root.join("runtime"),
+        config: root.join("config"),
+        data: root.join("data"),
+        cache_dir: root.join("cache"),
+        log_dir: root.join("logs"),
+        bin: root.join("bin"),
+        recipe_dirs: Vec::new(),
+        headset_dirs: vec![root.join("first"), root.join("second")],
+    }
 }
 
 #[test]
@@ -103,6 +121,18 @@ fn a_bad_value_names_the_file_and_the_value() {
 }
 
 #[test]
+fn a_refresh_rate_of_zero_is_refused() {
+    let text = QUEST_2.replace("refresh-rates: 60, 72, 80, 90, 120", "refresh-rates: 0, 60");
+    match parse_headset(&text) {
+        Err(HeadsetError::BadValue { key, value }) => {
+            assert_eq!(key, "refresh-rates");
+            assert_eq!(value, "0, 60");
+        }
+        other => panic!("expected BadValue, got {other:?}"),
+    }
+}
+
+#[test]
 fn unknown_files_are_ignored() {
     let dir = folder(
         "readme",
@@ -156,6 +186,78 @@ fn a_headset_is_found_by_usb_adb_product_or_model() {
 }
 
 #[test]
+fn profiles_load_from_the_first_folder_that_holds_them() {
+    let renamed = QUEST_2
+        .replace("name: Quest 2", "name: Another Quest 2")
+        .replace("usb-id: 2833:5013", "usb-id: 2833:5014")
+        .replace("adb-product: hollywood", "adb-product: other")
+        .replace("adb-model: Quest_2", "adb-model: Other_2");
+    let first = folder("paths-first", &[("quest-2.headset", QUEST_2)]);
+    let second = folder("paths-second", &[("other.headset", renamed.as_str())]);
+    let mut paths = paths("first-holds");
+    paths.headset_dirs = vec![first, second];
+    let loaded = load_headsets_from_dirs(&paths.headset_dirs).unwrap();
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].name, "Quest 2");
+}
+
+#[test]
+fn an_empty_folder_is_skipped_for_the_next_one() {
+    let empty = folder("paths-empty", &[("README.md", "# no profiles here\n")]);
+    let second = folder("paths-next", &[("quest-2.headset", QUEST_2)]);
+    let mut paths = paths("skip-empty");
+    paths.headset_dirs = vec![empty, second];
+    let identification = Identification::new(Some(UsbId::new(0x2833, 0x5013)), None, None);
+    let profile = lookup_in_paths(&paths, &identification).unwrap();
+    assert!(profile.is_known());
+    assert_eq!(profile.name, "Quest 2");
+}
+
+#[test]
+fn a_known_profile_is_found_and_sized_through_the_paths() {
+    let dir = folder("paths-known", &[("quest-2.headset", QUEST_2)]);
+    let mut paths = paths("known");
+    paths.headset_dirs = vec![dir];
+    let identification = Identification::new(None, Some("hollywood"), None);
+    let profile = lookup_in_paths(&paths, &identification).unwrap();
+    assert!(profile.is_known());
+    assert_eq!(profile.name, "Quest 2");
+    assert_eq!(
+        stream_size_in_paths(&paths, &identification).unwrap(),
+        (2880, 1440)
+    );
+}
+
+#[test]
+fn no_folder_present_gives_the_unknown_defaults() {
+    let paths = paths("none");
+    let identification = Identification::new(Some(UsbId::new(0x1234, 0x5678)), None, None);
+    let profile = lookup_in_paths(&paths, &identification).unwrap();
+    assert!(!profile.is_known());
+    assert_eq!(profile.usb, UsbId::new(0x1234, 0x5678));
+    assert_eq!(profile.stream, Resolution::new(1440, 1440));
+    assert_eq!(
+        stream_size_in_paths(&paths, &identification).unwrap(),
+        (2880, 1440)
+    );
+}
+
+#[test]
+fn a_malformed_file_in_the_paths_is_still_an_error() {
+    let broken = QUEST_2.replace("refresh-rates: 60, 72, 80, 90, 120\n", "");
+    let dir = folder("paths-broken", &[("broken.headset", broken.as_str())]);
+    let mut paths = paths("broken");
+    paths.headset_dirs = vec![dir];
+    match lookup_in_paths(&paths, &Identification::default()) {
+        Err(HeadsetError::InFile { file, error }) => {
+            assert_eq!(file, "broken.headset");
+            assert!(error.to_string().contains("refresh-rates"), "{error}");
+        }
+        other => panic!("expected InFile, got {other:?}"),
+    }
+}
+
+#[test]
 fn two_files_with_one_identification_are_refused() {
     let renamed = QUEST_2.replace("name: Quest 2", "name: Another Quest 2");
     let dir = folder(
@@ -168,6 +270,44 @@ fn two_files_with_one_identification_are_refused() {
             assert_eq!(second, "b.headset");
         }
         other => panic!("expected DuplicateIdentification, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_repeated_usb_id_adb_product_or_adb_model_is_refused_on_its_own() {
+    let other_usb = QUEST_2
+        .replace("name: Quest 2", "name: Another Quest 2")
+        .replace("adb-product: hollywood", "adb-product: other")
+        .replace("adb-model: Quest_2", "adb-model: Other_2");
+    let other_product = QUEST_2
+        .replace("name: Quest 2", "name: Another Quest 2")
+        .replace("usb-id: 2833:5013", "usb-id: 2833:5014")
+        .replace("adb-model: Quest_2", "adb-model: Other_2");
+    let other_model = QUEST_2
+        .replace("name: Quest 2", "name: Another Quest 2")
+        .replace("usb-id: 2833:5013", "usb-id: 2833:5014")
+        .replace("adb-product: hollywood", "adb-product: other");
+    for (case, second, field) in [
+        ("duplicate-usb", other_usb, "usb-id"),
+        ("duplicate-product", other_product, "adb-product"),
+        ("duplicate-model", other_model, "adb-model"),
+    ] {
+        let dir = folder(
+            case,
+            &[("a.headset", QUEST_2), ("b.headset", second.as_str())],
+        );
+        match load_headsets(&dir) {
+            Err(HeadsetError::DuplicateIdentification {
+                identification,
+                first,
+                second,
+            }) => {
+                assert_eq!(first, "a.headset");
+                assert_eq!(second, "b.headset");
+                assert!(identification.starts_with(field), "{identification}");
+            }
+            other => panic!("expected DuplicateIdentification for {case}, got {other:?}"),
+        }
     }
 }
 

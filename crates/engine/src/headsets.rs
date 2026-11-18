@@ -2,8 +2,9 @@
 //! One file per headset under `headsets/`, in the recipes' `key: value` syntax
 //! (`headsets/README.md`); Quest 2 ships first. Automatic detection stays after 2.0.
 
+use crate::paths::EnginePaths;
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Connection types a profile may name.
 pub const CONNECTIONS: [&str; 2] = ["usb", "wifi"];
@@ -204,7 +205,7 @@ pub enum HeadsetError {
     BadValue { key: String, value: String },
     /// A file whose name is not a profile file name.
     BadFileName(String),
-    /// Two files for one identification; file names, sorted.
+    /// Two files for one usb-id, adb-product or adb-model; file names, sorted.
     DuplicateIdentification {
         identification: String,
         first: String,
@@ -417,6 +418,7 @@ pub fn check_headset(profile: &HeadsetProfile) -> Result<(), HeadsetError> {
         .collect::<Vec<_>>()
         .join(", ");
     if profile.refresh_rates.is_empty()
+        || profile.refresh_rates.contains(&0)
         || profile
             .refresh_rates
             .windows(2)
@@ -510,23 +512,42 @@ pub fn load_headsets(folder: &Path) -> Result<Vec<HeadsetProfile>, HeadsetError>
             file: name.clone(),
             error: Box::new(error),
         })?;
-        let key = format!(
-            "{} {} {}",
-            profile.usb.text(),
-            profile.adb_product,
-            profile.adb_model
-        );
-        if let Some(first) = files.get(&key) {
-            return Err(HeadsetError::DuplicateIdentification {
-                identification: key,
-                first: first.clone(),
-                second: name,
-            });
+        for (label, value) in [
+            ("usb-id", profile.usb.text()),
+            ("adb-product", profile.adb_product.clone()),
+            ("adb-model", profile.adb_model.clone()),
+        ] {
+            if value.trim().is_empty() {
+                continue;
+            }
+            let key = format!("{label} {value}");
+            if let Some(first) = files.get(&key) {
+                return Err(HeadsetError::DuplicateIdentification {
+                    identification: key,
+                    first: first.clone(),
+                    second: name,
+                });
+            }
+            files.insert(key, name.clone());
         }
-        files.insert(key, name);
         headsets.push(profile);
     }
     Ok(headsets)
+}
+
+/// Load the profiles from the first folder in `dirs` that holds any; missing folders are skipped.
+pub fn load_headsets_from_dirs(dirs: &[PathBuf]) -> Result<Vec<HeadsetProfile>, HeadsetError> {
+    for dir in dirs {
+        let headsets = match load_headsets(dir) {
+            Ok(headsets) => headsets,
+            Err(HeadsetError::Io { .. }) if !dir.exists() => continue,
+            Err(error) => return Err(error),
+        };
+        if !headsets.is_empty() {
+            return Ok(headsets);
+        }
+    }
+    Ok(Vec::new())
 }
 
 /// The profile whose identification matches every field the caller gave.
@@ -566,6 +587,24 @@ pub fn lookup(headsets: &[HeadsetProfile], identification: &Identification) -> H
         profile.adb_model = model.clone();
     }
     profile
+}
+
+/// Look a headset up in `paths`' folders; an unknown one comes back as safe defaults marked unknown.
+pub fn lookup_in_paths(
+    paths: &EnginePaths,
+    identification: &Identification,
+) -> Result<HeadsetProfile, HeadsetError> {
+    let headsets = load_headsets_from_dirs(&paths.headset_dirs)?;
+    Ok(lookup(&headsets, identification))
+}
+
+/// The side-by-side stream size for a headset found in `paths`' folders.
+pub fn stream_size_in_paths(
+    paths: &EnginePaths,
+    identification: &Identification,
+) -> Result<(u32, u32), HeadsetError> {
+    let profile = lookup_in_paths(paths, identification)?;
+    Ok(stream_size(&profile))
 }
 
 #[cfg(test)]
