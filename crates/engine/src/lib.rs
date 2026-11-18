@@ -15,6 +15,7 @@ pub mod face;
 pub mod health;
 pub mod heroic;
 pub mod heroic_wrapper;
+pub mod ini_patch;
 pub mod injectors;
 pub mod install;
 pub mod launch_options;
