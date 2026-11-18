@@ -5,6 +5,7 @@ pub mod engine;
 pub mod games_page;
 pub mod headset_page;
 pub mod logs_page;
+pub mod play_3d;
 pub mod setup_page;
 pub mod view_games;
 pub mod view_headset;
