@@ -1,5 +1,7 @@
 # STAR WARS Zero Company (Steam 2075800): routes to true stereo
 
+Update 2026-11-18: this note was written before any run. The engine fake-stereo route has since run by hand in the Quest 2 ([roadmap](../../../ROADMAP.md#today-2026-11-18-zero-company-in-3d-and-what-that-changes)). The UEVR route is still untested.
+
 Researched 2026-11-11 on the handheld (SteamOS). Web sources plus a read-only look at the installed copy: nothing was launched, written or downloaded. This note builds on [games_group_a.md](../games_group_a.md#star-wars-zero-company) and on the static recon in the comment on [issue #34](https://github.com/iannitram/flat-to-3d/issues/34); it does not repeat them. Decisions in [DECISIONS.md](../../DECISIONS.md) win over anything here.
 
 Marking: **observed** = read from the installed files or from the linked page on 2026-11-11. **inferred** = my reading, not tested. Addresses are RVAs (offsets from the image base `0x140000000`) in the installed build only.
@@ -178,4 +180,4 @@ Proposed issues (titles only):
 - PCGamingWiki refused the fetch on 2026-11-11, so nothing here is checked against it beyond what games_group_a already cites.
 - No patch notes found for the 2026-11-10 build (CL 201250).
 - Whether the developer console opens in the shipping build is not known.
-- Nothing was run. Every route above is untested on the handheld.
+- When this note was written nothing had been run. See the 2026-11-18 update at the top.

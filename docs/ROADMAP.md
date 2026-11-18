@@ -199,7 +199,7 @@ Zero Company proves the headset chain, the link service and the `flat3d-run` wra
 
 ## What's next
 
-1. **The 3D on/off work** in [today's table](#today-2026-11-18-zero-company-in-3d-and-what-that-changes), #399 and #401 first.
+1. **The virtual-display route, one-eye window and 3D on/off** in [today's table](#today-2026-11-18-zero-company-in-3d-and-what-that-changes), #399 and #401 first.
 2. **Waves** and **the owner-device queue**, below. WP-38 (#318) is merged, so the pass is done.
 3. **Hook-point research** (ruling 52): ZR #285, AR #286, GR #287, FR #288, Spider-Man 2 Step 2r #283 and WR #289, each on the installed game before its track's first hook ([above](#hook-point-research-ruling-52)).
 4. Continue Spider-Man 2's port steps in [the plan](spiderman2/plan.md), with Step 2r's map before Step 3. Reverse-engineering setup and the command live in [the workbench](workbench.md).
