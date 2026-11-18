@@ -55,9 +55,10 @@ fn green(case: &str, unit_active: bool) -> (EnginePaths, FakeRunner) {
         "{}/.local/share/flatpak/app/io.github.wivrn.wivrn/x86_64/stable/abc\n",
         home.display()
     );
+    let adb = home.join(".local/share/flat3d/bin/adb");
     let fake = FakeRunner::new()
         .ok(
-            &["adb", "devices"],
+            &[adb.to_str().unwrap(), "devices"],
             "List of devices attached\nSERIAL1\tdevice\n",
         )
         .ok(
@@ -198,8 +199,10 @@ fn doctor_runs_only_probes() {
     let before = tree(&p.home);
     let _ = doctor(&p, &mut fake);
     assert_eq!(tree(&p.home), before, "doctor writes nothing");
+    let adb = p.home.join(".local/share/flat3d/bin/adb");
+    let adb = adb.to_str().unwrap();
     let probes: [&[&str]; 5] = [
-        &["adb", "devices"],
+        &[adb, "devices"],
         &["adb", "-s", "SERIAL1", "shell", "dumpsys", "package"],
         &["flatpak", "info"],
         &["ss", "-tlnp"],

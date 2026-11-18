@@ -44,8 +44,8 @@ fn fake(answers: Vec<CommandOutput>) -> Fake {
 }
 
 #[test]
-fn stop_runs_all_three_commands_in_order_and_is_stopped() {
-    let mut f = fake(vec![ok(), ok(), ok()]);
+fn stop_runs_all_four_commands_in_order_and_is_stopped() {
+    let mut f = fake(vec![ok(), ok(), ok(), ok()]);
     assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
     assert_eq!(f.ran, stop_3d_commands());
 }
@@ -53,7 +53,12 @@ fn stop_runs_all_three_commands_in_order_and_is_stopped() {
 #[test]
 fn an_unplugged_headset_still_stops_the_server() {
     let no_dev = "error: no devices/emulators found";
-    let mut f = fake(vec![failed(no_dev), failed(no_dev), ok()]);
+    let mut f = fake(vec![
+        failed(no_dev),
+        failed(no_dev),
+        failed("error: io.github.wivrn.wivrn is not running"),
+        ok(),
+    ]);
     assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
     assert_eq!(f.ran, stop_3d_commands());
 }
@@ -63,6 +68,7 @@ fn the_server_stop_failing_is_an_error_naming_it() {
     let mut f = fake(vec![
         ok(),
         ok(),
+        ok(),
         failed("Failed to stop flat3d-wivrn.service: Access denied\n"),
     ]);
     let expected = LinkError {
@@ -70,13 +76,14 @@ fn the_server_stop_failing_is_an_error_naming_it() {
         message: "Failed to stop flat3d-wivrn.service: Access denied".into(),
     };
     assert_eq!(stop_3d(&mut f), Err(expected));
-    assert_eq!(f.ran.len(), 3);
+    assert_eq!(f.ran.len(), 4);
 }
 
 #[test]
 fn start_stop_start_reports_ready_stopped_ready() {
     let mut f = fake(vec![
         ok_with(DEVICE),
+        ok(),
         ok(),
         ok(),
         ok(),

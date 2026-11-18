@@ -7,7 +7,7 @@ use crate::{
     injectors::fetch::{self, Pin},
     install::UNIT_NAME,
     link::{
-        adb::{bundled_adb, choose_adb, listener_pid, proc_exe_path},
+        adb::{bundled_adb, choose_adb, listener_pid, proc_exe_path, AdbChoice},
         wivrn::{detect_quest_app, detect_server, versions_match},
         WIVRN_FLATPAK,
     },
@@ -24,15 +24,33 @@ const SKIP_NO_HEADSET: &str = "skipped: no headset";
 const ADB_PORT: u16 = 5037;
 
 pub fn run(_cmd: &DoctorCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, ApiError> {
-    let serial = adb_serial(ctx.runner);
+    let adb = chosen_adb(ctx.paths, ctx.runner);
+    let serial = adb_serial(ctx.runner, &adb.path);
     let pins = fetch::parse_pins(fetch::PINS);
-    let report = doctor(ctx.paths, ctx.runner, serial.as_deref(), &pins);
+    let report = doctor(ctx.paths, ctx.runner, serial.as_deref(), &adb, &pins);
     serde_json::to_value(report).map_err(|e| ApiError::new("io", &e.to_string()))
 }
 
-/// The serial of the first headset `adb devices` lists as ready.
-fn adb_serial(r: &mut dyn CommandRunner) -> Option<String> {
-    let out = r.run(&["adb".into(), "devices".into()]);
+/// The adb in use: a running server's executable, else the bundled one.
+fn chosen_adb(p: &EnginePaths, r: &mut dyn CommandRunner) -> AdbChoice {
+    let home = p.home.to_string_lossy().into_owned();
+    let ss = r.run(&["ss".into(), "-tlnp".into()]);
+    let running = ss
+        .success
+        .then(|| listener_pid(&ss.stdout, ADB_PORT))
+        .flatten()
+        .and_then(|pid| std::fs::read_link(proc_exe_path(pid)).ok())
+        .map(|path| path.to_string_lossy().into_owned());
+    let bundled = Some(bundled_adb(&home)).filter(|path| Path::new(path).exists());
+    choose_adb(running.as_deref(), bundled.as_deref())
+}
+
+/// The serial of the first headset `adb devices` lists as ready, read with the chosen adb.
+fn adb_serial(r: &mut dyn CommandRunner, adb: &str) -> Option<String> {
+    if adb.is_empty() {
+        return None;
+    }
+    let out = r.run(&[adb.to_string(), "devices".into()]);
     if !out.success {
         return None;
     }
@@ -62,6 +80,7 @@ fn doctor(
     p: &EnginePaths,
     r: &mut dyn CommandRunner,
     serial: Option<&str>,
+    adb: &AdbChoice,
     pins: &BTreeMap<String, Pin>,
 ) -> DoctorReport {
     let home = p.home.to_string_lossy().into_owned();
@@ -123,15 +142,6 @@ fn doctor(
     });
 
     // 3. adb: the running server's executable, else the bundled one.
-    let ss = r.run(&["ss".into(), "-tlnp".into()]);
-    let running = ss
-        .success
-        .then(|| listener_pid(&ss.stdout, ADB_PORT))
-        .flatten()
-        .and_then(|pid| std::fs::read_link(proc_exe_path(pid)).ok())
-        .map(|path| path.to_string_lossy().into_owned());
-    let bundled = Some(bundled_adb(&home)).filter(|path| Path::new(path).exists());
-    let adb = choose_adb(running.as_deref(), bundled.as_deref());
     let source = match adb.source {
         AdbSource::Running => "running",
         AdbSource::Bundled => "bundled",
@@ -265,6 +275,8 @@ geo11.sha256: TBD-at-pin
         fs::set_permissions(path, fs::Permissions::from_mode(mode)).unwrap();
     }
 
+    const SERIAL_ADB: &str = "/opt/flat3d-test/adb";
+
     /// Files and replies for an all-green machine.
     fn green(case: &str, headset_version: &str) -> (EnginePaths, FakeRunner) {
         let p = paths(case);
@@ -280,9 +292,10 @@ geo11.sha256: TBD-at-pin
             "{}/.local/share/flatpak/app/io.github.wivrn.wivrn/x86_64/stable/abc\n",
             home.display()
         );
+        let adb = home.join(".local/share/flat3d/bin/adb");
         let fake = FakeRunner::new()
             .ok(
-                &["adb", "devices"],
+                &[adb.to_str().unwrap(), "devices"],
                 "List of devices attached\nSERIAL1\tdevice\n",
             )
             .ok(
@@ -315,6 +328,16 @@ geo11.sha256: TBD-at-pin
         (p, fake)
     }
 
+    fn report(
+        p: &EnginePaths,
+        fake: &mut FakeRunner,
+        serial: Option<&str>,
+        pins: &BTreeMap<String, Pin>,
+    ) -> DoctorReport {
+        let adb = chosen_adb(p, fake);
+        doctor(p, fake, serial, &adb, pins)
+    }
+
     fn names(report: &DoctorReport) -> Vec<&str> {
         report.checks.iter().map(|c| c.name.as_str()).collect()
     }
@@ -327,7 +350,7 @@ geo11.sha256: TBD-at-pin
     fn all_green() {
         let (p, mut fake) = green("all-green", "26.9");
         let pins = fetch::parse_pins(GREEN);
-        let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
         assert!(report.ok, "{report:?}");
         assert_eq!(names(&report), ORDER);
         assert!(report.checks.iter().all(|c| c.ok && c.fix.is_empty()));
@@ -337,7 +360,7 @@ geo11.sha256: TBD-at-pin
     fn tbd_pin_is_red() {
         let (p, mut fake) = green("tbd-pin", "26.9");
         let pins = fetch::parse_pins(WITH_TBD);
-        let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
         assert!(!report.ok);
         let pins = find(&report, "pins");
         assert!(!pins.ok);
@@ -348,19 +371,19 @@ geo11.sha256: TBD-at-pin
     #[test]
     fn no_serial_skips_quest() {
         let mut header_only =
-            FakeRunner::new().ok(&["adb", "devices"], "List of devices attached\n\n");
-        assert_eq!(adb_serial(&mut header_only), None);
+            FakeRunner::new().ok(&[SERIAL_ADB, "devices"], "List of devices attached\n\n");
+        assert_eq!(adb_serial(&mut header_only, SERIAL_ADB), None);
         let mut two = FakeRunner::new().ok(
-            &["adb", "devices"],
+            &[SERIAL_ADB, "devices"],
             "List of devices attached
 AAA	unauthorized
 BBB	device
 ",
         );
-        assert_eq!(adb_serial(&mut two).as_deref(), Some("BBB"));
+        assert_eq!(adb_serial(&mut two, SERIAL_ADB).as_deref(), Some("BBB"));
         let (p, mut fake) = green("no-serial", "26.9");
         let pins = fetch::parse_pins(GREEN);
-        let report = doctor(&p, &mut fake, None, &pins);
+        let report = report(&p, &mut fake, None, &pins);
         let quest = find(&report, "quest-app");
         assert!(quest.ok);
         assert_eq!(quest.detail, SKIP_NO_HEADSET);
@@ -372,10 +395,26 @@ BBB	device
     }
 
     #[test]
+    fn serial_lookup_uses_the_chosen_adb_and_never_a_bare_one() {
+        let (p, mut fake) = green("serial-adb", "26.9");
+        let adb = chosen_adb(&p, &mut fake);
+        assert_eq!(adb.source, AdbSource::Bundled);
+        assert_eq!(adb_serial(&mut fake, &adb.path).as_deref(), Some("SERIAL1"));
+        assert!(fake
+            .ran
+            .iter()
+            .all(|argv| argv.first().map(String::as_str) != Some("adb")));
+        assert!(fake
+            .ran
+            .iter()
+            .any(|argv| argv.first().map(String::as_str) == Some(adb.path.as_str())));
+    }
+
+    #[test]
     fn version_mismatch_is_red() {
         let (p, mut fake) = green("mismatch", "26.8");
         let pins = fetch::parse_pins(GREEN);
-        let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
         assert!(!report.ok);
         let quest = find(&report, "quest-app");
         assert!(!quest.ok);
@@ -387,7 +426,7 @@ BBB	device
     fn report_round_trips() {
         let (p, mut fake) = green("round-trip", "26.9");
         let pins = fetch::parse_pins(WITH_TBD);
-        let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
         let text = serde_json::to_string(&report).unwrap();
         assert_eq!(serde_json::from_str::<DoctorReport>(&text).unwrap(), report);
     }
@@ -397,7 +436,7 @@ BBB	device
         let p = paths("every-fix");
         let mut fake = FakeRunner::new();
         let pins = fetch::parse_pins(WITH_TBD);
-        let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
         assert!(!report.ok);
         assert_eq!(names(&report), ORDER);
         for c in &report.checks {
