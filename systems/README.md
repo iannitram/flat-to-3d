@@ -42,6 +42,11 @@ names the chip. A profile with no `match-gpu` accepts any GPU.
 - `3.0..3.7` for both bounds;
 - `3.0..` or `..3.7` when one end is open.
 
+For `<=`, `=` and the upper end of `3.0..3.7`, only the components the bound names are compared:
+the detected version is truncated to the bound's length first. So `<=3.7` and `3.0..3.7` accept
+`3.7.13`, and `=3.6` accepts `3.6.1`. `>`, `>=`, `<` and the lower end of `3.0..3.7` compare every
+component, so `3.7.13` still counts as greater than `3.7` for `>3.7`.
+
 A version that cannot be parsed, or a missing `VERSION_ID` when the profile has a range, does not
 match. A bare value such as `3.6` means equal.
 

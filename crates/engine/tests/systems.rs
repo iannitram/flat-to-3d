@@ -2,8 +2,8 @@
 //! and the repository's own shipped profile.
 
 use flat3d_inject::systems::{
-    detect, find_system, load_systems, matches, parse_gpu_name, parse_os_release, SystemError,
-    SystemFacts, SystemProfile,
+    detect, find_system, load_systems, matches, parse_gpu_name, parse_os_release, version_in_range,
+    SystemError, SystemFacts, SystemProfile,
 };
 use flat3d_inject::testing::FakeRunner;
 use std::fs;
@@ -83,6 +83,16 @@ fn no_match_is_unknown_and_not_an_error() {
     let mut facts = facts("steamos", "3.6", "AMD Radeon 8060S Graphics");
     facts.os_id.clear();
     assert!(!matches(&one(STEAMOS), &facts));
+}
+
+#[test]
+fn a_bound_compares_only_the_components_it_names() {
+    assert!(version_in_range("3.7.13", "3.0..3.7"));
+    assert!(!version_in_range("3.8", "3.0..3.7"));
+    assert!(version_in_range("3.7.13", "<=3.7"));
+    assert!(version_in_range("3.6.1", "=3.6"));
+    assert!(!version_in_range("3.7.1", "=3.6"));
+    assert!(!version_in_range("3.7.13", "<3.7"));
 }
 
 #[test]

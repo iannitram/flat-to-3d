@@ -458,7 +458,7 @@ pub fn version_in_range(version: &str, range: &str) -> bool {
                 .is_some_and(|value| cmp_versions(&current, &value) != Ordering::Less);
         let below = upper.trim().is_empty()
             || parse_version(upper.trim())
-                .is_some_and(|value| cmp_versions(&current, &value) != Ordering::Greater);
+                .is_some_and(|value| cmp_truncated(&current, &value) != Ordering::Greater);
         return above && below;
     }
     let (operator, rest) = [
@@ -480,12 +480,13 @@ pub fn version_in_range(version: &str, range: &str) -> bool {
         return false;
     };
     let order = cmp_versions(&current, &target);
+    let bounded = cmp_truncated(&current, &target);
     match operator {
         ">=" => order != Ordering::Less,
         ">" => order == Ordering::Greater,
-        "<=" => order != Ordering::Greater,
+        "<=" => bounded != Ordering::Greater,
         "<" => order == Ordering::Less,
-        _ => order == Ordering::Equal,
+        _ => bounded == Ordering::Equal,
     }
 }
 
@@ -519,6 +520,13 @@ fn parse_version(text: &str) -> Option<Vec<u32>> {
         parts.push(digits.parse().ok()?);
     }
     Some(parts)
+}
+
+/// Compare `version` with `bound` using only the components `bound` names, so `3.7.13` is
+/// equal to `3.7` for `<=`, `=` and the upper end of a range.
+fn cmp_truncated(version: &[u32], bound: &[u32]) -> Ordering {
+    let version = &version[..version.len().min(bound.len())];
+    cmp_versions(version, bound)
 }
 
 fn cmp_versions(left: &[u32], right: &[u32]) -> Ordering {
