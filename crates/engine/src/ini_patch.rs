@@ -205,14 +205,14 @@ pub fn restore(record: &PatchRecord, files: &IniFiles) -> IniFiles {
             CRLF
         };
 
-        for entry in &entries {
+        for entry in entries.iter().rev() {
             match &entry.before {
                 Some(value) => restore_key(&mut lines, entry, value, eol),
                 None => remove_key(&mut lines, entry),
             }
         }
 
-        for entry in &entries {
+        for entry in entries.iter().rev() {
             if !entry.section_existed && section_is_empty(&lines, &entry.section) {
                 remove_section(&mut lines, entry);
             }
@@ -417,7 +417,11 @@ fn earlier_value(lines: &[IniLine], section: &str, key: &str) -> Option<String> 
     let end = section_end(lines, section);
     let line = find_key(lines, section + 1, end, key)?;
     let (_, value_start) = key_value(&lines[line].text)?;
-    Some(lines[line].text[value_start..].trim().to_string())
+    Some(
+        lines[line].text[value_start..]
+            .trim_start_matches([' ', '\t'])
+            .to_string(),
+    )
 }
 
 fn replace_value(line: &mut IniLine, value: &str) {
@@ -599,6 +603,93 @@ mod tests {
             );
             assert_eq!(restore(&record, &patched), input);
         }
+    }
+
+    #[test]
+    fn restore_keeps_trailing_whitespace_in_an_earlier_value() {
+        let input = files(&[("game.ini", Some("[S]\nK=old  \nZ=1\n"))]);
+        let (patched, record) = apply(&[edit("game.ini", "S", "K", "n")], &input);
+        assert_eq!(patched["game.ini"].as_deref(), Some("[S]\nK=n\nZ=1\n"));
+        assert_eq!(record.edits[0].before.as_deref(), Some("old  "));
+        assert_eq!(
+            PatchRecord::from_text(&record.to_text()),
+            Ok(record.clone())
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_two_new_keys_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "S", "K", "n"),
+            edit("game.ini", "S", "L", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(patched["game.ini"].as_deref(), Some("[S]\nA=1\nK=n\nL=n\n"));
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_three_new_keys_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "S", "K", "n"),
+            edit("game.ini", "S", "L", "n"),
+            edit("game.ini", "S", "M", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\nA=1\nK=n\nL=n\nM=n\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_two_new_keys_with_crlf_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\r\nA=1"))]);
+        let edits = [
+            edit("game.ini", "S", "K", "n"),
+            edit("game.ini", "S", "L", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\r\nA=1\r\nK=n\r\nL=n\r\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_a_new_section_at_the_end_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "T", "K", "n"),
+            edit("game.ini", "T", "L", "n"),
+            edit("game.ini", "T", "M", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\nA=1\n[T]\nK=n\nL=n\nM=n\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
+    }
+
+    #[test]
+    fn restore_of_two_new_sections_at_the_end_keeps_a_file_without_a_final_newline() {
+        let input = files(&[("game.ini", Some("[S]\nA=1"))]);
+        let edits = [
+            edit("game.ini", "T", "K", "n"),
+            edit("game.ini", "U", "M", "n"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("[S]\nA=1\n[T]\nK=n\n[U]\nM=n\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
     }
 
     #[test]
