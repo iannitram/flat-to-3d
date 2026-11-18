@@ -206,13 +206,16 @@ pub fn restore(record: &PatchRecord, files: &IniFiles) -> IniFiles {
 
         let mut original_last: Option<String> = None;
         for entry in entries.iter().rev() {
-            match &entry.before {
-                Some(value) => restore_key(&mut lines, entry, value, eol),
-                None => {
-                    let previous = remove_key(&mut lines, entry);
-                    if entry.eol_added {
-                        original_last = previous;
-                    }
+            if let Some(value) = &entry.before {
+                restore_key(&mut lines, entry, value, eol);
+            }
+        }
+
+        for entry in entries.iter().rev() {
+            if entry.before.is_none() {
+                let previous = remove_key(&mut lines, entry);
+                if entry.eol_added {
+                    original_last = previous;
                 }
             }
         }
@@ -815,6 +818,60 @@ mod tests {
             restore(&created_record, &created_patched)["new.ini"].as_deref(),
             None
         );
+    }
+
+    #[test]
+    fn restore_of_a_value_and_a_new_key_keeps_a_file_without_a_final_newline() {
+        for ending in ["\n", "\r\n"] {
+            let before = format!("[A]{ending}k=1");
+            let input = files(&[("game.ini", Some(before.as_str()))]);
+            let edits = [
+                edit("game.ini", "A", "k", "9"),
+                edit("game.ini", "A", "z", "9"),
+            ];
+            let (patched, record) = apply(&edits, &input);
+            assert_eq!(
+                patched["game.ini"].as_deref(),
+                Some(format!("[A]{ending}k=9{ending}z=9{ending}").as_str())
+            );
+            assert_eq!(restore(&record, &patched), input);
+        }
+    }
+
+    #[test]
+    fn restore_of_a_new_key_and_a_value_keeps_a_file_without_a_final_newline() {
+        for ending in ["\n", "\r\n"] {
+            let before = format!("[A]{ending}k=1");
+            let input = files(&[("game.ini", Some(before.as_str()))]);
+            let edits = [
+                edit("game.ini", "A", "z", "9"),
+                edit("game.ini", "A", "k", "9"),
+            ];
+            let (patched, record) = apply(&edits, &input);
+            assert_eq!(
+                patched["game.ini"].as_deref(),
+                Some(format!("[A]{ending}k=9{ending}z=9{ending}").as_str())
+            );
+            assert_eq!(restore(&record, &patched), input);
+        }
+    }
+
+    #[test]
+    fn restore_of_a_value_and_a_new_key_in_a_later_section_is_byte_identical() {
+        let input = files(&[(
+            "game.ini",
+            Some("\r\n[Display]\r\n  B = 1 \r\n[video]\r\nb=2\r\n  A = 7 "),
+        )]);
+        let edits = [
+            edit("game.ini", "VIDEO", "a", "9"),
+            edit("game.ini", "VIDEO", "new", "9"),
+        ];
+        let (patched, record) = apply(&edits, &input);
+        assert_eq!(
+            patched["game.ini"].as_deref(),
+            Some("\r\n[Display]\r\n  B = 1 \r\n[video]\r\nb=2\r\n  A = 9\r\nnew=9\r\n")
+        );
+        assert_eq!(restore(&record, &patched), input);
     }
 
     #[test]
