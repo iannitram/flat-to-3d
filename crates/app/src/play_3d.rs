@@ -3,6 +3,11 @@
 //!
 //! The game is never closed. No `Action` and no code path here closes, stops or exits a game,
 //! because a forced exit can lose progress: ending a session only stops the headset view.
+//!
+//! The shell's contract: every `StartLinkAndLaunch` and `ResumeIn3d` is answered by exactly one
+//! `Started` or `StartFailed`, the engine work behind them is time-limited, and only one is
+//! outstanding at a time. That is why `Starting` and `Resuming` need no timeout here and messages
+//! carry no attempt id.
 
 /// Where a game is in its 3D session.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,6 +30,8 @@ pub struct Session {
 pub struct PlayState {
     pub session: Option<Session>,
     pub error: Option<String>,
+    /// The headset has been lost since the last time it was seen returned.
+    pub headset_lost: bool,
 }
 
 /// The button a game shows.
@@ -124,7 +131,9 @@ pub fn update(state: &mut PlayState, msg: Msg) -> Option<Action> {
                 Mode::Resuming => {
                     state.session = Some(Session {
                         appid,
-                        mode: Mode::OnLaptop { headset_back: true },
+                        mode: Mode::OnLaptop {
+                            headset_back: !state.headset_lost,
+                        },
                     });
                 }
                 _ => return None,
@@ -137,26 +146,30 @@ pub fn update(state: &mut PlayState, msg: Msg) -> Option<Action> {
             if session.appid != appid || session.mode != Mode::In3d {
                 return None;
             }
-            // The headset is still attached, so the way back stays on offer.
+            // The way back stays on offer only while the headset is still attached.
             state.session = Some(Session {
                 appid,
-                mode: Mode::OnLaptop { headset_back: true },
+                mode: Mode::OnLaptop {
+                    headset_back: !state.headset_lost,
+                },
             });
             state.error = None;
             Some(Action::BringBack(appid))
         }
         Msg::GraceEnded => {
-            if let Some(session) = state.session.as_mut() {
-                if session.mode == Mode::In3d {
-                    // The link service has already done the work.
-                    session.mode = Mode::OnLaptop {
-                        headset_back: false,
-                    };
-                }
+            let session = state.session.as_mut()?;
+            if !matches!(session.mode, Mode::In3d | Mode::Resuming) {
+                return None;
             }
+            // The link service has already done the work, and the headset is gone.
+            session.mode = Mode::OnLaptop {
+                headset_back: false,
+            };
+            state.headset_lost = true;
             None
         }
         Msg::HeadsetReturned => {
+            state.headset_lost = false;
             if let Some(session) = state.session.as_mut() {
                 if let Mode::OnLaptop { headset_back } = &mut session.mode {
                     *headset_back = true;
@@ -165,6 +178,7 @@ pub fn update(state: &mut PlayState, msg: Msg) -> Option<Action> {
             None
         }
         Msg::HeadsetLost => {
+            state.headset_lost = true;
             if let Some(session) = state.session.as_mut() {
                 if let Mode::OnLaptop { headset_back } = &mut session.mode {
                     *headset_back = false;

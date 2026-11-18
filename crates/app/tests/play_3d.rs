@@ -8,6 +8,7 @@ fn state(appid: u32, mode: Mode) -> PlayState {
     PlayState {
         session: Some(Session { appid, mode }),
         error: None,
+        headset_lost: false,
     }
 }
 
@@ -66,6 +67,7 @@ fn play_pressed_clears_an_old_error() {
     let mut s = PlayState {
         session: None,
         error: Some("old".into()),
+        headset_lost: false,
     };
     update(&mut s, Msg::PlayPressed(7));
     assert!(s.error.is_none());
@@ -103,6 +105,7 @@ fn an_ignored_press_keeps_the_error() {
             mode: Mode::In3d,
         }),
         error: Some("old".into()),
+        headset_lost: false,
     };
     assert_eq!(update(&mut s, Msg::PlayPressed(9)), None);
     assert_eq!(s.error.as_deref(), Some("old"));
@@ -221,13 +224,13 @@ fn grace_ended_moves_in_3d_to_the_laptop_without_a_headset() {
             }
         })
     );
+    assert!(s.headset_lost);
 }
 
 #[test]
-fn grace_ended_changes_only_in_3d() {
+fn grace_ended_changes_nothing_during_starting_or_on_the_laptop() {
     for mode in [
         Mode::Starting,
-        Mode::Resuming,
         Mode::OnLaptop { headset_back: true },
         Mode::OnLaptop {
             headset_back: false,
@@ -236,11 +239,83 @@ fn grace_ended_changes_only_in_3d() {
         let mut s = state(7, mode);
         assert_eq!(update(&mut s, Msg::GraceEnded), None);
         assert_eq!(s.session.unwrap().mode, mode);
+        assert!(!s.headset_lost);
     }
 }
 
 #[test]
-fn headset_returned_and_lost_only_change_an_on_laptop_session() {
+fn a_loss_during_resuming_ends_on_the_laptop_without_a_headset() {
+    let mut s = state(7, Mode::Resuming);
+    update(&mut s, Msg::HeadsetLost);
+    assert_eq!(update(&mut s, Msg::GraceEnded), None);
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::OnLaptop {
+                headset_back: false
+            }
+        })
+    );
+    assert!(s.headset_lost);
+
+    // The late answer to the resume changes nothing.
+    assert_eq!(update(&mut s, Msg::Started(7)), None);
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::OnLaptop {
+                headset_back: false
+            }
+        })
+    );
+}
+
+#[test]
+fn the_headset_returning_after_a_loss_during_resuming_offers_the_way_back() {
+    let mut s = state(7, Mode::Resuming);
+    update(&mut s, Msg::HeadsetLost);
+    update(&mut s, Msg::GraceEnded);
+    update(&mut s, Msg::Started(7));
+    update(&mut s, Msg::HeadsetReturned);
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::OnLaptop { headset_back: true }
+        })
+    );
+    assert!(!s.headset_lost);
+    assert_eq!(button(&s, 7), Button::BackTo3d);
+}
+
+#[test]
+fn grace_ended_during_starting_changes_nothing() {
+    let mut s = state(7, Mode::Starting);
+    assert_eq!(update(&mut s, Msg::GraceEnded), None);
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::Starting
+        })
+    );
+    assert!(!s.headset_lost);
+}
+
+#[test]
+fn a_loss_with_no_session_is_remembered() {
+    let mut s = PlayState::default();
+    assert_eq!(update(&mut s, Msg::HeadsetLost), None);
+    assert!(s.headset_lost && s.session.is_none());
+
+    assert_eq!(update(&mut s, Msg::HeadsetReturned), None);
+    assert!(!s.headset_lost);
+}
+
+#[test]
+fn headset_returned_and_lost_change_only_the_headset_back_offer() {
     let mut s = state(
         7,
         Mode::OnLaptop {
@@ -252,6 +327,7 @@ fn headset_returned_and_lost_only_change_an_on_laptop_session() {
         s.session.unwrap().mode,
         Mode::OnLaptop { headset_back: true }
     );
+    assert!(!s.headset_lost);
 
     let mut s = state(7, Mode::OnLaptop { headset_back: true });
     assert_eq!(update(&mut s, Msg::HeadsetLost), None);
@@ -261,15 +337,76 @@ fn headset_returned_and_lost_only_change_an_on_laptop_session() {
             headset_back: false
         }
     );
+    assert!(s.headset_lost);
 
-    // In3d is covered by the replug grace, so neither message changes it.
+    // In3d is covered by the replug grace, so neither message changes the mode,
+    // but both are still remembered.
     for mode in [Mode::Starting, Mode::In3d, Mode::Resuming] {
         let mut s = state(7, mode);
         update(&mut s, Msg::HeadsetReturned);
         assert_eq!(s.session.unwrap().mode, mode);
+        assert!(!s.headset_lost);
         update(&mut s, Msg::HeadsetLost);
         assert_eq!(s.session.unwrap().mode, mode);
+        assert!(s.headset_lost);
     }
+}
+
+#[test]
+fn bring_back_after_a_loss_offers_no_way_back() {
+    let mut s = state(7, Mode::In3d);
+    update(&mut s, Msg::HeadsetLost);
+    assert_eq!(
+        update(&mut s, Msg::BringBackPressed(7)),
+        Some(Action::BringBack(7))
+    );
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::OnLaptop {
+                headset_back: false
+            }
+        })
+    );
+    assert_eq!(button(&s, 7), Button::OnLaptop);
+}
+
+#[test]
+fn bring_back_after_the_headset_returns_offers_the_way_back() {
+    let mut s = state(7, Mode::In3d);
+    update(&mut s, Msg::HeadsetLost);
+    update(&mut s, Msg::HeadsetReturned);
+    assert_eq!(
+        update(&mut s, Msg::BringBackPressed(7)),
+        Some(Action::BringBack(7))
+    );
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::OnLaptop { headset_back: true }
+        })
+    );
+    assert_eq!(button(&s, 7), Button::BackTo3d);
+}
+
+#[test]
+fn start_failed_from_resuming_with_the_headset_lost_stays_on_the_laptop() {
+    let mut s = state(7, Mode::Resuming);
+    update(&mut s, Msg::HeadsetLost);
+    assert_eq!(update(&mut s, Msg::StartFailed(7, "no link".into())), None);
+    assert_eq!(
+        s.session,
+        Some(Session {
+            appid: 7,
+            mode: Mode::OnLaptop {
+                headset_back: false
+            }
+        })
+    );
+    assert_eq!(button(&s, 7), Button::OnLaptop);
+    assert_eq!(s.error.as_deref(), Some("no link"));
 }
 
 #[test]
@@ -309,6 +446,7 @@ fn back_to_3d_pressed_clears_an_old_error() {
             mode: Mode::OnLaptop { headset_back: true },
         }),
         error: Some("old".into()),
+        headset_lost: false,
     };
     update(&mut s, Msg::BackTo3dPressed(7));
     assert!(s.error.is_none());
