@@ -11,6 +11,12 @@ pub struct Game {
     pub has_recipe: bool,
 }
 
+impl Game {
+    pub fn key(&self) -> crate::recipes::StoreKey {
+        crate::recipes::StoreKey::Steam(self.appid)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Recipe {
     pub appid: u32,

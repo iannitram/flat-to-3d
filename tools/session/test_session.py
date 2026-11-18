@@ -21,6 +21,13 @@ class SessionTests(unittest.TestCase):
             out=session.render(d);self.assertIn(session.HEADER,out);self.assertNotIn("/home/",out);self.assertIn("{home}",out);self.assertIn("{state}",out);self.assertNotIn("{repo}",out)
             self.assertEqual(out,session.render(d))
 
+    def test_link_smoke_has_no_soak_and_uses_the_installed_adb(self):
+        d=session.load(ROOT/"sessions/link-smoke.toml");ids=[s["id"] for s in d["step"]]
+        self.assertNotIn("soak",ids);self.assertNotIn("soak-file",ids)
+        version=next(s for s in d["step"] if s["id"]=="wivrn-version")
+        self.assertEqual(version["run"][0],"{home}/.local/share/flat3d/bin/adb")
+        self.assertFalse(any(s.get("run",[None])[0]=="adb" for s in d["step"]))
+
     def test_validation_rejects_invalid_and_allows_find_name(self):
         d={"schema":1,"name":"bad","q":"Q17","issues":[36],"evidence_only":[37],"step":[{"id":"x","kind":"nope","who":"script","run":["ls","{state}/soak-*.txt"]},{"id":"x","kind":"cmd","who":"script"}]}
         e="\n".join(session.validate(d,"bad.toml"));self.assertIn("unknown q",e);self.assertIn("duplicate id",e);self.assertIn("unknown kind",e);self.assertIn("glob",e);self.assertIn("evidence_only",e)

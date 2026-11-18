@@ -43,6 +43,30 @@ pub fn parse(args: &[String]) -> Option<Result<ViewCommand, String>> {
                 {
                     parse(verb, options, Some(appid))
                 }
+                [_, verb, flag, app]
+                    if (flag == "--epic" || flag == "--app")
+                        && (verb == "add" || verb == "remove") =>
+                {
+                    let options = if app.starts_with("epic:") {
+                        app.clone()
+                    } else {
+                        format!("epic:{app}")
+                    };
+                    Ok(ViewCommand::Launch {
+                        add: verb == "add",
+                        options,
+                        appid: None,
+                    })
+                }
+                [_, verb, app]
+                    if (verb == "add" || verb == "remove") && app.starts_with("epic:") =>
+                {
+                    Ok(ViewCommand::Launch {
+                        add: verb == "add",
+                        options: app.clone(),
+                        appid: None,
+                    })
+                }
                 _ => Err(usage()),
             }
         }
@@ -105,6 +129,17 @@ pub fn run(cmd: &ViewCommand, ctx: &mut Ctx<'_>) -> Result<serde_json::Value, Ap
             options: original,
             appid,
         } => {
+            if let Some(app_name) = original.strip_prefix("epic:") {
+                let key = crate::recipes::StoreKey::Epic(app_name.to_string());
+                let text = if *add {
+                    crate::heroic_wrapper::apply_for_key_with(p, &key, original, &mut *ctx.runner)?
+                } else {
+                    let _ = crate::heroic_wrapper::undo_epic(p, app_name)?;
+                    String::new()
+                };
+                return serde_json::to_value(api::LaunchText { options: text })
+                    .map_err(|e| ApiError::new("command-failed", &e.to_string()));
+            }
             let options = if *add {
                 crate::launch_options::add_wrapper_at(original, &p.wrapper_bin().to_string_lossy())
             } else {

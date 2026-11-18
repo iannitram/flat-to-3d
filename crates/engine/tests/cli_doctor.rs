@@ -55,9 +55,10 @@ fn green(case: &str, unit_active: bool) -> (EnginePaths, FakeRunner) {
         "{}/.local/share/flatpak/app/io.github.wivrn.wivrn/x86_64/stable/abc\n",
         home.display()
     );
+    let adb = home.join(".local/share/flat3d/bin/adb");
     let fake = FakeRunner::new()
         .ok(
-            &["adb", "devices"],
+            &[adb.to_str().unwrap(), "devices"],
             "List of devices attached\nSERIAL1\tdevice\n",
         )
         .ok(
@@ -76,7 +77,7 @@ fn green(case: &str, unit_active: bool) -> (EnginePaths, FakeRunner) {
         )
         .ok(
             &[
-                "adb",
+                adb.to_str().unwrap(),
                 "-s",
                 "SERIAL1",
                 "shell",
@@ -176,6 +177,23 @@ fn exit_follows_report() {
 }
 
 #[test]
+fn quest_check_uses_the_chosen_adb() {
+    let (p, mut fake) = green("quest-adb", true);
+    let _ = doctor(&p, &mut fake);
+    let adb = p.home.join(".local/share/flat3d/bin/adb");
+    let adb = adb.to_str().unwrap();
+    assert!(fake.ran.iter().any(|argv| {
+        argv.first().map(String::as_str) == Some(adb)
+            && argv.get(1).map(String::as_str) == Some("-s")
+            && argv.iter().any(|word| word == "dumpsys")
+    }));
+    assert!(fake
+        .ran
+        .iter()
+        .all(|argv| argv.first().map(String::as_str) != Some("adb")));
+}
+
+#[test]
 fn red_report_exits_1() {
     let (p, mut fake) = green("red-exits", false);
     let (code, env) = doctor(&p, &mut fake);
@@ -198,9 +216,11 @@ fn doctor_runs_only_probes() {
     let before = tree(&p.home);
     let _ = doctor(&p, &mut fake);
     assert_eq!(tree(&p.home), before, "doctor writes nothing");
+    let adb = p.home.join(".local/share/flat3d/bin/adb");
+    let adb = adb.to_str().unwrap();
     let probes: [&[&str]; 5] = [
-        &["adb", "devices"],
-        &["adb", "-s", "SERIAL1", "shell", "dumpsys", "package"],
+        &[adb, "devices"],
+        &[adb, "-s", "SERIAL1", "shell", "dumpsys", "package"],
         &["flatpak", "info"],
         &["ss", "-tlnp"],
         &["systemctl", "--user", "is-active"],
