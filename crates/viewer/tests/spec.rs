@@ -59,7 +59,9 @@ fn eye_shift_and_full_width_round_trip_through_args() {
         ..ViewerSpec::default()
     };
     assert_eq!(ViewerSpec::from_args(&spec.to_args()).unwrap(), spec);
-    assert!(!ViewerSpec::default().to_args().contains(&"--eye-shift".to_string()));
+    assert!(!ViewerSpec::default()
+        .to_args()
+        .contains(&"--eye-shift".to_string()));
     assert!(!ViewerSpec::default()
         .to_args()
         .contains(&"--full-width-eyes".to_string()));

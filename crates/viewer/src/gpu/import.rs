@@ -95,8 +95,10 @@ impl Importer {
             )
         }?[0];
         let fence = unsafe {
-            ctx.device
-                .create_fence(&vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED), None)
+            ctx.device.create_fence(
+                &vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED),
+                None,
+            )
         }?;
         let (staging, staging_mem) = create_buffer(ctx, 4)?;
         let (upload, upload_mem) = create_image(ctx, 1, 1, vk::Format::B8G8R8A8_SRGB)?;
