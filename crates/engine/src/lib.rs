@@ -4,6 +4,7 @@ pub mod api;
 pub mod catalog;
 pub mod cli;
 pub mod exec;
+pub mod eye_view;
 pub mod fsx;
 pub mod paths;
 pub mod sys;
