@@ -3,13 +3,13 @@
 use super::{Ctx, DoctorCommand};
 use crate::{
     api::{AdbSource, ApiError, DoctorCheck, DoctorReport},
-    exec::CommandRunner,
+    exec::{CommandOutput, CommandRunner},
     injectors::fetch::{self, Pin},
     install::UNIT_NAME,
     link::{
-        adb::{bundled_adb, choose_adb, listener_pid, proc_exe_path, AdbChoice},
+        adb::{bundled_adb, choose_adb, listener_pid, proc_exe_path, AdbChoice, AdbRunner},
         wivrn::{detect_quest_app, detect_server, versions_match},
-        WIVRN_FLATPAK,
+        QuestApp, WIVRN_FLATPAK,
     },
     paths::EnginePaths,
     steam::DEFAULT_STEAM_ROOT,
@@ -58,6 +58,23 @@ fn adb_serial(r: &mut dyn CommandRunner, adb: &str) -> Option<String> {
         let (serial, state) = line.split_once('\t')?;
         (state.trim() == "device" && !serial.trim().is_empty()).then(|| serial.trim().to_string())
     })
+}
+
+/// Lets [`AdbRunner`] borrow doctor's runner, so the quest-app check names the adb in use.
+struct Borrowed<'a>(&'a mut dyn CommandRunner);
+
+impl CommandRunner for Borrowed<'_> {
+    fn run(&mut self, command: &[String]) -> CommandOutput {
+        self.0.run(command)
+    }
+}
+
+/// `detect_quest_app` through the chosen adb. With no adb, it runs nothing and finds nothing.
+fn detect_quest_app_with(r: &mut dyn CommandRunner, adb: &str, serial: &str) -> Option<QuestApp> {
+    if adb.is_empty() {
+        return None;
+    }
+    detect_quest_app(&mut AdbRunner::new(Borrowed(r), adb, Some(serial)), serial)
 }
 
 fn check(name: &str, ok: bool, detail: String, fix: &str) -> DoctorCheck {
@@ -109,7 +126,7 @@ fn doctor(
     // 2. The WiVRn app on the headset.
     checks.push(match serial {
         None => check("quest-app", true, SKIP_NO_HEADSET.into(), ""),
-        Some(serial) => match detect_quest_app(r, serial) {
+        Some(serial) => match detect_quest_app_with(r, &adb.path, serial) {
             None => check(
                 "quest-app",
                 false,
@@ -314,7 +331,7 @@ geo11.sha256: TBD-at-pin
             )
             .ok(
                 &[
-                    "adb",
+                    adb.to_str().unwrap(),
                     "-s",
                     "SERIAL1",
                     "shell",
@@ -408,6 +425,38 @@ BBB	device
             .ran
             .iter()
             .any(|argv| argv.first().map(String::as_str) == Some(adb.path.as_str())));
+    }
+
+    #[test]
+    fn quest_check_runs_the_chosen_adb_and_never_a_bare_one() {
+        let (p, mut fake) = green("quest-adb", "26.9");
+        let pins = fetch::parse_pins(GREEN);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
+        assert!(find(&report, "quest-app").ok, "{report:?}");
+        let adb = p.home.join(".local/share/flat3d/bin/adb");
+        let adb = adb.to_str().unwrap();
+        assert!(fake.ran.iter().any(|argv| {
+            argv.first().map(String::as_str) == Some(adb)
+                && argv.get(1).map(String::as_str) == Some("-s")
+                && argv.iter().any(|word| word == "dumpsys")
+        }));
+        assert!(fake
+            .ran
+            .iter()
+            .all(|argv| argv.first().map(String::as_str) != Some("adb")));
+    }
+
+    #[test]
+    fn quest_check_without_adb_runs_nothing() {
+        let p = paths("quest-no-adb");
+        let mut fake = FakeRunner::new();
+        let pins = fetch::parse_pins(GREEN);
+        let report = report(&p, &mut fake, Some("SERIAL1"), &pins);
+        assert!(!find(&report, "quest-app").ok);
+        assert!(fake
+            .ran
+            .iter()
+            .all(|argv| argv.first().map(String::as_str) != Some("adb")));
     }
 
     #[test]
