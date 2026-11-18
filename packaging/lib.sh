@@ -6,6 +6,10 @@ PINS=${PINS:-$ROOT/packaging/pins}
 PAYLOAD_BIN=(flat3d-inject flat3d-run flat3d-viewer)
 # shellcheck disable=SC2034
 PAYLOAD_TOOLS=(adb)
+# The UI layer's library and manifest ship beside the engine binaries; install copies
+# them into the user's Vulkan implicit-layer folder.
+# shellcheck disable=SC2034
+LAYER_FILES=(libflat3d_ui_layer.so VkLayer_FLAT3D_ui.json)
 
 pin() {
   local v

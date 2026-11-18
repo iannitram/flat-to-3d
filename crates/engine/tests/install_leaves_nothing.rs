@@ -23,6 +23,8 @@ fn setup(name: &str, existing: &[(&str, &str)]) -> (PathBuf, PathBuf) {
         ("tools/adb", "adb"),
         ("tools/lib/libusb.so", "lib"),
         ("recipes/1-a.recipe", "recipe"),
+        ("libflat3d_ui_layer.so", "layer"),
+        ("VkLayer_FLAT3D_ui.json", "manifest"),
     ] {
         let file = src.join(path);
         fs::create_dir_all(file.parent().unwrap()).unwrap();
