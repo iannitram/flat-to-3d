@@ -49,7 +49,7 @@ fn start_3d_runs_these_four_commands_in_order() {
 }
 
 #[test]
-fn stop_3d_runs_these_three_commands_in_order() {
+fn stop_3d_runs_these_four_commands_in_order() {
     let expected = vec![
         words(&[
             "adb",
@@ -59,6 +59,7 @@ fn stop_3d_runs_these_three_commands_in_order() {
             "org.meumeu.wivrn.github",
         ]),
         words(&["adb", "reverse", "--remove", "tcp:9757"]),
+        words(&["flatpak", "kill", "io.github.wivrn.wivrn"]),
         words(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]),
     ];
     assert_eq!(stop_3d_commands(), expected);

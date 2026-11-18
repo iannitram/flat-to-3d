@@ -3,7 +3,9 @@
 pub mod api;
 pub mod catalog;
 pub mod cli;
+pub mod epic_user_settings;
 pub mod exec;
+pub mod eye_view;
 pub mod fsx;
 pub mod paths;
 pub mod sys;
@@ -15,6 +17,7 @@ pub mod face;
 pub mod health;
 pub mod heroic;
 pub mod heroic_wrapper;
+pub mod ini_patch;
 pub mod injectors;
 pub mod install;
 pub mod launch_options;

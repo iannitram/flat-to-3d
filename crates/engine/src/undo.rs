@@ -1,6 +1,7 @@
 //! The undo record: how to put a game back to flat. docs/code-map.md, Parts.
 
 use crate::api::{ApiError, UndoResult};
+use crate::recipes::StoreKey;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -75,6 +76,15 @@ pub(crate) fn remove_created_dirs(record: &UndoRecord) {
     for dir in deepest_first(&record.created_dirs) {
         let _ = fs::remove_dir(dir);
     }
+}
+
+/// Remove the folders an apply made, deepest first, keeping any that are not empty; one
+/// `restored` line per folder removed or kept.
+pub(crate) fn remove_created_dirs_reported(record: &UndoRecord) -> io::Result<Vec<String>> {
+    deepest_first(&record.created_dirs)
+        .into_iter()
+        .map(|dir| remove_dir_step(&dir))
+        .collect()
 }
 
 /// What removing one created folder did, as a `restored` line; `Err` for a real failure.
@@ -161,11 +171,32 @@ pub(crate) fn unescape(s: &str) -> String {
 }
 
 impl UndoRecord {
+    /// The store key for this record: `StoreKey::Steam(appid)` when `appid != 0`, or
+    /// `StoreKey::Epic(app_name)` when the record carries an epic key (its `store-key` line is
+    /// kept in `launch_options_before` as `epic:<app name>`). Never guessed from file names.
+    pub fn key(&self) -> StoreKey {
+        if self.appid != 0 {
+            StoreKey::Steam(self.appid)
+        } else if let Some(name) = self.launch_options_before.strip_prefix("epic:") {
+            StoreKey::Epic(name.to_string())
+        } else {
+            StoreKey::Steam(self.appid)
+        }
+    }
+
     /// The exact text of the undo record file.
     pub fn to_text(&self) -> String {
         let mut text = String::new();
         text.push_str("flat3d-undo 1\n");
-        text.push_str(&format!("appid\t{}\n", self.appid));
+        let key = self.key();
+        match &key {
+            StoreKey::Epic(name) => {
+                text.push_str(&format!("store-key\tepic:{name}\n"));
+            }
+            StoreKey::Steam(appid) => {
+                text.push_str(&format!("appid\t{appid}\n"));
+            }
+        }
         text.push_str(&format!(
             "launch-options\t{}\n",
             escape(&self.launch_options_before)
@@ -197,6 +228,7 @@ impl UndoRecord {
         }
 
         let mut appid = None;
+        let mut store_key = None;
         let mut launch_options = None;
         let mut created = Vec::new();
         let mut replaced = Vec::new();
@@ -208,6 +240,11 @@ impl UndoRecord {
             let mut fields = line.split('\t');
             let word = fields.next().unwrap_or("");
             match word {
+                "store-key" => {
+                    let val = fields.next().unwrap_or("");
+                    let parsed: StoreKey = val.parse().map_err(|_| "bad store key".to_string())?;
+                    store_key = Some(parsed);
+                }
                 "appid" => {
                     let value = fields.next().unwrap_or("");
                     appid = Some(value.parse::<u32>().map_err(|_| "bad appid".to_string())?);
@@ -234,8 +271,20 @@ impl UndoRecord {
             }
         }
 
-        let appid = appid.ok_or_else(|| "missing appid".to_string())?;
-        let launch_options = launch_options.ok_or_else(|| "missing launch-options".to_string())?;
+        let (appid, launch_options_before) = match (appid, store_key) {
+            (Some(id), _) => (id, launch_options),
+            (None, Some(StoreKey::Steam(id))) => (id, launch_options),
+            (None, Some(StoreKey::Epic(name))) => {
+                let opts = match launch_options {
+                    Some(ref o) if o.starts_with("epic:") => o.clone(),
+                    _ => format!("epic:{name}"),
+                };
+                (0, Some(opts))
+            }
+            (None, None) => return Err("missing appid".to_string()),
+        };
+        let launch_options =
+            launch_options_before.ok_or_else(|| "missing launch-options".to_string())?;
 
         Ok(UndoRecord {
             appid,
@@ -247,9 +296,19 @@ impl UndoRecord {
     }
 }
 
+/// Where one game's undo record lives for the given store key:
+/// Steam records live at `<data_dir>/undo/<appid>.txt`;
+/// Epic records live at `<data_dir>/undo/epic-<app_name>.txt`.
+pub fn record_path_keyed(data_dir: &Path, key: &StoreKey) -> PathBuf {
+    match key {
+        StoreKey::Steam(appid) => data_dir.join("undo").join(format!("{appid}.txt")),
+        StoreKey::Epic(app_name) => data_dir.join("undo").join(format!("epic-{app_name}.txt")),
+    }
+}
+
 /// Where one game's undo record lives, `<data_dir>/undo/<appid>.txt`.
 pub fn record_path(data_dir: &Path, appid: u32) -> PathBuf {
-    data_dir.join("undo").join(format!("{}.txt", appid))
+    record_path_keyed(data_dir, &StoreKey::Steam(appid))
 }
 
 /// The engine's data directory: `$XDG_DATA_HOME/flat3d`, or `~/.local/share/flat3d` when
@@ -268,23 +327,39 @@ fn io_error(what: &str, path: &Path, e: &io::Error) -> ApiError {
     ApiError::new("io", &format!("{} {}: {}", what, path.display(), e))
 }
 
-/// Persist an undo record atomically, refusing to replace an existing recovery point.
-pub fn save_record(data_dir: &Path, rec: &UndoRecord) -> Result<PathBuf, ApiError> {
-    let path = record_path(data_dir, rec.appid);
+fn key_label(key: &StoreKey) -> String {
+    match key {
+        StoreKey::Steam(appid) => appid.to_string(),
+        StoreKey::Epic(name) => format!("epic:{name}"),
+    }
+}
+
+/// Persist an undo record atomically for the given store key, refusing to replace an existing recovery point.
+pub fn save_record_keyed(
+    data_dir: &Path,
+    key: &StoreKey,
+    rec: &UndoRecord,
+) -> Result<PathBuf, ApiError> {
+    let path = record_path_keyed(data_dir, key);
     fs::create_dir_all(path.parent().expect("record path has parent"))
         .map_err(|e| io_error("cannot create", path.parent().unwrap(), &e))?;
     if path.exists() {
+        let label = key_label(key);
         return Err(ApiError::new(
             "refused",
             &format!(
-                "an undo record for {} already exists; run flat3d-inject undo {} first",
-                rec.appid, rec.appid
+                "an undo record for {label} already exists; run flat3d-inject undo {label} first"
             ),
         ));
     }
     crate::fsx::write_atomic(&path, rec.to_text().as_bytes())
         .map_err(|e| io_error("cannot write", &path, &e))?;
     Ok(path)
+}
+
+/// Persist an undo record atomically, refusing to replace an existing recovery point.
+pub fn save_record(data_dir: &Path, rec: &UndoRecord) -> Result<PathBuf, ApiError> {
+    save_record_keyed(data_dir, &rec.key(), rec)
 }
 
 /// Attempt every file restoration step and collect a line describing each outcome.
@@ -330,38 +405,36 @@ pub fn put_back(rec: &UndoRecord) -> Vec<String> {
     restored
 }
 
-/// Put a game back to flat from its undo record (`undo <appid>`).
-///
-/// Runs the file steps of [`undo_actions`] on disk: created files are removed, replaced files
-/// get their backups copied back, then the folders the apply made are removed deepest first;
-/// one that is not empty is kept and named in `restored` ("kept <dir> (not empty)"). The
-/// launch option step is not run here: the Decky plugin removes only our wrapper word from the
-/// line (code map). The record is deleted only after every file step has worked, so a failed
-/// undo can be run again; a file already gone or a backup already restored counts as done.
-pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
-    let path = record_path(data_dir, appid);
+/// Read one game's undo record for the given store key: `not-found` when there is none, and an
+/// error when the file is not a record or is for another key.
+pub fn read_record_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoRecord, ApiError> {
+    let path = record_path_keyed(data_dir, key);
+    let label = key_label(key);
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
             return Err(ApiError::new(
                 "not-found",
-                &format!("no undo record for {}", appid),
+                &format!("no undo record for {label}"),
             ));
         }
         Err(e) => return Err(io_error("cannot read", &path, &e)),
     };
-    let record = UndoRecord::from_text(&text).map_err(|m| {
-        ApiError::new(
-            "command-failed",
-            &format!("undo record for {}: {}", appid, m),
-        )
-    })?;
-    if record.appid != appid {
+    let record = UndoRecord::from_text(&text)
+        .map_err(|m| ApiError::new("command-failed", &format!("undo record for {label}: {m}")))?;
+    if &record.key() != key {
         return Err(ApiError::new(
             "command-failed",
-            &format!("undo record is for {}, not {}", record.appid, appid),
+            &format!("undo record is for {}, not {label}", record.key()),
         ));
     }
+    Ok(record)
+}
+
+/// Put a game back to flat from its undo record for the given store key.
+pub fn undo_game_keyed(data_dir: &Path, key: &StoreKey) -> Result<UndoResult, ApiError> {
+    let path = record_path_keyed(data_dir, key);
+    let record = read_record_keyed(data_dir, key)?;
 
     let mut restored = Vec::new();
     for action in undo_actions(&record) {
@@ -373,6 +446,21 @@ pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
                 }
                 Err(e) => return Err(io_error("cannot remove", &file, &e)),
             },
+            UndoAction::RestoreFile {
+                backup,
+                path: target,
+            } if matches!(key, StoreKey::Epic(_)) => {
+                // Heroic configs go back through the atomic write; the backup goes only after it.
+                match crate::heroic_wrapper::undo(&target, &backup) {
+                    Ok(true) => restored.push(format!(
+                        "restored {} from {}",
+                        target.display(),
+                        backup.display()
+                    )),
+                    Ok(false) => restored.push(format!("already restored {}", target.display())),
+                    Err(e) => return Err(io_error("cannot restore", &target, &e)),
+                }
+            }
             UndoAction::RestoreFile { backup, path } => match fs::copy(&backup, &path) {
                 Ok(_) => {
                     fs::remove_file(&backup).map_err(|e| io_error("cannot remove", &backup, &e))?;
@@ -396,15 +484,33 @@ pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
     fs::remove_file(&path).map_err(|e| io_error("cannot remove", &path, &e))?;
     // A folder kept because it is not empty is named in `restored` but is not a change.
     let changes = restored.iter().filter(|l| !l.starts_with("kept ")).count();
-    let summary = format!(
-        "{} change(s) put back for {}; the launch option is left to the Decky plugin",
-        changes, appid
-    );
+    let (appid, summary) = match key {
+        StoreKey::Steam(appid) => (
+            *appid,
+            format!(
+                "{} change(s) put back for {}; the launch option is left to the Decky plugin",
+                changes, appid
+            ),
+        ),
+        StoreKey::Epic(name) => (0, format!("{} change(s) put back for epic:{name}", changes)),
+    };
     Ok(UndoResult {
         appid,
         restored,
         summary,
     })
+}
+
+/// Put a game back to flat from its undo record (`undo <appid>`).
+///
+/// Runs the file steps of [`undo_actions`] on disk: created files are removed, replaced files
+/// get their backups copied back, then the folders the apply made are removed deepest first;
+/// one that is not empty is kept and named in `restored` ("kept <dir> (not empty)"). The
+/// launch option step is not run here: the Decky plugin removes only our wrapper word from the
+/// line (code map). The record is deleted only after every file step has worked, so a failed
+/// undo can be run again; a file already gone or a backup already restored counts as done.
+pub fn undo_game(data_dir: &Path, appid: u32) -> Result<UndoResult, ApiError> {
+    undo_game_keyed(data_dir, &StoreKey::Steam(appid))
 }
 
 #[cfg(test)]
@@ -559,5 +665,46 @@ mod tests {
             data_dir(None, "/h"),
             PathBuf::from("/h/.local/share/flat3d")
         );
+    }
+
+    #[test]
+    fn epic_record_round_trips_saves_and_undoes() {
+        let root = scratch("epic-undo");
+        let game = root.join("game");
+        fs::create_dir_all(&game).unwrap();
+        let data = root.join("data");
+        fs::create_dir_all(data.join("undo")).unwrap();
+        let config = game.join("AlanWake2.json");
+        let backup = data.join("undo").join("epic-AlanWake2.backup.json");
+        fs::write(&config, "{\"wrapper\": true}").unwrap();
+        fs::write(&backup, "{\"wrapper\": false}").unwrap();
+
+        let rec = UndoRecord {
+            appid: 0,
+            launch_options_before: "epic:AlanWake2".to_string(),
+            created: vec![],
+            replaced: vec![Replaced {
+                path: config.clone(),
+                backup: backup.clone(),
+            }],
+            created_dirs: vec![],
+        };
+        let key = StoreKey::Epic("AlanWake2".to_string());
+        let path = save_record_keyed(&data, &key, &rec).unwrap();
+        assert_eq!(path, record_path_keyed(&data, &key));
+
+        let text = fs::read_to_string(&path).unwrap();
+        assert!(text.contains("store-key\tepic:AlanWake2\n"));
+        let parsed = UndoRecord::from_text(&text).unwrap();
+        assert_eq!(parsed.key(), key);
+
+        let got = undo_game_keyed(&data, &key).unwrap();
+        assert_eq!(got.appid, 0);
+        assert_eq!(got.restored.len(), 1);
+        assert!(got.restored[0].starts_with("restored "));
+        assert_eq!(fs::read_to_string(&config).unwrap(), "{\"wrapper\": false}");
+        assert!(!backup.exists());
+        assert!(!path.exists());
+        let _ = fs::remove_dir_all(&root);
     }
 }
