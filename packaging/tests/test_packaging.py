@@ -498,14 +498,10 @@ def make_decky_tree(temp: Path) -> tuple[Path, Path, Path]:
     (root / "recipes").mkdir()
     (root / "headsets").mkdir()
     (root / "systems").mkdir()
-    (root / "LICENSE").write_text("license
-")
-    (root / "recipes/x.recipe").write_text("recipe
-")
-    (root / "headsets/x.headset").write_text("headset
-")
-    (root / "systems/x.system").write_text("system
-")
+    (root / "LICENSE").write_text("license\n")
+    (root / "recipes/x.recipe").write_text("recipe\n")
+    (root / "headsets/x.headset").write_text("headset\n")
+    (root / "systems/x.system").write_text("system\n")
     for path, content in {
         "decky/dist/index.js": "bundle\n",
         "decky/package.json": "{}\n",
