@@ -131,6 +131,7 @@ fn every_any_command_variant_has_exactly_one_registry_row() {
         AnyCommand::View(ViewCommand::Launch {
             add: true,
             options: String::new(),
+            appid: None,
         }),
         AnyCommand::View(ViewCommand::Collection { current: None }),
         AnyCommand::View(ViewCommand::Toasts { last_seq: 0 }),

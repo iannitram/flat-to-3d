@@ -122,6 +122,7 @@ fn undo_via_cli(
         &ViewCommand::Launch {
             add: false,
             options: format!("epic:{app}"),
+            appid: None,
         },
         &mut ctx,
     )
@@ -545,6 +546,7 @@ fn steam_recipe_gets_the_launch_option_wrapper_and_leaves_the_file_alone() {
         &ViewCommand::Launch {
             add: true,
             options: "-novid".into(),
+            appid: None,
         },
         &mut ctx,
     )
@@ -597,6 +599,7 @@ fn launch_add_and_remove_use_the_user_settings_hook() {
         &ViewCommand::Launch {
             add: true,
             options: format!("epic:{APP}"),
+            appid: None,
         },
         &mut ctx,
     )

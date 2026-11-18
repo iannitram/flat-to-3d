@@ -73,6 +73,7 @@ fn launch(
         &ViewCommand::Launch {
             add,
             options: options.to_string(),
+            appid: None,
         },
         &mut ctx,
     )
@@ -230,6 +231,7 @@ fn launch_view_parse_accepts_epic_flags() {
         ViewCommand::Launch {
             add: true,
             options: format!("epic:{APP_NAME}"),
+            appid: None,
         }
     );
 
@@ -241,6 +243,7 @@ fn launch_view_parse_accepts_epic_flags() {
         ViewCommand::Launch {
             add: false,
             options: format!("epic:{APP_NAME}"),
+            appid: None,
         }
     );
 }

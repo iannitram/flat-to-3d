@@ -164,11 +164,23 @@ pub enum AnyCommand {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ViewCommand {
     View,
-    Rows { filter: String },
-    Launch { add: bool, options: String },
-    Collection { current: Option<Vec<u32>> },
-    Toasts { last_seq: u64 },
-    Logs { limit: usize },
+    Rows {
+        filter: String,
+    },
+    Launch {
+        add: bool,
+        options: String,
+        appid: Option<u32>,
+    },
+    Collection {
+        current: Option<Vec<u32>>,
+    },
+    Toasts {
+        last_seq: u64,
+    },
+    Logs {
+        limit: usize,
+    },
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SetupCommand {
@@ -325,9 +337,9 @@ pub static COMMANDS: &[CommandSpec] = &[
     CommandSpec {
         id: "launch",
         group: "View",
-        args: "add|remove --options <options>",
+        args: "add|remove [--appid <appid>] --options <options>",
         output: "LaunchText",
-        effects: RO,
+        effects: WRITE,
     },
     CommandSpec {
         id: "collection",
