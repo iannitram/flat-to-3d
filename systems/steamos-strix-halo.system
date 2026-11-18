@@ -1,0 +1,32 @@
+# SteamOS on a Strix Halo handheld (Radeon 8060S class).
+name: SteamOS on Strix Halo
+match-os: steamos
+match-version: >=3.0
+match-gpu: Strix Halo | Radeon 8060S | 8060S
+desktop-session: plasma
+game-session: gamescope
+steam-install: preinstalled
+wivrn-install: flatpak io.github.wivrn.wivrn
+tool: gamescope
+tool: pipewire
+tool: flatpak
+
+known-problem: virtual-display-headless
+problem-summary: The virtual display needs gamescope's headless backend because the SDL backend clamps the stream to the window size.
+problem-workaround: Start gamescope with its headless backend for the stream.
+problem-status: worked-around
+
+known-problem: pipewire-capture
+problem-summary: Capture must use PipeWire because x11grab gives black frames.
+problem-workaround: Capture through PipeWire instead of x11grab.
+problem-status: worked-around
+
+known-problem: gamescope-vulkan-crash
+problem-summary: gamescope 3.16.30 can crash in the Radeon Vulkan driver; the cause is unknown.
+problem-workaround: none yet
+problem-status: open
+
+known-problem: lsfg-vk-getinstanceprocaddr
+problem-summary: lsfg-vk logs "Failed to find 'vkGetInstanceProcAddr'" in OpenXR apps; the effect is unknown.
+problem-workaround: none yet
+problem-status: open

@@ -13,6 +13,7 @@ use crate::{
     },
     paths::EnginePaths,
     steam::DEFAULT_STEAM_ROOT,
+    systems,
 };
 use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
@@ -211,6 +212,38 @@ fn doctor(
         "tools/build-win.sh --install",
     ));
 
+    // 9. The shipped system profile and its known problems. An unknown system is normal, and
+    // an open known problem is information, so neither turns doctor red.
+    let facts = systems::detect(&p.os_release, r);
+    match systems::find_system(&p.system_dirs, &facts) {
+        Ok(Some(profile)) => {
+            checks.push(check("system", true, profile.name.clone(), ""));
+            for problem in &profile.problems {
+                let status = if problem.is_open() {
+                    "open"
+                } else {
+                    "worked around"
+                };
+                checks.push(check(
+                    &format!("system-{}", problem.id),
+                    true,
+                    format!(
+                        "{status}: {}; workaround: {}",
+                        problem.summary, problem.workaround
+                    ),
+                    "",
+                ));
+            }
+        }
+        Ok(None) => checks.push(check("system", true, "unknown system".into(), "")),
+        Err(error) => checks.push(check(
+            "system",
+            false,
+            error.to_string(),
+            "fix the system file named in the message",
+        )),
+    }
+
     DoctorReport {
         ok: checks.iter().all(|c| c.ok),
         checks,
@@ -329,7 +362,7 @@ geo11.sha256: TBD-at-pin
         let pins = fetch::parse_pins(GREEN);
         let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
         assert!(report.ok, "{report:?}");
-        assert_eq!(names(&report), ORDER);
+        assert_eq!(&names(&report)[..ORDER.len()], &ORDER[..]);
         assert!(report.checks.iter().all(|c| c.ok && c.fix.is_empty()));
     }
 
@@ -399,8 +432,11 @@ BBB	device
         let pins = fetch::parse_pins(WITH_TBD);
         let report = doctor(&p, &mut fake, Some("SERIAL1"), &pins);
         assert!(!report.ok);
-        assert_eq!(names(&report), ORDER);
+        assert_eq!(&names(&report)[..ORDER.len()], &ORDER[..]);
         for c in &report.checks {
+            if c.name.starts_with("system") {
+                continue;
+            }
             assert!(!c.ok, "{} should be red", c.name);
             assert!(!c.fix.is_empty(), "{} has no fix", c.name);
             if let Some(rest) = c.fix.strip_prefix("flat3d-inject ") {

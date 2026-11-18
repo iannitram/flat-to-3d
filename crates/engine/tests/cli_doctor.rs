@@ -149,7 +149,9 @@ fn exit_follows_report() {
     assert_eq!(env["ok"], true, "the envelope: the command ran");
     assert_eq!(env["command"], "doctor");
     let data = &env["data"];
-    assert_eq!(names(data), CHECKS);
+    let all = names(data);
+    assert_eq!(&all[..CHECKS.len()], &CHECKS[..]);
+    assert_eq!(*all.last().unwrap(), "system");
     for check in data["checks"].as_array().unwrap() {
         if check["name"] != "pins" {
             assert_eq!(check["ok"], true, "{check}");
@@ -182,7 +184,11 @@ fn red_report_exits_1() {
     assert_eq!(code, 1);
     let data = &env["data"];
     assert_eq!(data["ok"], false);
-    assert_eq!(names(data), CHECKS, "a red report still prints in full");
+    assert_eq!(
+        &names(data)[..CHECKS.len()],
+        &CHECKS[..],
+        "a red report still prints in full"
+    );
     let link = &data["checks"][3];
     assert_eq!(link["name"], "link-service");
     assert_eq!(link["ok"], false);
@@ -198,12 +204,15 @@ fn doctor_runs_only_probes() {
     let before = tree(&p.home);
     let _ = doctor(&p, &mut fake);
     assert_eq!(tree(&p.home), before, "doctor writes nothing");
-    let probes: [&[&str]; 5] = [
+    let probes: [&[&str]; 8] = [
         &["adb", "devices"],
         &["adb", "-s", "SERIAL1", "shell", "dumpsys", "package"],
         &["flatpak", "info"],
         &["ss", "-tlnp"],
         &["systemctl", "--user", "is-active"],
+        &["lspci", "-nn"],
+        &["glxinfo", "-B"],
+        &["vulkaninfo", "--summary"],
     ];
     assert!(!fake.ran.is_empty());
     for argv in &fake.ran {
