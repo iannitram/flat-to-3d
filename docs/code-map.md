@@ -8,7 +8,7 @@ The deep maps are [Spidy core](spiderman2/spidy-core-map.md) and the [Spider-Man
 
 **Platforms (R04).** The host is Linux only: SteamOS on the owner's handheld (rulings 1, 2). Mac and Windows hosts don't apply. Windows binaries (the Spider-Man 2 port's DLLs, the UEVR injector `flat3d-uevr-inject.exe`) are cross-built on Linux with clang-cl + xwin and run under Proton (ruling 21). The desktop app ships as an AppImage of the iced binary (no WebKitGTK). The Decky plugin bundles the engine binaries. The link service needs no root: `flat3d-inject install` puts in Flat to 3D's own udev rule for Meta USB devices (`packaging/flat3d-quest.rules`, one sudo prompt), so it does not rely on Quest Tether's rule (ruling 42, WP-37). CI is Linux only: GitHub-hosted `ubuntu-24.04` runners (ruling 48). The SBS viewer is a Linux-native binary.
 
-**State on 2026-11-18.** This map describes `main`. Zero Company's virtual-display 3D route works by hand but isn't in `main` yet: the rows marked planned below are its parts ([roadmap](ROADMAP.md#today-2026-11-18-zero-company-in-3d-and-what-that-changes)).
+**State on 2026-11-18.** This map describes `main`. Zero Company's virtual-display 3D route works by hand but isn't in `main` yet: its parts are the planned rows from `crates/engine/src/ini_patch.rs` to system profiles in the table below ([roadmap](ROADMAP.md#today-2026-11-18-zero-company-in-3d-and-what-that-changes)).
 
 ## How it fits together
 

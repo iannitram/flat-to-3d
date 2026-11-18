@@ -32,7 +32,7 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 - A running game is never closed for the player. Turning 3D off or losing the headset stops only the headset view.
 - Every game on the virtual-display route shows one eye on the laptop automatically for the whole 3D session.
 - Graphics settings return to their pre-3D values, and a flat launch never gets 3D settings.
-- The desktop app gets one per-game button: **Play in 3D** or **Bring back to laptop**. This changes rulings 25 and 29, so #407 needs the owner's approval before SPEC M18 and M24 change.
+- The desktop app gets one per-game button: **Play in 3D** or **Bring back to laptop**. This would change rulings 25 and 29. Both rulings and SPEC M18 and M24 stand as written until the owner approves #407.
 - Game, headset and OS data live in this repo and ship with the app.
 
 | Work | Issues | State |
