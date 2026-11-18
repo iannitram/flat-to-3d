@@ -45,6 +45,7 @@ fn stop_commands_with_an_app_name_that_app() {
     let expected = vec![
         strings(&["adb", "shell", "am", "force-stop", OTHER_APP]),
         strings(&["adb", "reverse", "--remove", "tcp:9757"]),
+        strings(&["flatpak", "kill", "io.github.wivrn.wivrn"]),
         strings(&["systemctl", "--user", "stop", "flat3d-wivrn.service"]),
     ];
     assert_eq!(stop_3d_commands_with(OTHER_APP), expected);

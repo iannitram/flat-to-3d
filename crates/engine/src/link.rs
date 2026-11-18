@@ -127,6 +127,7 @@ pub fn stop_3d_commands_with(app: &str) -> Vec<Vec<String>> {
             app.to_string(),
         ],
         vec!["adb".into(), "reverse".into(), "--remove".into(), port],
+        vec!["flatpak".into(), "kill".into(), WIVRN_FLATPAK.into()],
         vec!["systemctl".into(), "--user".into(), "stop".into(), unit],
     ]
 }
@@ -206,9 +207,9 @@ fn unit_already_gone(stderr: &str) -> bool {
 }
 
 /// Run all of [`stop_3d_commands`] in order, whatever each returns: with the headset
-/// unplugged the two adb steps fail, and the server must still stop. The last command (the
-/// server stop) decides: success or a narrowly recognized missing unit is `Stopped`;
-/// other failures are a [`LinkError`] naming it.
+/// unplugged the adb steps fail, and the Flatpak server may not be running, so the unit stop
+/// must still decide. The last command (the server stop) decides: success or a narrowly
+/// recognized missing unit is `Stopped`; other failures are a [`LinkError`] naming it.
 pub fn stop_3d(runner: &mut dyn CommandRunner) -> Result<LinkState, LinkError> {
     stop_3d_with(runner, WIVRN_APP)
 }
@@ -265,8 +266,13 @@ mod tests {
     }
 
     #[test]
-    fn stop_runs_all_three_in_order_and_is_stopped() {
-        let mut f = scripted(vec![out(true, ""), out(true, ""), out(true, "")]);
+    fn stop_runs_all_four_in_order_and_is_stopped() {
+        let mut f = scripted(vec![
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+            out(true, ""),
+        ]);
         assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
         assert_eq!(f.ran, stop_3d_commands());
     }
@@ -274,14 +280,32 @@ mod tests {
     #[test]
     fn unplugged_headset_still_stops_the_server() {
         let no_dev = "error: no devices/emulators found";
-        let mut f = scripted(vec![out(false, no_dev), out(false, no_dev), out(true, "")]);
+        let mut f = scripted(vec![
+            out(false, no_dev),
+            out(false, no_dev),
+            out(false, "error: io.github.wivrn.wivrn is not running"),
+            out(true, ""),
+        ]);
         assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
         assert_eq!(f.ran, stop_3d_commands());
     }
 
     #[test]
+    fn a_failed_flatpak_kill_does_not_beat_the_server_stop() {
+        let mut f = scripted(vec![
+            out(true, ""),
+            out(true, ""),
+            out(false, "error: io.github.wivrn.wivrn is not running"),
+            out(true, ""),
+        ]);
+        assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
+        assert_eq!(f.ran.len(), 4);
+    }
+
+    #[test]
     fn server_stop_failing_is_an_error_naming_it() {
         let mut f = scripted(vec![
+            out(true, ""),
             out(true, ""),
             out(true, ""),
             out(
@@ -294,7 +318,7 @@ mod tests {
             message: "Failed to stop flat3d-wivrn.service: Access denied".into(),
         };
         assert_eq!(stop_3d(&mut f), Err(expected));
-        assert_eq!(f.ran.len(), 3);
+        assert_eq!(f.ran.len(), 4);
     }
 
     #[test]
@@ -307,6 +331,7 @@ mod tests {
         };
         let mut f = scripted(vec![
             dev(device),
+            out(true, ""),
             out(true, ""),
             out(true, ""),
             out(true, ""),

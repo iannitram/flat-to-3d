@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 /// The games installed in Steam and their recipe records.
 pub struct Catalog {
     pub installed: Vec<steam::Game>,
-    pub recipes: BTreeMap<u32, recipes::Recipe>,
+    pub recipes: BTreeMap<recipes::StoreKey, recipes::Recipe>,
     pub games: Vec<api::Game>,
 }
 
@@ -36,7 +36,7 @@ pub fn catalog(paths: &EnginePaths) -> Result<Catalog, api::ApiError> {
             .map_err(|error| {
                 api::ApiError::new("bad-recipe", &format!("{}: {error}", path.display()))
             })?;
-        found.insert(game.appid, recipe);
+        found.insert(recipes::StoreKey::Steam(game.appid), recipe);
     }
     let games = join(&installed, &found);
     Ok(Catalog {
@@ -47,11 +47,14 @@ pub fn catalog(paths: &EnginePaths) -> Result<Catalog, api::ApiError> {
 }
 
 /// Join installed games to recipe status while preserving Steam's sorted order.
-pub fn join(games: &[steam::Game], recipes: &BTreeMap<u32, recipes::Recipe>) -> Vec<api::Game> {
+pub fn join(
+    games: &[steam::Game],
+    recipes: &BTreeMap<recipes::StoreKey, recipes::Recipe>,
+) -> Vec<api::Game> {
     games
         .iter()
         .map(|game| {
-            let recipe = recipes.get(&game.appid);
+            let recipe = recipes.get(&recipes::StoreKey::Steam(game.appid));
             api::Game {
                 appid: game.appid,
                 name: game.name.clone(),
