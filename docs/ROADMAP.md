@@ -40,8 +40,8 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 | Virtual-display route: settings patch and restore, gamescope launch | #399, then #400 | #399 merged (PR #414); #400 not started |
 | One-eye laptop window: crop and pointer map, PipeWire window, keyboard and mouse | #401, then #402 and #403 | #401 merged (PR #415); #402 and #403 not started |
 | 3D on/off: state model, desktop button, Decky, SPEC and rulings | #404, then #405, #406, #407 | #404 passed review, waiting to merge (PR #416); #405 and #406 not started; #407 waits for the owner's approval |
-| Package the UI layer, clean up the prototype | #408, then #409 | #408 built, review fixes under way; #409 not started |
-| App data: Zero Company recipe, headset profiles, system profiles | #410, #411, #412 | #411 and #412 built, review fixes under way; #410 not started |
+| Package the UI layer, clean up the prototype | #408, then #409 | #408 passed review, waiting to merge (PR #419); #409 not started |
+| App data: Zero Company recipe, headset profiles, system profiles | #410, #411, #412 | #411 (PR #420) and #412 (PR #418) passed review, waiting to merge; #411's route call is still owed; #410 not started |
 
 **Still in the way:**
 
