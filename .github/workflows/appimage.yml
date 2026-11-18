@@ -25,7 +25,7 @@ jobs:
         run: |
           cd "$(mktemp -d)"
           "$GITHUB_WORKSPACE/dist/Flat_to_3D-x86_64.AppImage" --appimage-extract
-          for member in usr/bin/flat3d-app usr/bin/flat3d-inject usr/bin/flat3d-run usr/bin/flat3d-viewer usr/bin/libflat3d_ui_layer.so usr/bin/VkLayer_FLAT3D_ui.json AppRun flat3d.desktop flat3d.svg; do
+          for member in usr/bin/flat3d-app usr/bin/flat3d-inject usr/bin/flat3d-run usr/bin/flat3d-viewer usr/bin/libflat3d_ui_layer.so usr/bin/VkLayer_FLAT3D_ui.json usr/systems/steamos-strix-halo.system AppRun flat3d.desktop flat3d.svg; do
             if [ ! -e "squashfs-root/$member" ]; then
               echo "Missing AppImage payload file: $member" >&2
               exit 1

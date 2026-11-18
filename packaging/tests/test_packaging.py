@@ -54,7 +54,9 @@ def write_pins(directory: Path, overrides: dict[str, str] | None = None) -> Path
     return path
 
 
-def call(script: str, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def call(
+    script: str, *args: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     merged = os.environ.copy()
     if env:
         merged.update(env)
@@ -108,7 +110,7 @@ printf 'libfake.so.1 => %s/libfake.so.1 (0x0)\\n' "$FIXTURES"
 printf 'libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0)\\n'
 printf '/usr/lib64/ld-linux-x86-64.so.2 => /usr/lib/ld-linux-x86-64.so.2 (0x0)\\n'
 """,
-        "patchelf": "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$PATCHELF_LOG\"\n",
+        "patchelf": '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$PATCHELF_LOG"\n',
     }
     for name, content in scripts.items():
         path = directory / name
@@ -186,20 +188,32 @@ class PackagingTests(unittest.TestCase):
             for name in ("adb", "lib/libfake.so.1"):
                 self.assertTrue((output / name).is_file(), name)
             self.assertEqual(
-                sorted(path.name for path in output.iterdir()), ["SHA256SUMS", "adb", "lib"]
+                sorted(path.name for path in output.iterdir()),
+                ["SHA256SUMS", "adb", "lib"],
             )
             self.assertEqual(stat.S_IMODE((output / "adb").stat().st_mode), 0o755)
             self.assertFalse(any((output / "lib").glob("libc.so*")))
             # Catches: Arch's ldd naming the loader by its full path ("/usr/lib64/ld-linux... =>"),
             # which slipped past the ld-linux skip and failed the copy into lib//lib64/.
-            self.assertEqual(sorted(p.name for p in (output / "lib").iterdir()), ["libfake.so.1"])
+            self.assertEqual(
+                sorted(p.name for p in (output / "lib").iterdir()), ["libfake.so.1"]
+            )
             sums = (output / "SHA256SUMS").read_text()
             self.assertEqual([line.split()[1] for line in sums.splitlines()], ["adb"])
             self.assertIn("--set-rpath $ORIGIN/lib", log.read_text())
 
     @unittest.skipUnless(shutil.which("shellcheck"), "shellcheck is not installed")
     def test_shellcheck_clean(self) -> None:
-        files = [f"packaging/{name}" for name in ("lib.sh", "build-tools.sh", "build-appimage.sh", "build-decky.sh", "AppRun")]
+        files = [
+            f"packaging/{name}"
+            for name in (
+                "lib.sh",
+                "build-tools.sh",
+                "build-appimage.sh",
+                "build-decky.sh",
+                "AppRun",
+            )
+        ]
         result = subprocess.run(
             ["shellcheck", "-x", *files],
             cwd=ROOT,
@@ -234,7 +248,9 @@ class PackagingTests(unittest.TestCase):
                 },
             )
             self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
-            self.assertIn("packaging/pin.sh android-tools.sha256 --check", result.stderr)
+            self.assertIn(
+                "packaging/pin.sh android-tools.sha256 --check", result.stderr
+            )
 
     def test_pin_tbd_and_missing_key_exit_two(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -253,17 +269,27 @@ class PackagingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             pins = write_pins(Path(temporary))
             for script in ("build-tools.sh", "build-appimage.sh", "build-decky.sh"):
-                args = ("--pins", str(pins), "--bogus") if script != "build-decky.sh" else ("--bogus",)
+                args = (
+                    ("--pins", str(pins), "--bogus")
+                    if script != "build-decky.sh"
+                    else ("--bogus",)
+                )
                 result = call(script, *args)
-                self.assertEqual(result.returncode, 2, f"{script}: {result.stdout}{result.stderr}")
+                self.assertEqual(
+                    result.returncode, 2, f"{script}: {result.stdout}{result.stderr}"
+                )
 
-    def test_appimage_dry_run_uses_pins_links_and_system_library_exclusion(self) -> None:
+    def test_appimage_dry_run_uses_pins_links_and_system_library_exclusion(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             pins = write_pins(Path(temporary))
             result = call("build-appimage.sh", "--dry-run", "--pins", str(pins))
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("--runtime-file", result.stdout)
-            self.assertIn(f"--manifest-path {ROOT.as_posix()}/Cargo.toml", result.stdout)
+            self.assertIn(
+                f"--manifest-path {ROOT.as_posix()}/Cargo.toml", result.stdout
+            )
             self.assertIn(APPIMAGETOOL_URL, result.stdout)
             self.assertIn(APPIMAGETOOL_SHA, result.stdout)
             self.assertIn(RUNTIME_URL, result.stdout)
@@ -290,7 +316,11 @@ class PackagingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "custom root"
             result = call(
-                "build-decky.sh", "--root", str(root), "--dry-run", env={"CARGO_TARGET_DIR": ""}
+                "build-decky.sh",
+                "--root",
+                str(root),
+                "--dry-run",
+                env={"CARGO_TARGET_DIR": ""},
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(f"--manifest-path {root}/Cargo.toml", result.stdout)
@@ -303,7 +333,11 @@ class PackagingTests(unittest.TestCase):
 
     def test_payload_parity(self) -> None:
         output = subprocess.run(
-            ["bash", "-c", '. packaging/lib.sh; printf "%s\\n" "${PAYLOAD_BIN[@]}"; printf -- "--tools--\\n"; printf "%s\\n" "${PAYLOAD_TOOLS[@]}"'],
+            [
+                "bash",
+                "-c",
+                '. packaging/lib.sh; printf "%s\\n" "${PAYLOAD_BIN[@]}"; printf -- "--tools--\\n"; printf "%s\\n" "${PAYLOAD_TOOLS[@]}"',
+            ],
             cwd=ROOT,
             check=True,
             text=True,
@@ -351,17 +385,25 @@ class PackagingTests(unittest.TestCase):
 
     def test_no_pin_payload_or_script_names_the_relay(self) -> None:
         payload = subprocess.run(
-            ["bash", "-c", '. packaging/lib.sh; printf "%s\\n" "${PAYLOAD_BIN[@]}" "${PAYLOAD_TOOLS[@]}"'],
+            [
+                "bash",
+                "-c",
+                '. packaging/lib.sh; printf "%s\\n" "${PAYLOAD_BIN[@]}" "${PAYLOAD_TOOLS[@]}"',
+            ],
             cwd=ROOT,
             check=True,
             text=True,
             stdout=subprocess.PIPE,
         ).stdout
-        self.assertEqual(payload.split(), ["flat3d-inject", "flat3d-run", "flat3d-viewer", "adb"])
+        self.assertEqual(
+            payload.split(), ["flat3d-inject", "flat3d-run", "flat3d-viewer", "adb"]
+        )
         for path in sorted(PACKAGING.rglob("*")):
             if path.is_file() and "__pycache__" not in path.parts:
                 self.assertNotIn(RELAY, path.name.lower(), path)
-                self.assertNotIn(RELAY, path.read_bytes().decode("utf-8", "replace").lower(), path)
+                self.assertNotIn(
+                    RELAY, path.read_bytes().decode("utf-8", "replace").lower(), path
+                )
         with tempfile.TemporaryDirectory() as temporary:
             pins = write_pins(Path(temporary))
             for script, args in (
@@ -433,6 +475,7 @@ class PackagingTests(unittest.TestCase):
                 "flat-to-3d/bin/tools/adb",
                 "flat-to-3d/bin/tools/lib/libx.so",
                 "flat-to-3d/bin/recipes/x.recipe",
+                "flat-to-3d/bin/systems/x.system",
             }
             self.assertFalse((bins / "VkLayer_FLAT3D_ui.json").exists())
             with zipfile.ZipFile(output) as archive:
@@ -441,8 +484,13 @@ class PackagingTests(unittest.TestCase):
                 self.assertEqual(
                     archive.read("flat-to-3d/bin/VkLayer_FLAT3D_ui.json"), b"manifest\n"
                 )
-                for name in ("flat-to-3d/bin/flat3d-inject", "flat-to-3d/bin/flat3d-viewer"):
-                    self.assertTrue((archive.getinfo(name).external_attr >> 16) & 0o111, name)
+                for name in (
+                    "flat-to-3d/bin/flat3d-inject",
+                    "flat-to-3d/bin/flat3d-viewer",
+                ):
+                    self.assertTrue(
+                        (archive.getinfo(name).external_attr >> 16) & 0o111, name
+                    )
 
             no_tools = temp / "no-tools.zip"
             result = call(
@@ -460,15 +508,22 @@ class PackagingTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             with zipfile.ZipFile(no_tools) as archive:
-                self.assertFalse(any(name.startswith("flat-to-3d/bin/tools/") for name in archive.namelist()))
+                self.assertFalse(
+                    any(
+                        name.startswith("flat-to-3d/bin/tools/")
+                        for name in archive.namelist()
+                    )
+                )
 
 
 def make_decky_tree(temp: Path) -> tuple[Path, Path, Path]:
     root = temp / "tree"
     (root / "decky/dist").mkdir(parents=True)
     (root / "recipes").mkdir()
+    (root / "systems").mkdir()
     (root / "LICENSE").write_text("license\n")
     (root / "recipes/x.recipe").write_text("recipe\n")
+    (root / "systems/x.system").write_text("system\n")
     for path, content in {
         "decky/dist/index.js": "bundle\n",
         "decky/package.json": "{}\n",

@@ -18,8 +18,19 @@ PACKAGING = ROOT / "packaging"
 SCRIPT = PACKAGING / "build-appimage.sh"
 WORKFLOW = ROOT / ".github" / "workflows" / "appimage.yml"
 MAIN_CATEGORIES = {
-    "AudioVideo", "Audio", "Video", "Development", "Education", "Game", "Graphics",
-    "Network", "Office", "Science", "Settings", "System", "Utility",
+    "AudioVideo",
+    "Audio",
+    "Video",
+    "Development",
+    "Education",
+    "Game",
+    "Graphics",
+    "Network",
+    "Office",
+    "Science",
+    "Settings",
+    "System",
+    "Utility",
 }
 PINS = (
     "appimagetool.url: https://example.invalid/appimagetool-x86_64.AppImage\n"
@@ -40,7 +51,11 @@ class AppImageSingleSourceTests(unittest.TestCase):
     def test_script_has_no_heredoc_and_copies_the_committed_files(self) -> None:
         text = SCRIPT.read_text(encoding="utf-8")
         self.assertNotIn("<<", text)
-        for name, dest in (("AppRun", "AppRun"), ("flat3d.desktop", "flat3d.desktop"), ("flat3d.svg", "flat3d.svg")):
+        for name, dest in (
+            ("AppRun", "AppRun"),
+            ("flat3d.desktop", "flat3d.desktop"),
+            ("flat3d.svg", "flat3d.svg"),
+        ):
             self.assertIn(f'run cp "$ROOT/packaging/{name}" "$appdir/{dest}"', text)
 
     def test_dry_run_prints_the_three_copies_and_no_write_line(self) -> None:
@@ -49,13 +64,19 @@ class AppImageSingleSourceTests(unittest.TestCase):
             pins.write_text(PINS, encoding="utf-8")
             result = subprocess.run(
                 ["bash", str(SCRIPT), "--dry-run", "--pins", str(pins)],
-                cwd=ROOT, env=os.environ.copy(), text=True,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                cwd=ROOT,
+                env=os.environ.copy(),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
             )
         self.assertEqual(result.returncode, 0, result.stderr)
         root = ROOT.as_posix()
         for name in ("AppRun", "flat3d.desktop", "flat3d.svg"):
-            self.assertIn(f"+ cp {root}/packaging/{name} $tmp/AppDir/{name}\n", result.stdout)
+            self.assertIn(
+                f"+ cp {root}/packaging/{name} $tmp/AppDir/{name}\n", result.stdout
+            )
         self.assertNotIn("+ write ", result.stdout)
         self.assertIn("+ ln -s flat3d.svg $tmp/AppDir/.DirIcon\n", result.stdout)
 
@@ -73,23 +94,37 @@ class AppImageSingleSourceTests(unittest.TestCase):
         self.assertEqual(len([c for c in categories if c in MAIN_CATEGORIES]), 1)
         self.assertTrue(desktop_entry()["Categories"].endswith(";"))
 
-    @unittest.skipUnless(shutil.which("desktop-file-validate"), "desktop-file-validate is not installed")
+    @unittest.skipUnless(
+        shutil.which("desktop-file-validate"), "desktop-file-validate is not installed"
+    )
     def test_desktop_file_validator_prints_nothing(self) -> None:
         result = subprocess.run(
             ["desktop-file-validate", str(PACKAGING / "flat3d.desktop")],
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(result.stdout + result.stderr, "")
 
-    def test_workflow_validates_the_desktop_file_and_checks_the_extracted_payload(self) -> None:
+    def test_workflow_validates_the_desktop_file_and_checks_the_extracted_payload(
+        self,
+    ) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("desktop-file-validate packaging/flat3d.desktop", text)
         self.assertIn("--appimage-extract", text)
         for member in (
-            "usr/bin/flat3d-app", "usr/bin/flat3d-inject", "usr/bin/flat3d-run",
-            "usr/bin/flat3d-viewer", "usr/bin/libflat3d_ui_layer.so",
-            "usr/bin/VkLayer_FLAT3D_ui.json", "AppRun", "flat3d.desktop", "flat3d.svg",
+            "usr/bin/flat3d-app",
+            "usr/bin/flat3d-inject",
+            "usr/bin/flat3d-run",
+            "usr/bin/flat3d-viewer",
+            "usr/bin/libflat3d_ui_layer.so",
+            "usr/bin/VkLayer_FLAT3D_ui.json",
+            "usr/systems/steamos-strix-halo.system",
+            "AppRun",
+            "flat3d.desktop",
+            "flat3d.svg",
         ):
             self.assertIn(member, text.split("--appimage-extract", 1)[1])
 

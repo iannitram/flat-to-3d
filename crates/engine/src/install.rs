@@ -48,7 +48,15 @@ impl Default for UnitSpec {
 }
 
 pub fn unit_text_with(spec: &UnitSpec) -> String {
-    format!("[Unit]\nDescription={}\nStartLimitIntervalSec={}\nStartLimitBurst={}\n\n[Service]\nType=simple\nExecStart={}\nRestart=on-failure\nRestartSec={}\n\n[Install]\nWantedBy={}\n", spec.description, spec.start_limit_interval_sec, spec.start_limit_burst, spec.exec_start, spec.restart_sec, spec.wanted_by)
+    format!(
+        "[Unit]\nDescription={}\nStartLimitIntervalSec={}\nStartLimitBurst={}\n\n[Service]\nType=simple\nExecStart={}\nRestart=on-failure\nRestartSec={}\n\n[Install]\nWantedBy={}\n",
+        spec.description,
+        spec.start_limit_interval_sec,
+        spec.start_limit_burst,
+        spec.exec_start,
+        spec.restart_sec,
+        spec.wanted_by
+    )
 }
 
 pub fn execute(
@@ -137,6 +145,13 @@ pub fn execute(
             if !Path::new(src).is_dir() {
                 continue;
             }
+            let data_extension = if Path::new(src).ends_with("recipes") {
+                Some("recipe")
+            } else if Path::new(src).ends_with("systems") {
+                Some("system")
+            } else {
+                None
+            };
             fs::create_dir_all(dst).map_err(|e| io_error(dst, &e, IO_INSTALL))?;
             let entries = fs::read_dir(src).map_err(|e| io_error(src, &e, IO_INSTALL))?;
             for entry in entries {
@@ -148,13 +163,13 @@ pub fn execute(
                 {
                     continue;
                 }
-                if Path::new(src).ends_with("recipes")
-                    && entry.path().extension().is_none_or(|e| e != "recipe")
-                {
+                if data_extension.is_some_and(|extension| {
+                    entry.path().extension().is_none_or(|e| e != extension)
+                }) {
                     continue;
                 }
                 let dest = format!("{dst}/{}", entry.file_name().to_string_lossy());
-                let mode = if Path::new(src).ends_with("recipes") {
+                let mode = if data_extension.is_some() {
                     0o644
                 } else {
                     0o755
@@ -265,7 +280,7 @@ pub fn execute_uninstall(
                 return Err(crate::api::ApiError::new(
                     "io",
                     &format!("{path}: {e}; fix: {FIX_UNINSTALL}"),
-                ))
+                ));
             }
         }
     }
@@ -324,7 +339,7 @@ fn remove_recorded_launch_options(plan: &UninstallPlan) -> Result<(), crate::api
                 &steam.display().to_string(),
                 &error,
                 FIX_UNINSTALL,
-            ))
+            ));
         }
     };
     for entry in entries {
@@ -421,6 +436,7 @@ fn created_dirs(home: &str) -> Vec<String> {
         ".local/share/flat3d/bin/lib",
         ".local/share/flat3d/bin",
         ".local/share/flat3d/recipes",
+        ".local/share/flat3d/systems",
         ".local/share/flat3d",
         ".local/share/vulkan/implicit_layer.d",
         ".local/share/vulkan",
@@ -561,6 +577,7 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             bin_dir.clone(),
             format!("{tools_dir}/"),
             format!("{home}/.local/share/flat3d/recipes"),
+            format!("{home}/.local/share/flat3d/systems"),
             format!("{home}/.config/systemd/user"),
             layer_dir.clone(),
         ],
@@ -583,6 +600,10 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             (
                 format!("{src_dir}/recipes"),
                 format!("{home}/.local/share/flat3d/recipes"),
+            ),
+            (
+                format!("{src_dir}/systems"),
+                format!("{home}/.local/share/flat3d/systems"),
             ),
         ],
         manifest: format!("{home}/.local/share/flat3d/installed.txt"),
