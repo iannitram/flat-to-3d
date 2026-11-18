@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use flat3d_viewer::{
     frame::FrameData,
-    layout::{eye_rects, quad_size, unsqueeze, Rect},
+    layout::{eye_rects, quad_size, screen_rect, unsqueeze, Rect},
     source::{
         test_pattern::{TestPattern, LEFT_MARK, RIGHT_MARK},
         FrameSource,
     },
-    spec::{Layout, ViewerSpec},
+    spec::{Layout, Source, ViewerSpec},
 };
 
 fn spec(layout: Layout) -> ViewerSpec {
@@ -213,4 +213,49 @@ fn eye_shift_trims_opposite_edges_of_each_eye() {
     let [left, right] = eye_rects(1920, 1200, &shifted);
     assert_eq!((left.x, left.w), (240, 720));
     assert_eq!((right.x, right.w), (960, 720));
+}
+
+#[test]
+fn swapping_eyes_keeps_the_eye_shift_direction() {
+    for (plain, reversed) in [(Layout::Sbs, Layout::SbsRev), (Layout::Tab, Layout::TabRev)] {
+        let mut swapped = spec(plain);
+        swapped.swap_eyes = true;
+        swapped.eye_shift = 0.25;
+        let mut expected = spec(reversed);
+        expected.eye_shift = 0.25;
+        assert_eq!(
+            eye_rects(1920, 1080, &swapped),
+            eye_rects(1920, 1080, &expected)
+        );
+    }
+    let mut swapped = spec(Layout::Sbs);
+    swapped.swap_eyes = true;
+    swapped.eye_shift = 0.25;
+    assert_eq!(
+        tuples(eye_rects(1920, 1080, &swapped)),
+        [(1200, 0, 720, 1080), (0, 0, 720, 1080)]
+    );
+}
+
+#[test]
+fn full_width_eyes_keep_their_shape_on_the_screen() {
+    let eye = Rect {
+        x: 0,
+        y: 0,
+        w: 1440,
+        h: 1440,
+    };
+    for (layout, stretched) in [
+        (Layout::Sbs, (2880, 1440)),
+        (Layout::SbsRev, (2880, 1440)),
+        (Layout::Tab, (1440, 2880)),
+        (Layout::TabRev, (1440, 2880)),
+    ] {
+        let mut viewer = spec(layout);
+        viewer.source = Source::Gamescope;
+        let rect = screen_rect(eye, &viewer);
+        assert_eq!((rect.w, rect.h), stretched);
+        viewer.full_width_eyes = true;
+        assert_eq!(screen_rect(eye, &viewer), eye);
+    }
 }

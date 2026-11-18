@@ -310,11 +310,7 @@ fn overlay(spec: &ViewerSpec, w: u32, h: u32) -> ([oxr::Rect2Di; 2], oxr::Extent
             height: r.h as i32,
         },
     });
-    let rect = if matches!(spec.source, Source::TestPattern) || spec.full_width_eyes {
-        rects[0]
-    } else {
-        flat3d_viewer::layout::unsqueeze(rects[0], spec.layout)
-    };
+    let rect = flat3d_viewer::layout::screen_rect(rects[0], spec);
     let (width, height) = flat3d_viewer::layout::quad_size(rect, spec.screen_width_m);
     (eyes, oxr::Extent2Df { width, height })
 }
