@@ -3,6 +3,7 @@
 Newest first. One line per change of stage, release or decision that the next session needs.
 
 - 2026-11-18 Viewer fixes from the first real game stream: single-plane modifiers only, first frame no longer waits on an unsignalled fence, damaged PipeWire buffers skipped, recentre no longer interrupts OpenXR calls, new `--eye-shift` and `--full-width-eyes`.
+- 2026-11-18 System profiles: `systems/` ships the SteamOS Strix Halo profile with its known problems, the engine matches the running system, doctor names it and lists the problems, and packaging carries the folder (#412)
 - 2026-11-18 App `play_3d`: the per-game 3D button's session state, `button`, `note` and `update`, pure; the game is never closed (#404)
 - 2026-11-18 Link smoke Q3 fixes (#392): Stop 3D kills the WiVRn Flatpak server before the unit stop, doctor reads the serial with the chosen adb, and link-smoke drops the removed soak steps and uses the installed adb.
 - 2026-11-18 Roadmap and code map: Zero Company runs in 3D by hand on the virtual-display route; 3D on/off and shipped data work tracked in #399-#412
