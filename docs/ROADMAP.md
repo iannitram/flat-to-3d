@@ -21,6 +21,34 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 "Desktop app + Decky plugin (Recommended)", built in Rust ("Native Rust GUI", "iced (Recommended)"; "Rust backend, thin TS panel (Recommended)", 2026-11-01). The Decky panel (a thin TypeScript layer over the engine binary) runs in Game Mode (link, health, switches, 3D Ready games); the iced app runs in Desktop Mode (Setup, Headset, Games, Logs). Both read one `snapshot` from the Rust engine in `crates/engine/`, whose `flat3d-link` service owns the headset link; neither face has an Inject button. Shape and interlinks: [code-map.md](code-map.md).
 
+## Today (2026-11-18): Zero Company in 3D, and what that changes
+
+**First real game in the headset.** STAR WARS Zero Company ran in 3D on the Quest 2 over WiVRn, at 1440x1440 per eye and a steady 60 fps at the viewer from about 30 real frames, using lsfg-vk 2x frame generation. The owner confirmed depth, aspect and size. It was set up by hand and is not a product feature yet. No full mission has been played through, so Z4 stays open.
+
+**The route is not the one planned.** It uses Unreal's own fake stereo (`r.EnableStereoEmulation`) on a headless gamescope display of 2880x1440, read over PipeWire by `flat3d-viewer`, with a Vulkan layer that gives the flat UI stereo depth. UEVR (Z2) is not part of it. M14, M15, M17 and the Z steps below still describe UEVR until SPEC is changed. M16, the full-mission bar, applies to any route.
+
+**Owner decisions today:**
+
+- A running game is never closed for the player. Turning 3D off or losing the headset stops only the headset view.
+- Every game on the virtual-display route shows one eye on the laptop automatically for the whole 3D session.
+- Graphics settings return to their pre-3D values, and a flat launch never gets 3D settings.
+- The desktop app gets one per-game button: **Play in 3D** or **Bring back to laptop**. This would change rulings 25 and 29. Both rulings and SPEC M18 and M24 stand as written until the owner approves #407.
+- Game, headset and OS data live in this repo and ship with the app.
+
+| Work | Issues | State |
+|---|---|---|
+| Virtual-display route: settings patch and restore, gamescope launch | #399, then #400 | #399 in review (PR #414) |
+| One-eye laptop window: crop and pointer map, PipeWire window, keyboard and mouse | #401, then #402 and #403 | #401 not yet in a PR |
+| 3D on/off: state model, desktop button, Decky, SPEC and rulings | #404, then #405, #406, #407 | not started |
+| Package the UI layer, clean up the prototype | #408, then #409 | not started |
+| App data: Zero Company recipe, headset profiles, system profiles | #410, #411, #412 | not started |
+
+**Still in the way:**
+
+- Gamescope 3.16.30 segfaulted in the Radeon Vulkan driver during a mirror test, about 13 seconds after a stream started, and took the game with it. The cause is unknown. Starting and stopping stream readers against a test app did not reproduce it. #402 must prove the viewer and laptop window can run together for 30 minutes.
+- The viewer fixes and the UI layer prototype are on a working branch, not in `main`. The viewer's recentre signal can also end its OpenXR session.
+- Q3 (link smoke) is not finished, and #392's fix (PR #393) failed review and is waiting on a fix.
+
 <a id="where-it-stands"></a>
 
 ## Where it stands (2026-11-16)
@@ -153,6 +181,8 @@ The owner, 2026-11-12: "Hook points should be steps in the build where research 
 
 STAR WARS Zero Company (Steam 2075800): Unreal 5.6.1, DX12 only (vkd3d-proton), ProtonDB Platinum, no anti-cheat found, ships `SWZeroCompany.pdb`. A turn-based tactics game with an overhead camera, so stereo gives a tabletop look and 30 fps is plenty. Research: [games_group_a.md](notes/research/games_group_a.md#star-wars-zero-company). Spec Musts M13-M17.
 
+**2026-11-18:** the game now runs in 3D by the virtual-display route ([today](#today-2026-11-18-zero-company-in-3d-and-what-that-changes)). The steps below are the original UEVR plan. Z1 and Z4 still apply; Z5 becomes #410.
+
 | Step | What | Depends on | Must |
 |---|---|---|---|
 | Z1 (#31) | Offline check: link the EA account once, then play a mission with the network off | owner's Z13 | M13 |
@@ -169,9 +199,10 @@ Zero Company proves the headset chain, the link service and the `flat3d-run` wra
 
 ## What's next
 
-1. **Waves** and **the owner-device queue**, below. WP-38 (#318) is merged, so the pass is done.
-2. **Hook-point research** (ruling 52): ZR #285, AR #286, GR #287, FR #288, Spider-Man 2 Step 2r #283 and WR #289, each on the installed game before its track's first hook ([above](#hook-point-research-ruling-52)).
-3. Continue Spider-Man 2's port steps in [the plan](spiderman2/plan.md), with Step 2r's map before Step 3. Reverse-engineering setup and the command live in [the workbench](workbench.md).
+1. **The virtual-display route, one-eye window and 3D on/off** in [today's table](#today-2026-11-18-zero-company-in-3d-and-what-that-changes), #399 and #401 first.
+2. **Waves** and **the owner-device queue**, below. WP-38 (#318) is merged, so the pass is done.
+3. **Hook-point research** (ruling 52): ZR #285, AR #286, GR #287, FR #288, Spider-Man 2 Step 2r #283 and WR #289, each on the installed game before its track's first hook ([above](#hook-point-research-ruling-52)).
+4. Continue Spider-Man 2's port steps in [the plan](spiderman2/plan.md), with Step 2r's map before Step 3. Reverse-engineering setup and the command live in [the workbench](workbench.md).
 
 ### Waves
 
