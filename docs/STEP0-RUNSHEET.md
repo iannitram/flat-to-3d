@@ -41,7 +41,7 @@ adb shell am start -a android.intent.action.VIEW -d wivrn+tcp://localhost org.me
 **Script:** Launch SpidyVR through the helper.
 
 ```sh
-env 'SPIDY_DIR={re_home}/spidy-0.3.8/Spidy-0.3.8' bash third_party/SpidyVR/tools/spidy-wivrn.sh
+env 'SPIDY_DIR={re_home}/spidy-0.3.8/Spidy-0.3.8' bash ./third_party/SpidyVR/tools/spidy-wivrn.sh
 ```
 
 - [ ] Frame generation and vsync are off; RT reflections are off; aspect is Auto.
