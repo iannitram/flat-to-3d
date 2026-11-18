@@ -9,6 +9,9 @@
 //! outstanding at a time. `PlayState::awaiting` holds the appid of that unanswered action and a
 //! late reply is matched through it, so a second press cannot be taken for the first answer. That
 //! is why `Starting` and `Resuming` need no timeout here and messages carry no attempt id.
+//!
+//! `StartLinkAndLaunch` reaches the headset itself and answers `Started` only if it is there, so a
+//! new press starts with no remembered loss; a loss reported after the press still counts.
 
 /// Where a game is in its 3D session.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,7 +34,7 @@ pub struct Session {
 pub struct PlayState {
     pub session: Option<Session>,
     pub error: Option<String>,
-    /// The headset has been lost since the last time it was seen returned.
+    /// The headset has been lost since the last press of Play or the last time it returned.
     pub headset_lost: bool,
     /// The appid whose `StartLinkAndLaunch` or `ResumeIn3d` has not been answered yet.
     pub awaiting: Option<u32>,
@@ -128,6 +131,7 @@ pub fn update(state: &mut PlayState, msg: Msg) -> Option<Action> {
             });
             state.awaiting = Some(appid);
             state.error = None;
+            state.headset_lost = false;
             Some(Action::StartLinkAndLaunch(appid))
         }
         Msg::Started(appid) => {
@@ -196,7 +200,7 @@ pub fn update(state: &mut PlayState, msg: Msg) -> Option<Action> {
         Msg::GraceEnded => {
             state.headset_lost = true;
             if let Some(session) = state.session.as_mut() {
-                if matches!(session.mode, Mode::In3d | Mode::Resuming) {
+                if session.mode != Mode::Starting {
                     // The link service has already done the work, and the headset is gone.
                     session.mode = Mode::OnLaptop {
                         headset_back: false,

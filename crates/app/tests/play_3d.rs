@@ -356,18 +356,19 @@ fn grace_ended_moves_in_3d_to_the_laptop_without_a_headset() {
 }
 
 #[test]
-fn grace_ended_is_remembered_outside_3d_without_changing_the_mode() {
-    for mode in [
-        Mode::Starting,
-        Mode::OnLaptop { headset_back: true },
-        Mode::OnLaptop {
-            headset_back: false,
-        },
-    ] {
-        let mut s = state(7, mode);
+fn grace_ended_on_the_laptop_withdraws_the_way_back() {
+    for headset_back in [true, false] {
+        let mut s = state(7, Mode::OnLaptop { headset_back });
         assert_eq!(update(&mut s, Msg::GraceEnded), None);
-        assert_eq!(s.session.unwrap().mode, mode);
+        assert_eq!(
+            s.session.unwrap().mode,
+            Mode::OnLaptop {
+                headset_back: false
+            }
+        );
         assert!(s.headset_lost);
+        assert_eq!(button(&s, 7), Button::OnLaptop);
+        assert_eq!(update(&mut s, Msg::BackTo3dPressed(7)), None);
     }
 }
 
@@ -469,27 +470,42 @@ fn a_loss_with_no_session_is_remembered() {
 }
 
 #[test]
-fn grace_ended_with_no_session_is_remembered_for_the_next_bring_back() {
-    let mut s = PlayState::default();
-    assert_eq!(update(&mut s, Msg::GraceEnded), None);
-    assert!(s.headset_lost && s.session.is_none());
+fn a_new_play_forgets_an_earlier_loss_and_keeps_the_way_back() {
+    for earlier_loss in [Msg::HeadsetLost, Msg::GraceEnded] {
+        let mut s = PlayState::default();
+        update(&mut s, earlier_loss);
+        assert!(s.headset_lost);
 
-    update(&mut s, Msg::PlayPressed(7));
-    update(&mut s, Msg::Started(7));
-    assert_eq!(
-        update(&mut s, Msg::BringBackPressed(7)),
-        Some(Action::BringBack(7))
-    );
-    assert_eq!(
-        s.session,
-        Some(Session {
-            appid: 7,
-            mode: Mode::OnLaptop {
-                headset_back: false
-            }
-        })
-    );
-    assert_eq!(button(&s, 7), Button::OnLaptop);
+        update(&mut s, Msg::PlayPressed(7));
+        assert!(!s.headset_lost);
+        update(&mut s, Msg::Started(7));
+        assert_eq!(
+            update(&mut s, Msg::BringBackPressed(7)),
+            Some(Action::BringBack(7))
+        );
+        assert_eq!(button(&s, 7), Button::BackTo3d);
+    }
+}
+
+#[test]
+fn a_loss_while_starting_still_counts_at_bring_back() {
+    for loss in [Msg::HeadsetLost, Msg::GraceEnded] {
+        let mut s = PlayState::default();
+        update(&mut s, Msg::PlayPressed(7));
+        update(&mut s, loss);
+        update(&mut s, Msg::Started(7));
+        assert!(s.headset_lost);
+        update(&mut s, Msg::BringBackPressed(7));
+        assert_eq!(button(&s, 7), Button::OnLaptop);
+    }
+}
+
+#[test]
+fn an_ignored_play_keeps_the_remembered_loss() {
+    let mut s = state(7, Mode::In3d);
+    update(&mut s, Msg::HeadsetLost);
+    assert_eq!(update(&mut s, Msg::PlayPressed(8)), None);
+    assert!(s.headset_lost);
 }
 
 #[test]
