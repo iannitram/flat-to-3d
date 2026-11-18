@@ -8,7 +8,7 @@ The deep maps are [Spidy core](spiderman2/spidy-core-map.md) and the [Spider-Man
 
 **Platforms (R04).** The host is Linux only: SteamOS on the owner's handheld (rulings 1, 2). Mac and Windows hosts don't apply. Windows binaries (the Spider-Man 2 port's DLLs, the UEVR injector `flat3d-uevr-inject.exe`) are cross-built on Linux with clang-cl + xwin and run under Proton (ruling 21). The desktop app ships as an AppImage of the iced binary (no WebKitGTK). The Decky plugin bundles the engine binaries. The link service needs no root: `flat3d-inject install` puts in Flat to 3D's own udev rule for Meta USB devices (`packaging/flat3d-quest.rules`, one sudo prompt), so it does not rely on Quest Tether's rule (ruling 42, WP-37). CI is Linux only: GitHub-hosted `ubuntu-24.04` runners (ruling 48). The SBS viewer is a Linux-native binary.
 
-**State on 2026-11-18.** This map describes `main`. Zero Company's virtual-display 3D route works by hand but isn't in `main` yet: its parts are the planned rows from `crates/engine/src/ini_patch.rs` to system profiles in the table below ([roadmap](ROADMAP.md#today-2026-11-18-zero-company-in-3d-and-what-that-changes)).
+**State on 2026-11-18.** This map describes `main`. Zero Company's virtual-display 3D route works by hand but isn't fully in `main` yet. `crates/engine/src/ini_patch.rs` and `crates/engine/src/eye_view.rs` are built but no route calls them; the other parts are the planned rows after them in the table below ([roadmap](ROADMAP.md#today-2026-11-18-zero-company-in-3d-and-what-that-changes)).
 
 ## How it fits together
 
@@ -112,9 +112,9 @@ A part that is fully built has exactly `present` in its Status cell, with nothin
 | `games/alan-wake-2/` | present (the proxy only) | `proxy/`, `flat3d-aw2-proxy` (#293): our do-nothing `version.dll` proxy, which logs one line on load and forwards every export to the system copy; the alternate-eye hook on the engine's camera class stays planned (planned route, untested; ruling 44); device check: W2 | M32 |
 | `games/spiderman2/` | planned (only `map.toml` so far, the SM2 address map, WP-30) | the port: render probe, camera shift, eye views, pairing, OpenXR worker, HUD and memory, launch script | M3-M8 |
 | `crates/viewer/` | present | Linux-native PipeWire→OpenXR quad viewer on WiVRn: `flat3d-viewer` (features `xr`,`capture`); layout/status/spec pure; device check Q10 | M21 |
-| `crates/engine/src/ini_patch.rs` | planned (#399, PR #414) | writes a route's ini values and restores only those keys from a saved record | - |
+| `crates/engine/src/ini_patch.rs` | present | `IniEdit`, `PatchRecord`, `apply`, `apply_over`, `restore` (#399): writes a route's ini values and restores only those keys from a saved record, leaving other lines as they were; the route that calls it is #400 | - |
 | `crates/engine/src/injectors/` virtual-display route | planned (#400) | starts the game on a headless gamescope display at the route's stream size | - |
-| `crates/engine/src/eye_view.rs` | planned (#401) | the one-eye crop, fit-to-window rectangle and window-to-game pointer map, from route settings | - |
+| `crates/engine/src/eye_view.rs` | present | `EyeView` (`new`, `crop`, `fit`, `window_to_game`) (#401): the one-eye crop, fit-to-window rectangle and window-to-game pointer map, from route settings; the window that calls it is #402 | - |
 | one-eye laptop window | planned (#402, #403) | opens with every virtual-display 3D session: native PipeWire window beside the viewer, with keyboard and mouse sent to gamescope over XTEST | - |
 | 3D on/off state and buttons | planned (#404-#407) | the session state model, the desktop app's **Play in 3D** and **Bring back to laptop** button, the Decky control | M18, M24 (changes need the owner's approval, #407) |
 | `crates/ui-layer/` | planned (#408, #409) | the Vulkan layer that gives a flat game UI stereo depth; a prototype exists outside `main` | - |

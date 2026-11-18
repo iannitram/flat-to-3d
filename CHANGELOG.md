@@ -2,6 +2,7 @@
 
 Newest first. One line per change of stage, release or decision that the next session needs.
 
+- 2026-11-18 Roadmap and code map: #399 and #401 are built and merged, and the 3D route table shows each remaining issue as of today.
 - 2026-11-18 Link smoke Q3 fixes (#392): Stop 3D kills the WiVRn Flatpak server before the unit stop, doctor reads the serial with the chosen adb, and link-smoke drops the removed soak steps and uses the installed adb.
 - 2026-11-18 Roadmap and code map: Zero Company runs in 3D by hand on the virtual-display route; 3D on/off and shipped data work tracked in #399-#412
 - 2026-11-18 PM audit: code map gains the heroic, heroic_wrapper and aw2 modules and the SM2 map.toml note; issues filed: SpidyVR stall-rule learn note, save-relay VDF reuse (linked to save-relay); #155 retargeted to SpidyVR v0.8.7.
