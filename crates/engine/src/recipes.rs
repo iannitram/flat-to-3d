@@ -25,6 +25,9 @@ pub const GEO11_KEYS: [&str; 7] = [
 ];
 pub const PORT_KEYS: [&str; 0] = [];
 pub const AW2_KEYS: [&str; 0] = [];
+/// The route-settings key that carries a recipe's plain `exe:` line. It belongs to no route,
+/// so [`check_route_settings`] ignores it.
+pub const EPIC_EXE_KEY: &str = "epic-exe";
 
 /// Read only route-specific settings from a recipe text.
 pub fn route_settings(text: &str) -> RouteSettings {
@@ -38,7 +41,10 @@ pub fn route_settings(text: &str) -> RouteSettings {
             continue;
         };
         let key = key.trim();
-        if !key.starts_with("uevr-")
+        // A store recipe names its game's exe in a plain `exe:` line (the Epic hook reads it).
+        let key = if key == "exe" { EPIC_EXE_KEY } else { key };
+        if key != EPIC_EXE_KEY
+            && !key.starts_with("uevr-")
             && !key.starts_with("geo11-")
             && !key.starts_with("port-")
             && !key.starts_with("aw2-")
@@ -59,6 +65,9 @@ pub fn route_settings(text: &str) -> RouteSettings {
 /// Validate route settings against the selected recipe route and its value rules.
 pub fn check_route_settings(route: &str, settings: &RouteSettings) -> Result<(), String> {
     use crate::injectors::{route_of, Route};
+    let mut settings = settings.clone();
+    settings.remove(EPIC_EXE_KEY);
+    let settings = &settings;
     let allowed: &[&str] = match route_of(route) {
         Route::Uevr => &UEVR_KEYS,
         Route::Geo11 => &GEO11_KEYS,
@@ -408,7 +417,7 @@ fn is_date_shape(text: &str) -> bool {
         })
 }
 
-fn extract_store_key(text: &str) -> Result<Option<String>, RecipeError> {
+pub(crate) fn extract_store_key(text: &str) -> Result<Option<String>, RecipeError> {
     let mut found: Option<(String, usize)> = None;
     for (index, raw) in text.lines().enumerate() {
         let line = index + 1;
@@ -434,6 +443,36 @@ fn extract_store_key(text: &str) -> Result<Option<String>, RecipeError> {
         }
     }
     Ok(found.map(|(v, _)| v))
+}
+
+/// The text of the first `.recipe` file in `dirs` whose `store-key:` line names `key`.
+/// A missing folder is skipped; a file with no `store-key:` line is not a match.
+pub fn find_recipe_text_keyed(
+    dirs: &[std::path::PathBuf],
+    key: &StoreKey,
+) -> Result<Option<String>, String> {
+    for dir in dirs {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(format!("{}: {e}", dir.display())),
+        };
+        let mut paths: Vec<std::path::PathBuf> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().is_some_and(|ext| ext == "recipe") && path.is_file())
+            .collect();
+        paths.sort();
+        for path in paths {
+            let text =
+                std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+            let raw = extract_store_key(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+            if raw.and_then(|raw| raw.parse::<StoreKey>().ok()).as_ref() == Some(key) {
+                return Ok(Some(text));
+            }
+        }
+    }
+    Ok(None)
 }
 
 /// Every `.recipe` file under `folder`, parsed and checked, keyed by [`StoreKey`].

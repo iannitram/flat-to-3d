@@ -3,6 +3,7 @@
 pub mod api;
 pub mod catalog;
 pub mod cli;
+pub mod epic_user_settings;
 pub mod exec;
 pub mod eye_view;
 pub mod fsx;
