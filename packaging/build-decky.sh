@@ -28,6 +28,8 @@ while (($#)); do
   esac
 done
 BIN_DIR="${BIN_DIR:-${CARGO_TARGET_DIR:-$ROOT_DIR/target}/release}"
+UI_LAYER_LIBRARY=${LAYER_FILES[0]}
+UI_LAYER_MANIFEST=${LAYER_FILES[1]}
 
 if [ "$DRY" = 1 ]; then
   DRY=1
@@ -46,9 +48,8 @@ if [ "$DRY" = 1 ]; then
   for name in "${PAYLOAD_BIN[@]}"; do
     printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$name" "$name"
   done
-  for name in "${LAYER_FILES[@]}"; do
-    printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$name" "$name"
-  done
+  printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$UI_LAYER_LIBRARY" "$UI_LAYER_LIBRARY"
+  printf "+ cp %s/packaging/%s \$stage/flat-to-3d/bin/%s\n" "$ROOT_DIR" "$UI_LAYER_MANIFEST" "$UI_LAYER_MANIFEST"
   if [ "$NO_TOOLS" = 0 ]; then
     for name in "${PAYLOAD_TOOLS[@]}"; do
       printf "+ cp %s/%s \$stage/flat-to-3d/bin/tools/%s\n" "$TOOLS" "$name" "$name"
@@ -87,11 +88,10 @@ run cp "$ROOT_DIR/LICENSE" "$package/LICENSE"
 for name in "${PAYLOAD_BIN[@]}"; do
   run cp "$BIN_DIR/$name" "$package/bin/$name"
 done
-for name in "${LAYER_FILES[@]}"; do
-  run cp "$BIN_DIR/$name" "$package/bin/$name"
-done
+run cp "$BIN_DIR/$UI_LAYER_LIBRARY" "$package/bin/$UI_LAYER_LIBRARY"
+run cp "$ROOT_DIR/packaging/$UI_LAYER_MANIFEST" "$package/bin/$UI_LAYER_MANIFEST"
 run chmod 755 "$package/bin/"flat3d-*
-run chmod 755 "$package/bin/${LAYER_FILES[0]}"
+run chmod 755 "$package/bin/$UI_LAYER_LIBRARY"
 if [ "$NO_TOOLS" = 0 ]; then
   run mkdir -p "$package/bin/tools/lib"
   for name in "${PAYLOAD_TOOLS[@]}"; do

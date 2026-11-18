@@ -28,6 +28,7 @@ while (($#)); do
 done
 
 UI_LAYER_LIBRARY=${LAYER_FILES[0]}
+UI_LAYER_MANIFEST=${LAYER_FILES[1]}
 APPIMAGETOOL_URL=$(pin appimagetool.url)
 APPIMAGETOOL_SHA=$(pin appimagetool.sha256)
 RUNTIME_URL=$(pin appimage-runtime.url)
@@ -46,9 +47,8 @@ if [ "$DRY" = 1 ]; then
     printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$name" "$name"
     printf "+ ln -s bin/%s \$tmp/AppDir/usr/%s\n" "$name" "$name"
   done
-  for name in "${LAYER_FILES[@]}"; do
-    printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$name" "$name"
-  done
+  printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$UI_LAYER_LIBRARY" "$UI_LAYER_LIBRARY"
+  printf "+ cp %s/packaging/%s \$tmp/AppDir/usr/bin/%s\n" "$ROOT" "$UI_LAYER_MANIFEST" "$UI_LAYER_MANIFEST"
   if [ "$NO_TOOLS" = 0 ]; then
     for name in "${PAYLOAD_TOOLS[@]}"; do
       printf "+ cp %s/%s \$tmp/AppDir/usr/tools/%s\n" "$TOOLS" "$name" "$name"
@@ -86,9 +86,8 @@ for name in "${PAYLOAD_BIN[@]}"; do
   run cp "$BIN_DIR/$name" "$appdir/usr/bin/$name"
   run ln -s "bin/$name" "$appdir/usr/$name"
 done
-for name in "${LAYER_FILES[@]}"; do
-  run cp "$BIN_DIR/$name" "$appdir/usr/bin/$name"
-done
+run cp "$BIN_DIR/$UI_LAYER_LIBRARY" "$appdir/usr/bin/$UI_LAYER_LIBRARY"
+run cp "$ROOT/packaging/$UI_LAYER_MANIFEST" "$appdir/usr/bin/$UI_LAYER_MANIFEST"
 if [ "$NO_TOOLS" = 0 ]; then
   run mkdir -p "$appdir/usr/tools/lib"
   for name in "${PAYLOAD_TOOLS[@]}"; do
