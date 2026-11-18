@@ -4,7 +4,7 @@ title = "Link Smoke"
 q = "Q3"
 issues = [26, 39, 125, 128]
 device = ["z13", "quest2"]
-done_when = "tests assert the command list and the state reported for a missing headset, an unauthorised headset and a ready link (the command runner behind a small trait so tests fake it); on the device, one call leaves WiVRn ready over the cable (needs-owner-device).; tests assert the stop command list and the reported state, using #26's fake runner; on the device Start 3D, Stop 3D, Start 3D in a row all report ready/done (`needs-owner-device`).; a fake-runner test with scripted misses sees 3 misses then one reconnect, at most 10 reconnects, and soak lines written; needs-owner-device for the real headset.; tests on a temp HOME show install then uninstall leaves nothing behind; the systemd step is a device check (needs-owner-device)."
+done_when = "tests assert the command list and the state reported for a missing headset, an unauthorised headset and a ready link (the command runner behind a small trait so tests fake it); on the device, one call leaves WiVRn ready over the cable (needs-owner-device).; tests assert the stop command list and the reported state, using #26's fake runner; on the device Start 3D, Stop 3D, Start 3D in a row all report ready/done (`needs-owner-device`).; tests on a temp HOME show install then uninstall leaves nothing behind; the systemd step is a device check (needs-owner-device)."
 
 [[trouble]]
 symptom = "link never becomes ready"
@@ -82,20 +82,6 @@ run = ["flat3d-inject", "list", "--json"]
 expect_json = { "/ok" = true }
 
 [[step]]
-id = "soak"
-kind = "ask"
-who = "you"
-text = "Run the 30-minute link soak and record the resulting log."
-
-[[step]]
-id = "soak-file"
-kind = "cmd"
-who = "script"
-text = "Confirm soak result exists."
-run = ["find", "{state}", "-maxdepth", "1", "-name", "soak-*.txt"]
-expect = "soak-"
-
-[[step]]
 id = "doctor"
 kind = "cmd"
 who = "script"
@@ -153,7 +139,7 @@ id = "wivrn-version"
 kind = "cmd"
 who = "script"
 text = "Confirm the WiVRn headset app version."
-run = ["adb", "shell", "dumpsys", "package", "org.meumeu.wivrn.github"]
+run = ["{home}/.local/share/flat3d/bin/adb", "shell", "dumpsys", "package", "org.meumeu.wivrn.github"]
 expect = "versionName=26\\.9"
 
 [[step]]

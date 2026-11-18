@@ -23,7 +23,7 @@ fn a_second_stop_with_the_unit_not_loaded_is_stopped() {
     assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
     let mut expected = link::stop_3d_commands();
     expected.extend(link::stop_3d_commands());
-    assert_eq!(f.ran.len(), 6);
+    assert_eq!(f.ran.len(), 8);
     assert_eq!(f.ran, expected);
 }
 
@@ -34,7 +34,7 @@ fn unit_not_found_is_stopped() {
         "Failed to stop flat3d-wivrn.service: Unit flat3d-wivrn.service not found.\n",
     );
     assert_eq!(stop_3d(&mut f), Ok(LinkState::Stopped));
-    assert_eq!(f.ran.len(), 3);
+    assert_eq!(f.ran.len(), 4);
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn access_denied_is_still_an_error() {
             message: "Failed to stop flat3d-wivrn.service: Access denied".into()
         })
     );
-    assert_eq!(f.ran.len(), 3);
+    assert_eq!(f.ran.len(), 4);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn a_bus_error_is_still_an_error() {
         stop_3d(&mut f).unwrap_err().message,
         "Failed to connect to bus: No medium found"
     );
-    assert_eq!(f.ran.len(), 3);
+    assert_eq!(f.ran.len(), 4);
 }
 
 #[test]
