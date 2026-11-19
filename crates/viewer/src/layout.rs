@@ -1,4 +1,4 @@
-use crate::spec::{Layout, ViewerSpec};
+use crate::spec::{Layout, Source, ViewerSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Rect {
@@ -54,6 +54,12 @@ pub fn eye_rects(frame_w: u32, frame_h: u32, spec: &ViewerSpec) -> [Rect; 2] {
     if spec.swap_eyes {
         std::mem::swap(&mut left, &mut right);
     }
+    if spec.eye_shift > 0.0 {
+        let shift = ((left.w as f32 * spec.eye_shift).round() as u32).min(left.w);
+        left.x += shift;
+        left.w -= shift;
+        right.w -= shift;
+    }
     if let Some(aspect) = spec.crop_aspect.filter(|a| *a > 0.0) {
         crop(&mut left, aspect);
         crop(&mut right, aspect);
@@ -80,6 +86,17 @@ pub fn unsqueeze(mut rect: Rect, layout: Layout) -> Rect {
         Layout::Tab | Layout::TabRev => rect.h = rect.h.saturating_mul(2),
     }
     rect
+}
+
+/// The rectangle whose shape sets the screen's shape in the headset. A
+/// half-width eye is stretched back to full size unless the eyes are already
+/// full width.
+pub fn screen_rect(eye: Rect, spec: &ViewerSpec) -> Rect {
+    if matches!(spec.source, Source::TestPattern) || spec.full_width_eyes {
+        eye
+    } else {
+        unsqueeze(eye, spec.layout)
+    }
 }
 
 pub fn quad_size(rect: Rect, width_m: f32) -> (f32, f32) {

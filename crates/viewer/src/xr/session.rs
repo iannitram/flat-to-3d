@@ -428,6 +428,8 @@ mod tests {
                 crop_aspect: Some(16.0 / 9.0),
                 screen_width_m: 3.5,
                 distance_m: 2.0,
+                eye_shift: 0.036,
+                full_width_eyes: true,
             },
             ViewerSpec::default(),
         ] {

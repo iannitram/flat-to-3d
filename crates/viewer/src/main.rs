@@ -74,7 +74,8 @@ fn run() -> Result<u8, (u8, String)> {
         let mut action: libc::sigaction = std::mem::zeroed();
         action.sa_sigaction = signal_recenter as *const () as usize;
         libc::sigemptyset(&mut action.sa_mask);
-        action.sa_flags = 0;
+        // A recentre must not interrupt the OpenXR calls that are waiting.
+        action.sa_flags = libc::SA_RESTART;
         libc::sigaction(libc::SIGUSR1, &action, std::ptr::null_mut());
     }
     let mut supervisor = Supervisor::new();
@@ -309,11 +310,7 @@ fn overlay(spec: &ViewerSpec, w: u32, h: u32) -> ([oxr::Rect2Di; 2], oxr::Extent
             height: r.h as i32,
         },
     });
-    let rect = if matches!(spec.source, Source::TestPattern) {
-        rects[0]
-    } else {
-        flat3d_viewer::layout::unsqueeze(rects[0], spec.layout)
-    };
+    let rect = flat3d_viewer::layout::screen_rect(rects[0], spec);
     let (width, height) = flat3d_viewer::layout::quad_size(rect, spec.screen_width_m);
     (eyes, oxr::Extent2Df { width, height })
 }

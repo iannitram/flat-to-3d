@@ -10,6 +10,12 @@ pub struct ViewerSpec {
     pub crop_aspect: Option<f32>,
     pub screen_width_m: f32,
     pub distance_m: f32,
+    /// Horizontal offset between the eye images, as a fraction of one eye's width.
+    #[serde(default)]
+    pub eye_shift: f32,
+    /// Each eye already has its true shape, so the picture is not stretched back.
+    #[serde(default)]
+    pub full_width_eyes: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -82,6 +88,18 @@ impl ViewerSpec {
                     spec.distance_m = parse_float(value(args, i, "--distance-m")?, "--distance-m")?;
                     i += 2;
                 }
+                "--eye-shift" => {
+                    let shift = parse_float(value(args, i, "--eye-shift")?, "--eye-shift")?;
+                    if !(0.0..0.9).contains(&shift) {
+                        return Err(format!("--eye-shift out of range: {shift}"));
+                    }
+                    spec.eye_shift = shift;
+                    i += 2;
+                }
+                "--full-width-eyes" => {
+                    spec.full_width_eyes = true;
+                    i += 1;
+                }
                 flag => return Err(format!("unknown flag: {flag}")),
             }
         }
@@ -109,6 +127,13 @@ impl ViewerSpec {
         if self.distance_m > 0.0 {
             args.push("--distance-m".into());
             args.push(self.distance_m.to_string());
+        }
+        if self.eye_shift > 0.0 {
+            args.push("--eye-shift".into());
+            args.push(self.eye_shift.to_string());
+        }
+        if self.full_width_eyes {
+            args.push("--full-width-eyes".into());
         }
         args
     }
