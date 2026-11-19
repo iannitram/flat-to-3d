@@ -28,6 +28,8 @@ while (($#)); do
   esac
 done
 BIN_DIR="${BIN_DIR:-${CARGO_TARGET_DIR:-$ROOT_DIR/target}/release}"
+UI_LAYER_LIBRARY=${LAYER_FILES[0]}
+UI_LAYER_MANIFEST=${LAYER_FILES[1]}
 
 if [ "$DRY" = 1 ]; then
   DRY=1
@@ -36,6 +38,7 @@ if [ "$DRY" = 1 ]; then
     printf '+ pnpm -C %s/decky run build\n' "$ROOT_DIR"
     printf '+ cargo build --release --locked -p flat3d-inject --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
+    printf '+ cargo build --release --locked -p flat3d-ui-layer --manifest-path %s/Cargo.toml\n' "$ROOT_DIR"
   fi
   printf "+ mkdir -p \$stage/flat-to-3d/dist \$stage/flat-to-3d/bin/recipes \$stage/flat-to-3d/bin/systems\n"
   for file in dist/index.js package.json plugin.json main.py README.md; do
@@ -45,6 +48,8 @@ if [ "$DRY" = 1 ]; then
   for name in "${PAYLOAD_BIN[@]}"; do
     printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$name" "$name"
   done
+  printf "+ cp %s/%s \$stage/flat-to-3d/bin/%s\n" "$BIN_DIR" "$UI_LAYER_LIBRARY" "$UI_LAYER_LIBRARY"
+  printf "+ cp %s/packaging/%s \$stage/flat-to-3d/bin/%s\n" "$ROOT_DIR" "$UI_LAYER_MANIFEST" "$UI_LAYER_MANIFEST"
   if [ "$NO_TOOLS" = 0 ]; then
     for name in "${PAYLOAD_TOOLS[@]}"; do
       printf "+ cp %s/%s \$stage/flat-to-3d/bin/tools/%s\n" "$TOOLS" "$name" "$name"
@@ -63,6 +68,7 @@ if [ "$SKIP_BUILD" = 0 ]; then
   run pnpm -C "$ROOT_DIR/decky" run build
   run cargo build --release --locked -p flat3d-inject --manifest-path "$ROOT_DIR/Cargo.toml"
   run cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path "$ROOT_DIR/Cargo.toml"
+  run cargo build --release --locked -p flat3d-ui-layer --manifest-path "$ROOT_DIR/Cargo.toml"
 fi
 
 stage=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-decky.XXXXXX")
@@ -83,7 +89,10 @@ run cp "$ROOT_DIR/LICENSE" "$package/LICENSE"
 for name in "${PAYLOAD_BIN[@]}"; do
   run cp "$BIN_DIR/$name" "$package/bin/$name"
 done
+run cp "$BIN_DIR/$UI_LAYER_LIBRARY" "$package/bin/$UI_LAYER_LIBRARY"
+run cp "$ROOT_DIR/packaging/$UI_LAYER_MANIFEST" "$package/bin/$UI_LAYER_MANIFEST"
 run chmod 755 "$package/bin/"flat3d-*
+run chmod 755 "$package/bin/$UI_LAYER_LIBRARY"
 if [ "$NO_TOOLS" = 0 ]; then
   run mkdir -p "$package/bin/tools/lib"
   for name in "${PAYLOAD_TOOLS[@]}"; do

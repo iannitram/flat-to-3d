@@ -296,6 +296,18 @@ class PackagingTests(unittest.TestCase):
             self.assertIn(RUNTIME_SHA, result.stdout)
             self.assertIn("ln -s bin/flat3d-inject", result.stdout)
             self.assertIn("ln -s bin/flat3d-run", result.stdout)
+            self.assertIn("-p flat3d-ui-layer", result.stdout)
+            bin_dir = Path(os.environ.get("CARGO_TARGET_DIR") or ROOT / "target") / "release"
+            self.assertIn(
+                f"+ cp {bin_dir.as_posix()}/libflat3d_ui_layer.so $tmp/AppDir/usr/bin/libflat3d_ui_layer.so\n",
+                result.stdout,
+            )
+            self.assertIn(
+                f"+ cp {ROOT.as_posix()}/packaging/VkLayer_FLAT3D_ui.json $tmp/AppDir/usr/bin/VkLayer_FLAT3D_ui.json\n",
+                result.stdout,
+            )
+            for name in ("libflat3d_ui_layer.so", "VkLayer_FLAT3D_ui.json"):
+                self.assertIn(f"$tmp/AppDir/usr/bin/{name}", result.stdout)
             self.assertNotIn("libwayland", result.stdout)
             self.assertNotIn("libvulkan", result.stdout)
             self.assertNotIn("libGL", result.stdout)
@@ -314,6 +326,10 @@ class PackagingTests(unittest.TestCase):
             self.assertIn(f"--manifest-path {root}/Cargo.toml", result.stdout)
             self.assertIn(f"{root}/target/release/flat3d-inject", result.stdout)
             self.assertIn("$stage/flat-to-3d/dist", result.stdout)
+            self.assertIn(
+                f"+ cp {root}/packaging/VkLayer_FLAT3D_ui.json $stage/flat-to-3d/bin/VkLayer_FLAT3D_ui.json\n",
+                result.stdout,
+            )
 
     def test_payload_parity(self) -> None:
         output = subprocess.run(
@@ -340,6 +356,8 @@ class PackagingTests(unittest.TestCase):
             for name in payload_bin:
                 self.assertIn(f"/usr/bin/{name}", appimage.stdout)
                 self.assertIn(f"ln -s bin/{name}", appimage.stdout)
+            for name in ("libflat3d_ui_layer.so", "VkLayer_FLAT3D_ui.json"):
+                self.assertIn(f"/usr/bin/{name}", appimage.stdout)
 
             root, bins, tools = make_decky_tree(Path(temporary))
             archive_path = Path(temporary) / "payload.zip"
@@ -362,6 +380,8 @@ class PackagingTests(unittest.TestCase):
                 self.assertIn(f"flat-to-3d/bin/{name}", files)
             for name in payload_tools:
                 self.assertIn(f"flat-to-3d/bin/tools/{name}", files)
+            for name in ("libflat3d_ui_layer.so", "VkLayer_FLAT3D_ui.json"):
+                self.assertIn(f"flat-to-3d/bin/{name}", files)
 
     def test_no_pin_payload_or_script_names_the_relay(self) -> None:
         payload = subprocess.run(
@@ -450,14 +470,20 @@ class PackagingTests(unittest.TestCase):
                 "flat-to-3d/bin/flat3d-inject",
                 "flat-to-3d/bin/flat3d-run",
                 "flat-to-3d/bin/flat3d-viewer",
+                "flat-to-3d/bin/libflat3d_ui_layer.so",
+                "flat-to-3d/bin/VkLayer_FLAT3D_ui.json",
                 "flat-to-3d/bin/tools/adb",
                 "flat-to-3d/bin/tools/lib/libx.so",
                 "flat-to-3d/bin/recipes/x.recipe",
                 "flat-to-3d/bin/systems/x.system",
             }
+            self.assertFalse((bins / "VkLayer_FLAT3D_ui.json").exists())
             with zipfile.ZipFile(output) as archive:
                 files = {name for name in archive.namelist() if not name.endswith("/")}
                 self.assertEqual(files, expected)
+                self.assertEqual(
+                    archive.read("flat-to-3d/bin/VkLayer_FLAT3D_ui.json"), b"manifest\n"
+                )
                 for name in (
                     "flat-to-3d/bin/flat3d-inject",
                     "flat-to-3d/bin/flat3d-viewer",
@@ -513,6 +539,9 @@ def make_decky_tree(temp: Path) -> tuple[Path, Path, Path]:
         path = bins / name
         path.write_text("#!/bin/sh\nexit 0\n")
         path.chmod(0o755)
+    (bins / "libflat3d_ui_layer.so").write_text("layer\n")
+    (root / "packaging").mkdir()
+    (root / "packaging/VkLayer_FLAT3D_ui.json").write_text("manifest\n")
 
     tools = temp / "tools"
     (tools / "lib").mkdir(parents=True)
