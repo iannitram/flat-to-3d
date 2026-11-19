@@ -37,6 +37,13 @@ fn from_env_uses_xdg_locations_and_source_recipe_first() {
             PathBuf::from("/data/flat3d/recipes")
         ]
     );
+    assert_eq!(
+        p.headset_dirs,
+        [
+            PathBuf::from("/src/headsets"),
+            PathBuf::from("/data/flat3d/headsets")
+        ]
+    );
 }
 
 #[test]
@@ -49,6 +56,10 @@ fn from_env_uses_home_defaults_when_xdg_is_unset_or_empty() {
     assert_eq!(
         p.recipe_dirs,
         [PathBuf::from("/home/u/.local/share/flat3d/recipes")]
+    );
+    assert_eq!(
+        p.headset_dirs,
+        [PathBuf::from("/home/u/.local/share/flat3d/headsets")]
     );
 }
 

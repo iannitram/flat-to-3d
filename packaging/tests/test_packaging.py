@@ -326,6 +326,7 @@ class PackagingTests(unittest.TestCase):
             self.assertIn(f"--manifest-path {root}/Cargo.toml", result.stdout)
             self.assertIn(f"{root}/target/release/flat3d-inject", result.stdout)
             self.assertIn("$stage/flat-to-3d/dist", result.stdout)
+            self.assertIn(f"{root}/headsets/*.headset", result.stdout)
             self.assertIn(
                 f"+ cp {root}/packaging/VkLayer_FLAT3D_ui.json $stage/flat-to-3d/bin/VkLayer_FLAT3D_ui.json\n",
                 result.stdout,
@@ -475,6 +476,7 @@ class PackagingTests(unittest.TestCase):
                 "flat-to-3d/bin/tools/adb",
                 "flat-to-3d/bin/tools/lib/libx.so",
                 "flat-to-3d/bin/recipes/x.recipe",
+                "flat-to-3d/bin/headsets/x.headset",
                 "flat-to-3d/bin/systems/x.system",
             }
             self.assertFalse((bins / "VkLayer_FLAT3D_ui.json").exists())
@@ -520,9 +522,11 @@ def make_decky_tree(temp: Path) -> tuple[Path, Path, Path]:
     root = temp / "tree"
     (root / "decky/dist").mkdir(parents=True)
     (root / "recipes").mkdir()
+    (root / "headsets").mkdir()
     (root / "systems").mkdir()
     (root / "LICENSE").write_text("license\n")
     (root / "recipes/x.recipe").write_text("recipe\n")
+    (root / "headsets/x.headset").write_text("headset\n")
     (root / "systems/x.system").write_text("system\n")
     for path, content in {
         "decky/dist/index.js": "bundle\n",

@@ -20,6 +20,7 @@ fn paths(test: &str) -> EnginePaths {
         log_dir: root.join("logs"),
         bin: root.join("bin"),
         recipe_dirs: vec![],
+        headset_dirs: vec![],
         system_dirs: vec![],
         os_release: PathBuf::from("/etc/os-release"),
     }
