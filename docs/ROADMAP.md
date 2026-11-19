@@ -37,17 +37,17 @@ Today the same chain is done by hand in Desktop Mode ([STEP0-RUNSHEET.md](STEP0-
 
 | Work | Issues | State |
 |---|---|---|
-| Virtual-display route: settings patch and restore, gamescope launch | #399, then #400 | #399 in review (PR #414) |
-| One-eye laptop window: crop and pointer map, PipeWire window, keyboard and mouse | #401, then #402 and #403 | #401 not yet in a PR |
-| 3D on/off: state model, desktop button, Decky, SPEC and rulings | #404, then #405, #406, #407 | not started |
-| Package the UI layer, clean up the prototype | #408, then #409 | not started |
-| App data: Zero Company recipe, headset profiles, system profiles | #410, #411, #412 | not started |
+| Virtual-display route: settings patch and restore, gamescope launch | #399, then #400 | #399 merged (PR #414); #400 not started |
+| One-eye laptop window: crop and pointer map, PipeWire window, keyboard and mouse | #401, then #402 and #403 | #401 merged (PR #415); #402 and #403 not started |
+| 3D on/off: state model, desktop button, Decky, SPEC and rulings | #404, then #405, #406, #407 | #404 passed review, waiting to merge (PR #416); #405 and #406 not started; #407 waits for the owner's approval |
+| Package the UI layer, clean up the prototype | #408, then #409 | #408 passed review, waiting to merge (PR #419); #409 not started |
+| App data: Zero Company recipe, headset profiles, system profiles | #410, #411, #412 | #411 (PR #420) and #412 (PR #418) passed review, waiting to merge; #411's route call is still owed; #410 not started |
 
 **Still in the way:**
 
 - Gamescope 3.16.30 segfaulted in the Radeon Vulkan driver during a mirror test, about 13 seconds after a stream started, and took the game with it. The cause is unknown. Starting and stopping stream readers against a test app did not reproduce it. #402 must prove the viewer and laptop window can run together for 30 minutes.
-- The viewer fixes and the UI layer prototype are on a working branch, not in `main`. The viewer's recentre signal can also end its OpenXR session.
-- Q3 (link smoke) is not finished, and #392's fix (PR #393) failed review and is waiting on a fix.
+- The viewer fixes (#417) and the packaged UI layer (#408) are not in `main` yet. Until #417 lands, the viewer's recentre signal can end its OpenXR session.
+- #392's fixes are merged (PR #393), but Q3 (link smoke) still has to pass on the device.
 
 <a id="where-it-stands"></a>
 
@@ -199,7 +199,7 @@ Zero Company proves the headset chain, the link service and the `flat3d-run` wra
 
 ## What's next
 
-1. **The virtual-display route, one-eye window and 3D on/off** in [today's table](#today-2026-11-18-zero-company-in-3d-and-what-that-changes), #399 and #401 first.
+1. **The virtual-display route, one-eye window and 3D on/off** in [today's table](#today-2026-11-18-zero-company-in-3d-and-what-that-changes), #400 and #402 next.
 2. **Waves** and **the owner-device queue**, below. WP-38 (#318) is merged, so the pass is done.
 3. **Hook-point research** (ruling 52): ZR #285, AR #286, GR #287, FR #288, Spider-Man 2 Step 2r #283 and WR #289, each on the installed game before its track's first hook ([above](#hook-point-research-ruling-52)).
 4. Continue Spider-Man 2's port steps in [the plan](spiderman2/plan.md), with Step 2r's map before Step 3. Reverse-engineering setup and the command live in [the workbench](workbench.md).
