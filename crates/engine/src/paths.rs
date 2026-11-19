@@ -16,6 +16,7 @@ pub struct EnginePaths {
     pub log_dir: PathBuf,
     pub bin: PathBuf,
     pub recipe_dirs: Vec<PathBuf>,
+    pub headset_dirs: Vec<PathBuf>,
     pub system_dirs: Vec<PathBuf>,
     pub os_release: PathBuf,
 }
@@ -45,12 +46,15 @@ impl EnginePaths {
         let log_dir = home.join(".local/state/flat3d");
         let bin = home.join(".local/bin");
         let mut recipe_dirs = Vec::new();
+        let mut headset_dirs = Vec::new();
         let mut system_dirs = Vec::new();
         if let Some(src) = env.get("FLAT3D_SRC_DIR").filter(|value| !value.is_empty()) {
             recipe_dirs.push(PathBuf::from(src).join("recipes"));
+            headset_dirs.push(PathBuf::from(src).join("headsets"));
             system_dirs.push(PathBuf::from(src).join("systems"));
         }
         recipe_dirs.push(data.join("recipes"));
+        headset_dirs.push(data.join("headsets"));
         system_dirs.push(data.join("systems"));
         let os_release = env
             .get("FLAT3D_OS_RELEASE")
@@ -67,6 +71,7 @@ impl EnginePaths {
             log_dir,
             bin,
             recipe_dirs,
+            headset_dirs,
             system_dirs,
             os_release,
         })

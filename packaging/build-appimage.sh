@@ -41,7 +41,7 @@ if [ "$DRY" = 1 ]; then
     printf '+ cargo build --release --locked -p flat3d-viewer --features xr,capture --manifest-path %s/Cargo.toml\n' "$ROOT"
     printf '+ cargo build --release --locked -p flat3d-ui-layer --manifest-path %s/Cargo.toml\n' "$ROOT"
   fi
-  printf "+ mkdir -p \$tmp/AppDir/usr/bin \$tmp/AppDir/usr/tools \$tmp/AppDir/usr/recipes \$tmp/AppDir/usr/systems\n"
+  printf "+ mkdir -p \$tmp/AppDir/usr/bin \$tmp/AppDir/usr/tools \$tmp/AppDir/usr/recipes \$tmp/AppDir/usr/systems \$tmp/AppDir/usr/headsets\n"
   printf "+ cp %s/flat3d-app \$tmp/AppDir/usr/bin/flat3d-app\n" "$BIN_DIR"
   for name in "${PAYLOAD_BIN[@]}"; do
     printf "+ cp %s/%s \$tmp/AppDir/usr/bin/%s\n" "$BIN_DIR" "$name" "$name"
@@ -56,6 +56,7 @@ if [ "$DRY" = 1 ]; then
     printf "+ cp %s/lib/* \$tmp/AppDir/usr/tools/lib/\n" "$TOOLS"
   fi
   printf "+ shopt -s nullglob; cp %s/recipes/*.recipe \$tmp/AppDir/usr/recipes/\n" "$ROOT"
+  printf "+ shopt -s nullglob; cp %s/headsets/*.headset \$tmp/AppDir/usr/headsets/\n" "$ROOT"
   printf "+ cp %s/systems/*.system \$tmp/AppDir/usr/systems/\n" "$ROOT"
   for name in AppRun flat3d.desktop flat3d.svg; do
     printf "+ cp %s/packaging/%s \$tmp/AppDir/%s\n" "$ROOT" "$name" "$name"
@@ -81,7 +82,7 @@ tmp=$(mktemp -d "${TMPDIR:-/tmp}/flat3d-appimage.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 appdir="$tmp/AppDir"
 case $OUT in /*) out_abs=$OUT ;; *) out_abs="$PWD/$OUT" ;; esac
-run mkdir -p "$appdir/usr/bin" "$appdir/usr/recipes" "$appdir/usr/systems"
+run mkdir -p "$appdir/usr/bin" "$appdir/usr/recipes" "$appdir/usr/systems" "$appdir/usr/headsets"
 run cp "$BIN_DIR/flat3d-app" "$appdir/usr/bin/flat3d-app"
 for name in "${PAYLOAD_BIN[@]}"; do
   run cp "$BIN_DIR/$name" "$appdir/usr/bin/$name"
@@ -101,6 +102,8 @@ fi
 shopt -s nullglob
 recipes=("$ROOT"/recipes/*.recipe)
 if ((${#recipes[@]})); then run cp "${recipes[@]}" "$appdir/usr/recipes/"; fi
+headsets=("$ROOT"/headsets/*.headset)
+if ((${#headsets[@]})); then run cp "${headsets[@]}" "$appdir/usr/headsets/"; fi
 systems=("$ROOT"/systems/*.system)
 if ((${#systems[@]})); then run cp "${systems[@]}" "$appdir/usr/systems/"; fi
 run chmod 755 "$appdir/usr/bin/flat3d-app" "$appdir/usr/bin/"flat3d-*

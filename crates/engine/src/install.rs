@@ -149,6 +149,8 @@ pub fn execute(
                 Some("recipe")
             } else if Path::new(src).ends_with("systems") {
                 Some("system")
+            } else if Path::new(src).ends_with("headsets") {
+                Some("headset")
             } else {
                 None
             };
@@ -436,6 +438,7 @@ fn created_dirs(home: &str) -> Vec<String> {
         ".local/share/flat3d/bin/lib",
         ".local/share/flat3d/bin",
         ".local/share/flat3d/recipes",
+        ".local/share/flat3d/headsets",
         ".local/share/flat3d/systems",
         ".local/share/flat3d",
         ".local/share/vulkan/implicit_layer.d",
@@ -577,6 +580,7 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             bin_dir.clone(),
             format!("{tools_dir}/"),
             format!("{home}/.local/share/flat3d/recipes"),
+            format!("{home}/.local/share/flat3d/headsets"),
             format!("{home}/.local/share/flat3d/systems"),
             format!("{home}/.config/systemd/user"),
             layer_dir.clone(),
@@ -600,6 +604,10 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             (
                 format!("{src_dir}/recipes"),
                 format!("{home}/.local/share/flat3d/recipes"),
+            ),
+            (
+                format!("{src_dir}/headsets"),
+                format!("{home}/.local/share/flat3d/headsets"),
             ),
             (
                 format!("{src_dir}/systems"),

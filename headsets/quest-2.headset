@@ -1,0 +1,17 @@
+# Meta Quest 2
+name: Quest 2
+usb-id: 2833:5013
+adb-product: hollywood
+adb-model: Quest_2
+panel-width: 1832
+panel-height: 1920
+refresh-rates: 60, 72, 80, 90, 120
+field-of-view-note: The maker publishes no field-of-view figure for the Quest 2
+connections: usb
+client-app: org.meumeu.wivrn.github
+client-app-name: WiVRn
+stream-width: 1440
+stream-height: 1440
+stream-fps: 60
+frame-generation: 2
+stream-connection: usb
