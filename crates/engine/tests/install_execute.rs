@@ -23,6 +23,8 @@ fn fixture(name: &str, omit: &[&str]) -> (PathBuf, PathBuf, PathBuf) {
         ("tools/adb", "adb"),
         ("tools/lib/libusb.so", "lib"),
         ("recipes/1-a.recipe", "recipe"),
+        ("libflat3d_ui_layer.so", "layer"),
+        ("VkLayer_FLAT3D_ui.json", "manifest"),
         ("recipes/notes.txt", "notes"),
     ] {
         if omit.contains(&path) {
