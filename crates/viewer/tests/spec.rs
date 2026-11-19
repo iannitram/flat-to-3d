@@ -50,3 +50,27 @@ fn defaults_omit_screen_dimensions_and_unknown_flag_is_an_error() {
         .any(|arg| arg == "--screen-width-m" || arg == "--distance-m"));
     assert!(ViewerSpec::from_args(&["--unknown".into()]).is_err());
 }
+
+#[test]
+fn eye_shift_and_full_width_round_trip_through_args() {
+    let spec = ViewerSpec {
+        eye_shift: 0.036,
+        full_width_eyes: true,
+        ..ViewerSpec::default()
+    };
+    assert_eq!(ViewerSpec::from_args(&spec.to_args()).unwrap(), spec);
+    assert!(!ViewerSpec::default()
+        .to_args()
+        .contains(&"--eye-shift".to_string()));
+    assert!(!ViewerSpec::default()
+        .to_args()
+        .contains(&"--full-width-eyes".to_string()));
+}
+
+#[test]
+fn eye_shift_outside_its_range_is_refused() {
+    for bad in ["-0.1", "0.9", "NaN"] {
+        let args = ["--eye-shift".to_string(), bad.to_string()];
+        assert!(ViewerSpec::from_args(&args).is_err(), "{bad}");
+    }
+}
