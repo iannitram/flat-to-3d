@@ -19,6 +19,11 @@ pub const UDEV_RULE_TEXT: &str = include_str!("../../../packaging/flat3d-quest.r
 /// the `uaccess` tag into the user's access.
 pub const UDEV_RULE_PATH: &str = "/etc/udev/rules.d/70-flat3d-quest.rules";
 
+/// The UI layer's built library and implicit-layer manifest, shipped beside the
+/// engine binaries and copied into the user's Vulkan implicit-layer folder.
+pub const UI_LAYER_LIBRARY: &str = "libflat3d_ui_layer.so";
+pub const UI_LAYER_MANIFEST: &str = "VkLayer_FLAT3D_ui.json";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnitSpec {
     pub description: String,
@@ -65,6 +70,7 @@ pub fn execute(
         .iter()
         .map(|(_, d)| d)
         .chain(plan.optional_bins.iter().map(|(_, d)| d))
+        .chain(plan.layer_files.iter().map(|(_, d)| d))
         .chain(plan.trees.iter().map(|(_, d)| d))
         .chain(std::iter::once(&plan.udev_source))
         .chain(std::iter::once(&plan.unit_path))
@@ -121,6 +127,18 @@ pub fn execute(
                 continue;
             }
             copy_chmod(src, dst, 0o755)?;
+            written.push(dst.clone());
+        }
+        for (src, dst) in &plan.layer_files {
+            let Some(name) = Path::new(src).file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            if !Path::new(src).is_file() {
+                notes.push(name.to_string());
+                continue;
+            }
+            let mode = if name.ends_with(".so") { 0o755 } else { 0o644 };
+            copy_chmod(src, dst, mode)?;
             written.push(dst.clone());
         }
         for (src, dst) in &plan.trees {
@@ -247,6 +265,7 @@ pub fn execute_uninstall(
     }
     remove_recorded_launch_options(plan)?;
     let mut paths = plan.removes.clone();
+    paths.extend(plan.layer_removes.iter().cloned());
     if let Ok(contents) = fs::read_to_string(&plan.manifest) {
         paths.extend(contents.lines().map(str::to_string));
     }
@@ -409,6 +428,7 @@ fn install_roots(home: &str) -> Vec<String> {
     vec![
         format!("{home}/.local/bin/"),
         format!("{home}/.local/share/flat3d/"),
+        format!("{home}/.local/share/vulkan/"),
         format!("{home}/.config/systemd/user/"),
     ]
 }
@@ -421,6 +441,8 @@ fn created_dirs(home: &str) -> Vec<String> {
         ".local/share/flat3d/headsets",
         ".local/share/flat3d/systems",
         ".local/share/flat3d",
+        ".local/share/vulkan/implicit_layer.d",
+        ".local/share/vulkan",
         ".local/share",
         ".local/bin",
         ".local",
@@ -510,6 +532,8 @@ pub struct InstallPlan {
     pub home: String,
     pub dirs: Vec<String>,
     pub optional_bins: Vec<(String, String)>,
+    /// The UI layer's library and manifest, copied into the user's implicit-layer folder.
+    pub layer_files: Vec<(String, String)>,
     pub trees: Vec<(String, String)>,
     pub manifest: String,
     /// The rule's copy inside the install folders, which the sudo command reads.
@@ -535,6 +559,7 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
         (format!("{src_dir}/tools/adb"), format!("{tools_dir}/adb")),
     ];
     let udev_source = udev_source(home);
+    let layer_dir = implicit_layer_dir(home);
 
     InstallPlan {
         copies,
@@ -558,11 +583,22 @@ pub fn install_plan(home: &str, src_dir: &str) -> InstallPlan {
             format!("{home}/.local/share/flat3d/headsets"),
             format!("{home}/.local/share/flat3d/systems"),
             format!("{home}/.config/systemd/user"),
+            layer_dir.clone(),
         ],
         optional_bins: vec![(
             format!("{src_dir}/flat3d-viewer"),
             format!("{bin_dir}/flat3d-viewer"),
         )],
+        layer_files: vec![
+            (
+                format!("{src_dir}/{UI_LAYER_LIBRARY}"),
+                format!("{layer_dir}/{UI_LAYER_LIBRARY}"),
+            ),
+            (
+                format!("{src_dir}/{UI_LAYER_MANIFEST}"),
+                format!("{layer_dir}/{UI_LAYER_MANIFEST}"),
+            ),
+        ],
         trees: vec![
             (format!("{src_dir}/tools/lib"), format!("{tools_dir}/lib")),
             (
@@ -600,10 +636,16 @@ fn udev_source(home: &str) -> String {
     format!("{home}/.local/share/flat3d/flat3d-quest.rules")
 }
 
+pub fn implicit_layer_dir(home: &str) -> String {
+    format!("{home}/.local/share/vulkan/implicit_layer.d")
+}
+
 #[derive(Debug, Clone)]
 pub struct UninstallPlan {
     pub before: Vec<Vec<String>>,
     pub removes: Vec<String>,
+    /// The UI layer's library and manifest in the implicit-layer folder.
+    pub layer_removes: Vec<String>,
     pub after: Vec<Vec<String>>,
     pub home: String,
     pub manifest: String,
@@ -629,6 +671,13 @@ pub fn uninstall_plan(home: &str) -> UninstallPlan {
             format!("{tools_dir}/adb"),
             udev_source(home),
         ],
+        layer_removes: {
+            let layer_dir = implicit_layer_dir(home);
+            vec![
+                format!("{layer_dir}/{UI_LAYER_LIBRARY}"),
+                format!("{layer_dir}/{UI_LAYER_MANIFEST}"),
+            ]
+        },
         after: vec![vec!["systemctl", "--user", "daemon-reload"]
             .into_iter()
             .map(str::to_string)

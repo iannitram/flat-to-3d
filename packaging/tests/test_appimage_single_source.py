@@ -119,6 +119,8 @@ class AppImageSingleSourceTests(unittest.TestCase):
             "usr/bin/flat3d-inject",
             "usr/bin/flat3d-run",
             "usr/bin/flat3d-viewer",
+            "usr/bin/libflat3d_ui_layer.so",
+            "usr/bin/VkLayer_FLAT3D_ui.json",
             "usr/systems/steamos-strix-halo.system",
             "AppRun",
             "flat3d.desktop",
