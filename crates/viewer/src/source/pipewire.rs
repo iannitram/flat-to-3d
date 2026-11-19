@@ -290,7 +290,7 @@ pub fn open(remote: Remote, target: Target, offer: &Offer) -> Result<PwSource, S
                         let mut planes = Vec::new();
                         for data in buffer.datas_mut().iter() {
                             let chunk = data.chunk();
-                            if data.type_() != spa::buffer::DataType::DmaBuf || skip_chunk(chunk.size(), chunk.flags()) { return; }
+                            if data.type_() != spa::buffer::DataType::DmaBuf || chunk.flags().contains(spa::buffer::ChunkFlags::CORRUPTED) { return; }
                             let fd = match unsafe { BorrowedFd::borrow_raw(data.fd()).try_clone_to_owned() } {
                                 Ok(fd) => fd,
                                 Err(error) => { set_error(&error_process, error.to_string()); return; }
