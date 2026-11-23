@@ -15,3 +15,5 @@ Everything you need to work here is in this repo. The full pipeline and rules (`
 
 - Project notes and run sheets live in `docs/`; research scripts in `tools/`.
 - Only games you own; no game files in the repo.
+
+**Upstream and peers:** see `PEERS.md` at the repo root. When I say "upstream", I mean the repo in its Upstream section; reuse a peer's code only as that file allows.
