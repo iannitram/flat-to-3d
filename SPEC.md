@@ -104,13 +104,4 @@ Platforms (R04): Linux (SteamOS) as the host only. The game DLLs are Windows bin
 
 ## Prior art
 
-Approved 2026-10-31; why each matters and what was also seen: [PEERS.md](PEERS.md).
-
-peer: IlyaMez/SpidyVR | GPL-3.0 | our upstream; v0.7.0 documents Proton + WiVRn wired (docs/LINUX.md, tools/spidy-wivrn.sh); watch releases, eye-pair and swapchain code
-peer: lecutis7of9/HEROVR | GPL-3.0 | SpidyVR ported to Spider-Man 2 on Windows: render probe, eye hooks, FXAA/CAS on the eyes, RT off; learn only (ruling 2026-10-31), its addresses come from the closed SM2VR mod
-peer: LorenDB/kaon | GPL-3.0 | Linux UEVR manager for Proton: Steam scan, UEVR + .NET install, launch options; reference for Zero Company Z2 and the Inject engine
-peer: WiVRn/WiVRn | GPL-3.0 | our streamer; wired mode and the dashboard's adb automation are what Start 3D wraps
-peer: praydog/UEVR | NOASSERTION | the Zero Company route; watch nightlies for UE 5.6 and 2D Screen Mode depth
-peer: Blackskydk/FlatToDepth | MIT | Windows: Geo-11 per-eye output on a big OpenXR screen with a Steam scan; closest to the generic 3D TV (#9)
-peer: artumino/VRScreenCap | MIT | Rust OpenXR SBS/Katanga screen viewer; reference for the fixed-screen layer and SBS viewer
-peer: Raicuparta/rai-pal | GPL-3.0 | the model for game detection and the Inject flow
+The upstream and the peer list are in [`PEERS.md`](PEERS.md) at the repo root.
